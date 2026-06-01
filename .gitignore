@@ -1,0 +1,22 @@
+# Godot 4
+.godot/
+*.tmp
+*.translation
+export_presets.cfg
+
+# Builds (use GitHub Releases instead)
+builds/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Obsidian local config
+obsidian-vault/.obsidian/
+
+# Editor / IDE
+.vscode/
+.idea/
+*.swp
+*.swo
