@@ -149,7 +149,7 @@ Each file is plain Markdown. Include:
 | `write-adr.md`                | Draft an ADR for a decision                    |
 | `write-release-notes.md`      | Generate release notes from a commit range     |
 | `design-species.md`           | Design a new species entry for species_stats.json |
-| `design-biome.md`             | Design a new biome for biome_definitions.json  |
+| `design-biome.md`             | Design a new biome group for biome_groups.json |
 
 ---
 

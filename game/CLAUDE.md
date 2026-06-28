@@ -70,7 +70,11 @@ when a system truly needs global access.
   always visible in code.
 - UI scenes inherit from a `BaseScreen` scene where possible.
 - World entity scenes use a consistent structure:
-  `EntityRoot → Sprite2D, CollisionShape2D, [AnimationPlayer]`
+  `EntityRoot → Sprite2D, [CollisionShape2D], [AnimationPlayer]`.
+  `CollisionShape2D` is **only** for entities needing pointer-picking/area
+  hit-testing; **simulated animals have none** — movement is tick-based A* with
+  render interpolation, not physics, so `Animal.tscn` is `Node2D → Sprite2D,
+  [AnimationPlayer]` ([ADR 0015](../docs/adr/0015-ecosystem-overpass-fallback-animal-scene.md)).
 
 ---
 
@@ -83,12 +87,26 @@ These are the core simulation systems planned or in progress. Each lives in
 |--------------------------|-----------------------------------------------------|
 | `habitat_manager.gd`     | Zone placement, habitat type assignment, adjacency  |
 | `species_manager.gd`     | Animal spawning, needs satisfaction, population     |
-| `ecosystem_manager.gd`   | Food web, resource flows, biodiversity score        |
 | `season_manager.gd`      | Season cycle, weather, environmental modifiers      |
 | `infrastructure_manager.gd` | Roads, corridors, crossings, connectivity graph  |
 | `save_manager.gd`        | Serialise/deserialise `GameState` to disk           |
+| `connectivity_graph.gd`  | Patch-adjacency graph; cached connectivity for overlay, habitat quality, and trust metrics |
+| `population_model.gd`    | Per-patch counts, trend, viability, and recovery events (monthly step) |
+| `economy_manager.gd`     | Budget, spends, monthly donation income, fundraising trickle |
+| `information_manager.gd` | Information purchases and permanent reveal state    |
+| `permissions_manager.gd` | Per-entity trust scores, relationship stages, sub-area unlocks |
+| `time_controller.gd`     | Time speed (pause/1×/2×/4×) and simulation-tick scaling |
+| `milestone_tracker.gd`   | Corridor milestones and the Continental Connection capstone |
+| `narrative_manager.gd`   | Unlock beats, land acknowledgment, entity/community content |
 
-Add a row here whenever a new system is created.
+Add a row here whenever a new system is created. The full script map (including
+non-system scripts like `world_data.gd`, `hex_grid.gd`, and `pathfinding.gd`) is
+in `docs/architecture.md` §1.
+
+> A food-web / resource-flow / biodiversity-score system (`ecosystem_manager`) is
+> **deferred post-v1** — out of P0/P1/P2 scope and not in the architecture; v1
+> viability is handled by `population_model` + `habitat_manager`
+> ([ADR 0015](../docs/adr/0015-ecosystem-overpass-fallback-animal-scene.md)).
 
 ---
 
@@ -98,11 +116,24 @@ Static reference data is stored as JSON and loaded by autoloads at startup.
 Schema changes require updating the loader in `SpeciesRegistry` (or the
 relevant manager) and bumping the data version key in the file.
 
-| File                  | Contents                                       |
-|-----------------------|------------------------------------------------|
-| `species_stats.json`  | Per-species needs, range, behaviour flags      |
-| `biome_definitions.json` | Habitat types, climate params, valid species |
-| `infrastructure.json` | Crossing types, costs, connectivity bonuses    |
+The normative schema for every file below is `docs/data-schemas.md`.
+
+| File                       | Contents                                            |
+|----------------------------|-----------------------------------------------------|
+| `tiles.json`               | Tile registry: terrain id, biome, danger flags, suitability |
+| `species_stats.json`       | Per-species needs, range, behaviour flags (single array) |
+| `biome_groups.json`        | Canonical biomes + compatible-biome groups + terrain aliases |
+| `sub_areas.json`           | The 12 sub-areas: metadata, tile counts, controlling entity |
+| `entities.json`            | The nine governing entities and their trust metrics |
+| `segments.json`            | Dangerous-tile segments within sub-areas            |
+| `infrastructure.json`      | Crossing types, costs, connectivity bonuses         |
+| `milestones.json`          | Corridor milestones and the capstone                |
+| `world/<sub_area>.json`    | Per-coordinate tile-id grid + origin (the authored map) |
+
+> `biome_definitions.json` was retired by
+> [ADR 0007](../docs/adr/0007-patch-derivation-biome-compatibility.md) in favour of
+> `biome_groups.json`; biome data is a string field on tiles plus the group table,
+> not a separate definitions file.
 
 ---
 
@@ -117,6 +148,8 @@ relevant manager) and bumping the data version key in the file.
   in isolation by instantiating classes directly.
 - Run all tests via the GUT panel in the Godot editor, or via `gut_cmdln.gd`
   in CI.
+- Setup, run commands, the `.gutconfig.json` discovery fix, and common pitfalls
+  are documented in [`docs/testing-setup.md`](../docs/testing-setup.md).
 
 ### Test file template
 
@@ -143,8 +176,12 @@ func test_example() -> void:
 - **Sprites**: exported from Aseprite as PNG sprite sheets. Keep source
   `.aseprite` files in a sibling `_src/` folder alongside the PNG. Do not
   commit binaries you didn't generate yourself.
-- **Tilesets**: one image per biome theme. Tile size is **16×16 px** at 1×;
-  the game renders at 2× or 3× scale via a global `CanvasItem` scale.
+- **Tilesets**: one image per biome theme. Tile size is **32×32 px** (hex
+  bounding box) at 1×; the game renders at 2× or 3× scale via a global
+  `CanvasItem` scale. The inscribed hex carries ~16px of detail, and the
+  `SEGMENT_ZOOM_ACTIVATE_PX`/`DEACTIVATE_PX` thresholds are tuned to this box
+  (`art-direction` §3, [ADR 0013](../docs/adr/0013-scaffolding-conventions.md);
+  24×24 is the documented fallback).
 - **Audio**: all music as `.ogg` (looping), SFX as `.wav`. Keep file sizes
   small — compress in the Godot import settings.
 

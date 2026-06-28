@@ -46,9 +46,14 @@ loop of managing a healthy, connected ecosystem.
 - **No species-specific crossing structures in v1.** Every species can use any
   overpass; preference affects probability, not hard eligibility. Species-specific
   variants are a v2 concern.
-- **No economy or resource cost.** Overpasses can be placed freely. An in-game
+- ~~**No economy or resource cost.** Overpasses can be placed freely. An in-game
   cost system is a separate feature and would introduce complexity that is not
-  central to validating the core mechanic.
+  central to validating the core mechanic.~~
+  *Superseded (2026-06-14): the no-cost rule existed to validate the core mechanic
+  in isolation. In the full game, crossings cost budget — **5,000 per overpass
+  tile** (a three-tile road span costs 15,000). Constants live in
+  `economy_constants.gd` and are tunable without code changes. See the economy
+  section of [[game-design-overview]].*
 - **No upgrades or tiers.** A single overpass tile is the only crossing object.
   Upgrades, sizing variants, and cosmetic skins are out of scope.
 - **No underpass or corridor types.** This PRD covers overpasses only. Underpasses
@@ -239,19 +244,24 @@ action.
   partial overpass (not spanning the full barrier width) does not create a
   traversable connection.*
 
-- **How does the pathfinding system handle diagonal crossing attempts?**
-  Animals that approach a barrier at a diagonal may be ambiguous about which
-  crossing to use. Needs a clear rule. *(Owner: engineering — resolve during
-  pathfinding system design.)*
+- ~~**How does the pathfinding system handle diagonal crossing attempts?**~~
+  *Resolved: the map uses a hex grid, where every tile has exactly six direct
+  neighbours and no diagonal relationships exist. Pathfinding is 6-directional
+  across these six edges; because every edge is a direct connection, crossing
+  choice is always unambiguous — an animal must pass through one of its six
+  neighbouring tiles.*
 
-- **Is the `animal_crossed` signal per-animal, per-crossing, or global?**
-  If many animals cross simultaneously, will feedback events stack or queue?
-  *(Owner: engineering — determine during signal/feedback implementation.)*
+- ~~**Is the `animal_crossed` signal per-animal, per-crossing, or global?**~~
+  *Resolved: the signal is per-animal, per-completed-traversal. The feedback layer
+  coalesces signals per crossing within a 2-second window into a single
+  visual/audio cue with a small "+N" counter, so simultaneous crossings never
+  stack into noise.*
 
-- **What tile does the overpass render as?**
-  No art asset has been defined yet. A placeholder sprite is acceptable for
-  prototype, but the art direction needs to be decided before the feature ships.
-  *(Owner: product owner — art pass needed.)*
+- ~~**What tile does the overpass render as?**~~
+  *Resolved: a vegetated pixel-art overpass with earthen ramps and native
+  plantings, in the warm Stardew-register palette; three visual variants keyed to
+  surrounding biome (forest, grassland, alpine). A placeholder sprite is
+  acceptable through prototype; the art direction document finalizes the spec.*
 
 ---
 
