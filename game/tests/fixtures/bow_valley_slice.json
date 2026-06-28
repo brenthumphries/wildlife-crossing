@@ -1,0 +1,130 @@
+{
+  "data_version": 1,
+  "sub_area_id": 7,
+  "origin": [
+    0,
+    0
+  ],
+  "regions": [
+    {
+      "tile": "forest",
+      "rect": [
+        0,
+        0,
+        25,
+        9
+      ]
+    },
+    {
+      "tile": "alpine_meadow",
+      "rect": [
+        0,
+        10,
+        3,
+        11
+      ]
+    }
+  ],
+  "cells": [
+    {
+      "q": 12,
+      "r": 0,
+      "tile": "road"
+    },
+    {
+      "q": 12,
+      "r": 1,
+      "tile": "road"
+    },
+    {
+      "q": 12,
+      "r": 2,
+      "tile": "road"
+    },
+    {
+      "q": 12,
+      "r": 3,
+      "tile": "road"
+    },
+    {
+      "q": 12,
+      "r": 4,
+      "tile": "road"
+    },
+    {
+      "q": 12,
+      "r": 5,
+      "tile": "road"
+    },
+    {
+      "q": 12,
+      "r": 6,
+      "tile": "road"
+    },
+    {
+      "q": 12,
+      "r": 7,
+      "tile": "road"
+    },
+    {
+      "q": 12,
+      "r": 8,
+      "tile": "road"
+    },
+    {
+      "q": 12,
+      "r": 9,
+      "tile": "road"
+    },
+    {
+      "q": 13,
+      "r": 0,
+      "tile": "road"
+    },
+    {
+      "q": 13,
+      "r": 1,
+      "tile": "road"
+    },
+    {
+      "q": 13,
+      "r": 2,
+      "tile": "road"
+    },
+    {
+      "q": 13,
+      "r": 3,
+      "tile": "road"
+    },
+    {
+      "q": 13,
+      "r": 4,
+      "tile": "road"
+    },
+    {
+      "q": 13,
+      "r": 5,
+      "tile": "road"
+    },
+    {
+      "q": 13,
+      "r": 6,
+      "tile": "road"
+    },
+    {
+      "q": 13,
+      "r": 7,
+      "tile": "road"
+    },
+    {
+      "q": 13,
+      "r": 8,
+      "tile": "road"
+    },
+    {
+      "q": 13,
+      "r": 9,
+      "tile": "road"
+    }
+  ]
+}

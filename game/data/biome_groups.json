@@ -1,0 +1,27 @@
+{
+  "data_version": 1,
+  "biomes": [
+    "forest",
+    "grassland",
+    "alpine",
+    "wetland",
+    "sagebrush",
+    "boreal",
+    "old_growth",
+    "cliff"
+  ],
+  "groups": {
+    "forest_complex": ["forest", "old_growth"],
+    "open_range": ["grassland", "sagebrush"],
+    "alpine": ["alpine"],
+    "boreal": ["boreal"],
+    "wetland": ["wetland"],
+    "cliff": ["cliff"]
+  },
+  "terrain_aliases": {
+    "forest_edge": "forest",
+    "alpine_meadow": "alpine",
+    "subalpine": "alpine",
+    "alpine_grassland": "alpine"
+  }
+}

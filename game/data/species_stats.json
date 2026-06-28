@@ -1,0 +1,44 @@
+{
+  "data_version": 1,
+  "species": [
+    { "id": "grizzly_bear", "display_name": "Grizzly bear",
+      "habitat_terrains": ["forest", "alpine_meadow"], "min_viable_patch_size": 220,
+      "range_tiles": 60, "preferred_crossing_type": "overpass",
+      "seasonal_pattern": "hibernates", "status_weight": 2, "sprite_set": "grizzly_bear" },
+
+    { "id": "elk", "display_name": "Elk",
+      "habitat_terrains": ["grassland", "forest_edge"], "min_viable_patch_size": 120,
+      "range_tiles": 45, "preferred_crossing_type": "overpass",
+      "seasonal_pattern": "seasonal_migration", "status_weight": 1, "sprite_set": "elk" },
+
+    { "id": "pronghorn", "display_name": "Pronghorn",
+      "habitat_terrains": ["grassland", "sagebrush"], "min_viable_patch_size": 140,
+      "range_tiles": 50, "preferred_crossing_type": "overpass",
+      "seasonal_pattern": "seasonal_migration", "status_weight": 1, "sprite_set": "pronghorn" },
+
+    { "id": "mountain_caribou", "display_name": "Mountain caribou",
+      "habitat_terrains": ["old_growth", "alpine"], "min_viable_patch_size": 260,
+      "range_tiles": 65, "preferred_crossing_type": "corridor",
+      "seasonal_pattern": "elevational_migration", "status_weight": 3, "sprite_set": "mountain_caribou" },
+
+    { "id": "wolverine", "display_name": "Wolverine",
+      "habitat_terrains": ["alpine", "subalpine"], "min_viable_patch_size": 240,
+      "range_tiles": 70, "preferred_crossing_type": "corridor",
+      "seasonal_pattern": "resident", "status_weight": 2, "sprite_set": "wolverine" },
+
+    { "id": "gray_wolf", "display_name": "Gray wolf",
+      "habitat_terrains": ["forest", "grassland"], "min_viable_patch_size": 200,
+      "range_tiles": 70, "preferred_crossing_type": "underpass",
+      "seasonal_pattern": "resident", "status_weight": 1, "sprite_set": "gray_wolf" },
+
+    { "id": "canada_lynx", "display_name": "Canada lynx",
+      "habitat_terrains": ["boreal"], "min_viable_patch_size": 90,
+      "range_tiles": 30, "preferred_crossing_type": "underpass",
+      "seasonal_pattern": "resident", "status_weight": 2, "sprite_set": "canada_lynx" },
+
+    { "id": "bighorn_sheep", "display_name": "Bighorn sheep",
+      "habitat_terrains": ["cliff", "alpine_grassland"], "min_viable_patch_size": 80,
+      "range_tiles": 25, "preferred_crossing_type": "overpass",
+      "seasonal_pattern": "elevational_migration", "status_weight": 2, "sprite_set": "bighorn_sheep" }
+  ]
+}

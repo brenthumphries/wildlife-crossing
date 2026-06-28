@@ -1,0 +1,28 @@
+; Engine configuration file.
+; Wildlife Crossing — pinned to Godot 4.6 (ADR 0012).
+; Autoload roster and node choices follow docs/architecture.md §2–3.
+
+config_version=5
+
+[application]
+
+config/name="Wildlife Crossing"
+config/description="A cozy wildlife-corridor simulation: build crossings, reconnect fragmented habitat."
+config/features=PackedStringArray("4.6", "GL Compatibility")
+run/main_scene="res://scenes/Main.tscn"
+
+[autoload]
+
+GameState="*res://scripts/systems/game_state.gd"
+EventBus="*res://scripts/systems/event_bus.gd"
+Debug="*res://scripts/systems/debug.gd"
+SpeciesRegistry="*res://scripts/systems/species_registry.gd"
+
+[editor_plugins]
+
+enabled=PackedStringArray("res://addons/gut/plugin.cfg")
+
+[rendering]
+
+renderer/rendering_method="gl_compatibility"
+renderer/rendering_method.mobile="gl_compatibility"

@@ -1,0 +1,86 @@
+{
+  "data_version": 1,
+  "tiles": [
+    { "id": "forest", "display_name": "Forest", "category": "terrain",
+      "is_impassable": false, "is_hazardous": false, "hazard_mortality_env": null,
+      "biome": "forest", "terrain_suitability": { "forest": 38, "grassland": 12, "alpine": 8 },
+      "sprite_set": "terrain_forest" },
+
+    { "id": "forest_edge", "display_name": "Forest edge", "category": "terrain",
+      "is_impassable": false, "is_hazardous": false, "hazard_mortality_env": null,
+      "biome": "forest", "terrain_suitability": { "forest": 30, "grassland": 22 },
+      "sprite_set": "terrain_forest_edge" },
+
+    { "id": "old_growth", "display_name": "Old-growth forest", "category": "terrain",
+      "is_impassable": false, "is_hazardous": false, "hazard_mortality_env": null,
+      "biome": "old_growth", "terrain_suitability": { "old_growth": 40, "forest": 30 },
+      "sprite_set": "terrain_old_growth" },
+
+    { "id": "grassland", "display_name": "Grassland", "category": "terrain",
+      "is_impassable": false, "is_hazardous": false, "hazard_mortality_env": null,
+      "biome": "grassland", "terrain_suitability": { "grassland": 36, "sagebrush": 18, "forest": 10 },
+      "sprite_set": "terrain_grassland" },
+
+    { "id": "sagebrush", "display_name": "Sagebrush steppe", "category": "terrain",
+      "is_impassable": false, "is_hazardous": false, "hazard_mortality_env": null,
+      "biome": "sagebrush", "terrain_suitability": { "sagebrush": 34, "grassland": 20 },
+      "sprite_set": "terrain_sagebrush" },
+
+    { "id": "alpine", "display_name": "Alpine", "category": "terrain",
+      "is_impassable": false, "is_hazardous": false, "hazard_mortality_env": null,
+      "biome": "alpine", "terrain_suitability": { "alpine": 34, "cliff": 14 },
+      "sprite_set": "terrain_alpine" },
+
+    { "id": "alpine_meadow", "display_name": "Alpine meadow", "category": "terrain",
+      "is_impassable": false, "is_hazardous": false, "hazard_mortality_env": null,
+      "biome": "alpine", "terrain_suitability": { "alpine": 36, "grassland": 16 },
+      "sprite_set": "terrain_alpine_meadow" },
+
+    { "id": "subalpine", "display_name": "Subalpine", "category": "terrain",
+      "is_impassable": false, "is_hazardous": false, "hazard_mortality_env": null,
+      "biome": "alpine", "terrain_suitability": { "alpine": 30, "forest": 18 },
+      "sprite_set": "terrain_subalpine" },
+
+    { "id": "alpine_grassland", "display_name": "Alpine grassland", "category": "terrain",
+      "is_impassable": false, "is_hazardous": false, "hazard_mortality_env": null,
+      "biome": "alpine", "terrain_suitability": { "alpine": 32, "grassland": 22, "cliff": 12 },
+      "sprite_set": "terrain_alpine_grassland" },
+
+    { "id": "boreal", "display_name": "Boreal forest", "category": "terrain",
+      "is_impassable": false, "is_hazardous": false, "hazard_mortality_env": null,
+      "biome": "boreal", "terrain_suitability": { "boreal": 36, "forest": 20 },
+      "sprite_set": "terrain_boreal" },
+
+    { "id": "wetland", "display_name": "Wetland", "category": "terrain",
+      "is_impassable": false, "is_hazardous": false, "hazard_mortality_env": null,
+      "biome": "wetland", "terrain_suitability": { "wetland": 34, "grassland": 14 },
+      "sprite_set": "terrain_wetland" },
+
+    { "id": "cliff", "display_name": "Cliff", "category": "terrain",
+      "is_impassable": false, "is_hazardous": false, "hazard_mortality_env": null,
+      "biome": "cliff", "terrain_suitability": { "cliff": 32, "alpine": 16 },
+      "sprite_set": "terrain_cliff" },
+
+    { "id": "road", "display_name": "Highway", "category": "hazard",
+      "is_impassable": false, "is_hazardous": true,
+      "hazard_mortality_env": "ROAD_HAZARD_MORTALITY",
+      "biome": null, "terrain_suitability": null, "sprite_set": "hazard_road" },
+
+    { "id": "river", "display_name": "River", "category": "hazard",
+      "is_impassable": false, "is_hazardous": true,
+      "hazard_mortality_env": "RIVER_HAZARD_MORTALITY",
+      "biome": null, "terrain_suitability": null, "sprite_set": "hazard_river" },
+
+    { "id": "fence", "display_name": "Fence line", "category": "barrier",
+      "is_impassable": true, "is_hazardous": false, "hazard_mortality_env": null,
+      "biome": null, "terrain_suitability": null, "sprite_set": "barrier_fence" },
+
+    { "id": "urban", "display_name": "Urban", "category": "barrier",
+      "is_impassable": true, "is_hazardous": false, "hazard_mortality_env": null,
+      "biome": null, "terrain_suitability": null, "sprite_set": "barrier_urban" },
+
+    { "id": "overpass", "display_name": "Wildlife overpass", "category": "crossing",
+      "is_impassable": false, "is_hazardous": false, "hazard_mortality_env": null,
+      "biome": null, "terrain_suitability": null, "sprite_set": "overpass_forest" }
+  ]
+}

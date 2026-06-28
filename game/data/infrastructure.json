@@ -1,0 +1,22 @@
+{
+  "data_version": 1,
+  "infrastructure": [
+    { "crossing_type": "overpass", "display_name": "Wildlife overpass",
+      "cost_per_tile": 5000, "coverable_flags": ["is_hazardous", "is_impassable"],
+      "preference_cost_modifier": 0.6,
+      "biome_sprite_variants": { "forest": "overpass_forest", "grassland": "overpass_grassland", "alpine": "overpass_alpine" },
+      "available_in_v1": true },
+
+    { "crossing_type": "underpass", "display_name": "Wildlife underpass",
+      "cost_per_tile": 6000, "coverable_flags": ["is_hazardous", "is_impassable"],
+      "preference_cost_modifier": 0.6,
+      "biome_sprite_variants": { "forest": "underpass_forest", "grassland": "underpass_grassland", "alpine": "underpass_alpine" },
+      "available_in_v1": false },
+
+    { "crossing_type": "corridor", "display_name": "Vegetated corridor",
+      "cost_per_tile": 4000, "coverable_flags": ["is_hazardous"],
+      "preference_cost_modifier": 0.6,
+      "biome_sprite_variants": { "forest": "corridor_forest", "grassland": "corridor_grassland", "alpine": "corridor_alpine" },
+      "available_in_v1": false }
+  ]
+}

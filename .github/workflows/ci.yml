@@ -1,0 +1,39 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+# Pinned per ADR 0012: Godot 4.6-stable + GUT 9.6.0 (vendored at game/addons/gut/).
+env:
+  GODOT_VERSION: 4.6-stable
+
+jobs:
+  test:
+    name: GUT tests (Godot ${{ env.GODOT_VERSION }} headless)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download pinned Godot headless binary
+        run: |
+          set -euo pipefail
+          BASE="Godot_v${GODOT_VERSION}_linux.x86_64"
+          URL="https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}/${BASE}.zip"
+          wget -q "$URL"
+          unzip -q "${BASE}.zip"
+          sudo mv "${BASE}" /usr/local/bin/godot
+          sudo chmod +x /usr/local/bin/godot
+          godot --version
+
+      - name: Import project (build resource cache)
+        working-directory: game
+        run: godot --headless --import
+
+      - name: Run GUT test suite
+        working-directory: game
+        run: >
+          godot --headless -s addons/gut/gut_cmdln.gd
+          -gdir=res://tests -ginclude_subdirs -gexit

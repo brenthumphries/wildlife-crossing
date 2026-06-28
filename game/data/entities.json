@@ -1,0 +1,58 @@
+{
+  "data_version": 1,
+  "entities": [
+    { "id": "us_federal_lands", "display_name": "U.S. Federal Lands Agency (parks & forests)",
+      "type": "federal", "governs_sub_areas": [1, 3], "trust_threshold": 60,
+      "metric_weights": { "crossing_usage": 0.5, "road_mortality_reduction": 0.5 },
+      "top_conditions": ["Crossing usage counts", "Reduced road mortality", "Visitor-safe outcomes"],
+      "is_first_nations": false },
+
+    { "id": "ca_federal_parks", "display_name": "Canadian Federal Parks Agency",
+      "type": "federal", "governs_sub_areas": [7], "trust_threshold": 0,
+      "metric_weights": { "crossing_usage": 0.5, "road_mortality_reduction": 0.5 },
+      "top_conditions": ["Crossing usage counts", "Reduced road mortality", "Visitor-safe park outcomes"],
+      "is_first_nations": false },
+
+    { "id": "transport_authorities", "display_name": "Provincial Transport Authorities",
+      "type": "provincial_state", "governs_sub_areas": [4], "trust_threshold": 50,
+      "metric_weights": { "road_mortality_reduction": 0.5, "crossings_completed": 0.3, "active_crossings": 0.2 },
+      "top_conditions": ["Reduced road mortality", "Crossings completed", "Active maintained crossings"],
+      "is_first_nations": false },
+
+    { "id": "bc_provincial", "display_name": "B.C. Provincial Government",
+      "type": "provincial_state", "governs_sub_areas": [5, 8], "trust_threshold": 65,
+      "metric_weights": { "road_mortality_reduction": 0.4, "population_stability": 0.3, "crossing_usage": 0.3 },
+      "top_conditions": ["Reduced road mortality", "Stable wildlife populations", "Crossing usage"],
+      "is_first_nations": false },
+
+    { "id": "ranching_coalition", "display_name": "High Divide Ranching Coalition",
+      "type": "ranching_coalition", "governs_sub_areas": [2], "trust_threshold": 45,
+      "metric_weights": { "road_mortality_reduction": 0.4, "population_stability": 0.3, "adjacent_stewardship": 0.3 },
+      "top_conditions": ["Reduced road mortality", "Stable populations near rangeland", "Good-neighbour stewardship"],
+      "is_first_nations": false },
+
+    { "id": "territorial_gov", "display_name": "Northern Territorial Governments",
+      "type": "territorial", "governs_sub_areas": [10, 12], "trust_threshold": 80,
+      "metric_weights": { "species_diversity": 0.3, "population_stability": 0.3, "crossings_completed": 0.2, "active_crossings": 0.2 },
+      "top_conditions": ["Species diversity", "Population stability", "Crossings completed"],
+      "is_first_nations": false },
+
+    { "id": "ksanka_confederacy", "display_name": "Ksanka Confederacy (fictional)",
+      "type": "first_nations", "governs_sub_areas": [6], "trust_threshold": 25,
+      "metric_weights": { "population_recovery": 0.35, "species_diversity": 0.25, "adjacent_stewardship": 0.25, "joint_stewardship_accept": 0.15 },
+      "top_conditions": ["Population recovery events", "Species diversity", "Stewardship in adjacent lands"],
+      "is_first_nations": true },
+
+    { "id": "taltse_dena_council", "display_name": "Tałtse Dena Council (fictional)",
+      "type": "first_nations", "governs_sub_areas": [9], "trust_threshold": 75,
+      "metric_weights": { "population_recovery": 0.35, "species_diversity": 0.25, "joint_stewardship_accept": 0.25, "adjacent_stewardship": 0.15 },
+      "top_conditions": ["Population recovery events", "Species diversity", "Joint stewardship accepted"],
+      "is_first_nations": true },
+
+    { "id": "three_rivers_nations", "display_name": "Three Rivers Nations (fictional)",
+      "type": "first_nations", "governs_sub_areas": [11], "trust_threshold": 85,
+      "metric_weights": { "population_recovery": 0.3, "species_diversity": 0.3, "joint_stewardship_accept": 0.25, "adjacent_stewardship": 0.15 },
+      "top_conditions": ["Population recovery events", "Species diversity", "Joint stewardship"],
+      "is_first_nations": true }
+  ]
+}

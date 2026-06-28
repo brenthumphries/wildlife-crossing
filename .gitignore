@@ -7,6 +7,9 @@ export_presets.cfg
 # Builds (use GitHub Releases instead)
 builds/
 
+# Local Godot binary used for running tests (not committed)
+/tools/
+
 # macOS
 .DS_Store
 .AppleDouble
