@@ -12,6 +12,7 @@ const WORLD_SELECT_SCENE := preload("res://scenes/ui/WorldSelectMap.tscn")
 var sim: Simulation
 var _renderer: WorldRenderer
 var _world_select: WorldSelectController
+var _overlay: ConnectivityOverlay
 var _debug: Node
 var _crossed_pending := 0
 var _coalesce_timer := 0.0
@@ -26,6 +27,10 @@ func _ready() -> void:
 	_renderer = WorldRenderer.new()
 	_renderer.sim = sim
 	add_child(_renderer)
+
+	_overlay = ConnectivityOverlay.new()
+	_overlay.setup(sim.world, sim.graph, _sub_area_segments(TUTORIAL_SUB_AREA))
+	add_child(_overlay)   # draws over the renderer; hidden until segment mode
 
 	var cam := Camera2D.new()
 	cam.position = Vector2(13.0 * WorldRenderer.TILE_PX, 6.0 * WorldRenderer.TILE_PX)
@@ -45,6 +50,14 @@ func _registries() -> Dictionary:
 		"segments": r.segments, "biome_groups": r.biome_groups,
 	}
 
+## The registry's segment records belonging to one sub-area.
+func _sub_area_segments(sub_area_id: int) -> Array:
+	var out: Array = []
+	for seg: Dictionary in _registries()["segments"].values():
+		if int(seg.get("sub_area_id", -1)) == sub_area_id:
+			out.append(seg)
+	return out
+
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and event.keycode == KEY_B:
 		if sim.build_crossing(TUTORIAL_SEGMENT, "overpass"):
@@ -60,6 +73,7 @@ func _open_world_select() -> void:
 		var layer := CanvasLayer.new()
 		layer.add_child(_world_select)
 		add_child(layer)
+		_overlay.attach(_world_select)
 	if _world_select.mode == WorldSelectController.Mode.INACTIVE:
 		_world_select.enter_selection_mode()
 		_log("Crossing location selection — scroll to zoom, Escape to exit.")
