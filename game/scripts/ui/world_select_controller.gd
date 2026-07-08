@@ -82,9 +82,10 @@ func enter_selection_mode() -> void:
 	queue_redraw()
 	selection_mode_entered.emit()
 
-## Leave selection mode entirely from any state; no crossing is initiated
-## (PRD rule 13 — the Escape path).
-func exit_selection_mode() -> void:
+## Leave selection mode entirely from any state (PRD rule 13 — the Escape
+## path). Pass `cancelled = false` on the confirm→construction hand-off, where
+## the exit is not a cancellation and no `selection_cancelled` is relayed.
+func exit_selection_mode(cancelled: bool = true) -> void:
 	if mode == Mode.INACTIVE:
 		return
 	if mode == Mode.SEGMENT:
@@ -92,7 +93,7 @@ func exit_selection_mode() -> void:
 	mode = Mode.INACTIVE
 	hide()
 	selection_mode_exited.emit()
-	if is_inside_tree():
+	if cancelled and is_inside_tree():
 		var bus := get_node_or_null("/root/EventBus")
 		if bus:
 			bus.selection_cancelled.emit()

@@ -13,6 +13,7 @@ var sim: Simulation
 var _renderer: WorldRenderer
 var _world_select: WorldSelectController
 var _overlay: ConnectivityOverlay
+var _confirm_panel: ConfirmPanel
 var _debug: Node
 var _crossed_pending := 0
 var _coalesce_timer := 0.0
@@ -64,6 +65,38 @@ func _unhandled_input(event: InputEvent) -> void:
 			_log("Overpass complete — the highway is now a safe crossing.")
 	elif event is InputEventKey and event.pressed and event.keycode == KEY_M:
 		_open_world_select()
+	elif event is InputEventMouseButton and event.pressed \
+			and event.button_index == MOUSE_BUTTON_LEFT:
+		_try_select_segment()
+
+## Segment-mode click: select the demo segment and open the confirmation panel.
+## Placeholder hit-testing — the real per-segment hover/click picking needs the
+## authored world maps (B4) and the in-map segment renderer to land.
+func _try_select_segment() -> void:
+	if _world_select == null or _world_select.mode != WorldSelectController.Mode.SEGMENT:
+		return
+	if _confirm_panel.is_open:
+		return
+	var seg: Dictionary = _registries()["segments"].get(TUTORIAL_SEGMENT, {})
+	if seg.is_empty():
+		return
+	var bus := get_node_or_null("/root/EventBus")
+	if bus:
+		bus.segment_selected.emit(String(seg["id"]), int(seg["sub_area_id"]))
+	var game_state := get_node_or_null("/root/GameState")
+	var budget: int = game_state.budget if game_state else 0
+	# min_crossing_cost 0: the budget gate is display-only until the Phase 3
+	# economy gives crossings real costs (roadmap Phase 3).
+	_confirm_panel.open(seg, budget, 0)
+
+## The construction step: confirm hands over the exact (segment, sub_area).
+func _on_confirm_panel_confirmed(segment_id: String, sub_area_id: int) -> void:
+	_world_select.exit_selection_mode(false)   # hand-off to construction, not a cancel
+	if sub_area_id != sim.active_sub_area_id:
+		_log("Sub-area %d is not loaded yet — construction needs its world map (B4)." % sub_area_id)
+		return
+	if sim.build_crossing(segment_id, "overpass"):
+		_log("Overpass complete — the highway is now a safe crossing.")
 
 ## Open the crossing-location-selection map (lazily instanced on first use).
 ## Placeholder trigger for the PRD's "Add crossing" toolbar action.
@@ -74,6 +107,10 @@ func _open_world_select() -> void:
 		layer.add_child(_world_select)
 		add_child(layer)
 		_overlay.attach(_world_select)
+		_confirm_panel = ConfirmPanel.new()
+		_confirm_panel.attach(_world_select)
+		_confirm_panel.confirmed.connect(_on_confirm_panel_confirmed)
+		layer.add_child(_confirm_panel)
 	if _world_select.mode == WorldSelectController.Mode.INACTIVE:
 		_world_select.enter_selection_mode()
 		_log("Crossing location selection — scroll to zoom, Escape to exit.")
