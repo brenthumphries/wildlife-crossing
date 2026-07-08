@@ -8,12 +8,14 @@ extends Node2D
 const TUTORIAL_SUB_AREA := 7
 const TUTORIAL_SEGMENT := "s7_trans_canada_bow_a"
 const WORLD_SELECT_SCENE := preload("res://scenes/ui/WorldSelectMap.tscn")
+const CROSSING_CUE := preload("res://assets/audio/crossing_chime.wav")
 
 var sim: Simulation
 var _renderer: WorldRenderer
 var _world_select: WorldSelectController
 var _overlay: ConnectivityOverlay
 var _confirm_panel: ConfirmPanel
+var _cue_player: AudioStreamPlayer
 var _debug: Node
 var _crossed_pending := 0
 var _coalesce_timer := 0.0
@@ -37,6 +39,10 @@ func _ready() -> void:
 	cam.position = Vector2(13.0 * WorldRenderer.TILE_PX, 6.0 * WorldRenderer.TILE_PX)
 	cam.zoom = Vector2(2.0, 2.0)
 	add_child(cam)
+
+	_cue_player = AudioStreamPlayer.new()
+	_cue_player.stream = CROSSING_CUE
+	add_child(_cue_player)
 
 	var bus := get_node_or_null("/root/EventBus")
 	if bus:
@@ -123,7 +129,10 @@ func _process(delta: float) -> void:
 	if _coalesce_timer > 0.0:
 		_coalesce_timer -= delta
 		if _coalesce_timer <= 0.0 and _crossed_pending > 0:
-			_log("+%d crossed safely" % _crossed_pending)   # coalesced feedback cue
+			# The coalesced crossing cue: visual + audio together, once per
+			# 2s window (Phase 1 exit criterion; wildlife-overpass-crossing PRD).
+			_log("+%d crossed safely" % _crossed_pending)
+			_cue_player.play()
 			_crossed_pending = 0
 
 func _log(msg: String) -> void:
