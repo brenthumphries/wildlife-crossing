@@ -2,7 +2,8 @@
 .godot/
 *.tmp
 *.translation
-export_presets.cfg
+# NOTE: export_presets.cfg is intentionally tracked (B7): our presets hold no
+# signing credentials. Re-ignore it if identities/keys are ever added.
 
 # Builds (use GitHub Releases instead)
 builds/

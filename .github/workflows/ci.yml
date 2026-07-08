@@ -37,3 +37,66 @@ jobs:
         run: >
           godot --headless -s addons/gut/gut_cmdln.gd
           -gdir=res://tests -ginclude_subdirs -gexit
+
+  export:
+    name: Export desktop builds (Godot ${{ env.GODOT_VERSION }} headless)
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download pinned Godot headless binary
+        run: |
+          set -euo pipefail
+          BASE="Godot_v${GODOT_VERSION}_linux.x86_64"
+          URL="https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}/${BASE}.zip"
+          wget -q "$URL"
+          unzip -q "${BASE}.zip"
+          sudo mv "${BASE}" /usr/local/bin/godot
+          sudo chmod +x /usr/local/bin/godot
+          godot --version
+
+      - name: Install matching export templates
+        run: |
+          set -euo pipefail
+          TPZ="Godot_v${GODOT_VERSION}_export_templates.tpz"
+          URL="https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}/${TPZ}"
+          wget -q "$URL"
+          # Template dir name is the version string Godot reports (e.g. 4.6.stable).
+          VER="$(godot --version | grep -oE '^[0-9]+\.[0-9]+(\.[0-9]+)?\.[a-z]+')"
+          DEST="$HOME/.local/share/godot/export_templates/${VER}"
+          mkdir -p "$DEST"
+          unzip -q "$TPZ" -d /tmp/templates
+          mv /tmp/templates/templates/* "$DEST/"
+
+      - name: Import project (build resource cache)
+        working-directory: game
+        run: godot --headless --import
+
+      - name: Export desktop presets
+        working-directory: game
+        run: |
+          set -euo pipefail
+          mkdir -p ../builds/wildlife-crossing-linux-x86_64 \
+                   ../builds/wildlife-crossing-windows-x86_64 \
+                   ../builds/wildlife-crossing-macos
+          godot --headless --export-release "Linux x86_64" \
+            ../builds/wildlife-crossing-linux-x86_64/wildlife-crossing.x86_64
+          godot --headless --export-release "Windows x86_64" \
+            ../builds/wildlife-crossing-windows-x86_64/wildlife-crossing.exe
+          godot --headless --export-release "macOS" \
+            ../builds/wildlife-crossing-macos/wildlife-crossing.zip
+
+      - name: Smoke-test the Linux binary (boots to Main.tscn)
+        run: |
+          set -euo pipefail
+          OUT="$(timeout 20 ./builds/wildlife-crossing-linux-x86_64/wildlife-crossing.x86_64 --headless 2>&1 | head -20 || true)"
+          echo "$OUT"
+          echo "$OUT" | grep -q "Tutorial loaded" || { echo "::error::exported binary did not boot to the tutorial"; exit 1; }
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: wildlife-crossing-desktop-builds
+          path: builds/
+          retention-days: 14
