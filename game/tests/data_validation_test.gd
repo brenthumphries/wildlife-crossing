@@ -177,7 +177,36 @@ func test_biome_groups_schema() -> void:
 			"alias '" + str(alias) + "' resolves to a canonical biome")
 		assert_false(biomes.has(alias), "alias key '" + str(alias) + "' does not shadow a canonical biome")
 
-# --- §12 world map (fixture) ----------------------------------------------
+# --- §12 world maps ----------------------------------------------------------
+
+func test_all_sub_area_world_maps_resolve() -> void:
+	var registry := {}
+	for t in _records("tiles.json", "tiles"):
+		registry[t["id"]] = t
+	for i in range(1, 13):
+		var path := WORLD + "sub_area_%d.json" % i
+		var ctx := "sub_area_%d map" % i
+		var m := _load_obj(path)
+		_has_fields(m, ["data_version", "sub_area_id", "origin", "cells"], ctx)
+		assert_eq(int(m.get("sub_area_id", -1)), i, ctx + " sub_area_id matches its filename")
+		for region in m.get("regions", []):
+			assert_true(registry.has(region["tile"]),
+				ctx + " region tile '" + str(region["tile"]) + "' is registered")
+		var occupied := {}
+		var has_road := false
+		for cell in m["cells"]:
+			assert_true(registry.has(cell["tile"]),
+				ctx + " cell tile '" + str(cell["tile"]) + "' is registered")
+			var key := str(int(cell["q"])) + "," + str(int(cell["r"]))
+			assert_false(occupied.has(key), ctx + " cell [" + key + "] appears at most once")
+			occupied[key] = true
+			if cell["tile"] == "road":
+				has_road = true
+		assert_true(has_road, ctx + " has at least one road (future segment site)")
+		# Loads via the production path into a non-empty grid (B4 acceptance).
+		var wd := WorldData.new()
+		wd.load_from_dict(WorldData.parse_file(path), registry)
+		assert_gt(wd.tile_count(), 0, ctx + " loads via WorldData.parse_file")
 
 func test_world_map_fixture_resolves() -> void:
 	var path := FIXTURES + "bow_valley_slice.json"

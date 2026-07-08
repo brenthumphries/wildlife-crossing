@@ -71,6 +71,10 @@
       "hazard_mortality_env": "RIVER_HAZARD_MORTALITY",
       "biome": null, "terrain_suitability": null, "sprite_set": "hazard_river" },
 
+    { "id": "lake", "display_name": "Lake", "category": "barrier",
+      "is_impassable": true, "is_hazardous": false, "hazard_mortality_env": null,
+      "biome": null, "terrain_suitability": null, "sprite_set": "barrier_lake" },
+
     { "id": "fence", "display_name": "Fence line", "category": "barrier",
       "is_impassable": true, "is_hazardous": false, "hazard_mortality_env": null,
       "biome": null, "terrain_suitability": null, "sprite_set": "barrier_fence" },

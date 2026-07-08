@@ -1,0 +1,237 @@
+{
+  "data_version": 1,
+  "sub_area_id": 4,
+  "origin": [
+    0,
+    0
+  ],
+  "regions": [
+    {
+      "tile": "forest",
+      "rect": [
+        0,
+        0,
+        25,
+        11
+      ]
+    },
+    {
+      "tile": "old_growth",
+      "rect": [
+        2,
+        2,
+        6,
+        5
+      ]
+    },
+    {
+      "tile": "alpine",
+      "rect": [
+        0,
+        7,
+        7,
+        11
+      ]
+    },
+    {
+      "tile": "grassland",
+      "rect": [
+        14,
+        0,
+        17,
+        11
+      ]
+    },
+    {
+      "tile": "lake",
+      "rect": [
+        1,
+        9,
+        4,
+        11
+      ]
+    }
+  ],
+  "cells": [
+    {
+      "q": 15,
+      "r": 0,
+      "tile": "road"
+    },
+    {
+      "q": 16,
+      "r": 0,
+      "tile": "road"
+    },
+    {
+      "q": 18,
+      "r": 0,
+      "tile": "river"
+    },
+    {
+      "q": 15,
+      "r": 1,
+      "tile": "road"
+    },
+    {
+      "q": 16,
+      "r": 1,
+      "tile": "road"
+    },
+    {
+      "q": 18,
+      "r": 1,
+      "tile": "river"
+    },
+    {
+      "q": 15,
+      "r": 2,
+      "tile": "road"
+    },
+    {
+      "q": 16,
+      "r": 2,
+      "tile": "road"
+    },
+    {
+      "q": 18,
+      "r": 2,
+      "tile": "river"
+    },
+    {
+      "q": 15,
+      "r": 3,
+      "tile": "road"
+    },
+    {
+      "q": 16,
+      "r": 3,
+      "tile": "road"
+    },
+    {
+      "q": 18,
+      "r": 3,
+      "tile": "river"
+    },
+    {
+      "q": 15,
+      "r": 4,
+      "tile": "road"
+    },
+    {
+      "q": 16,
+      "r": 4,
+      "tile": "road"
+    },
+    {
+      "q": 18,
+      "r": 4,
+      "tile": "river"
+    },
+    {
+      "q": 15,
+      "r": 5,
+      "tile": "road"
+    },
+    {
+      "q": 16,
+      "r": 5,
+      "tile": "road"
+    },
+    {
+      "q": 18,
+      "r": 5,
+      "tile": "river"
+    },
+    {
+      "q": 15,
+      "r": 6,
+      "tile": "road"
+    },
+    {
+      "q": 16,
+      "r": 6,
+      "tile": "road"
+    },
+    {
+      "q": 19,
+      "r": 6,
+      "tile": "river"
+    },
+    {
+      "q": 15,
+      "r": 7,
+      "tile": "road"
+    },
+    {
+      "q": 16,
+      "r": 7,
+      "tile": "road"
+    },
+    {
+      "q": 19,
+      "r": 7,
+      "tile": "river"
+    },
+    {
+      "q": 15,
+      "r": 8,
+      "tile": "road"
+    },
+    {
+      "q": 16,
+      "r": 8,
+      "tile": "road"
+    },
+    {
+      "q": 19,
+      "r": 8,
+      "tile": "river"
+    },
+    {
+      "q": 15,
+      "r": 9,
+      "tile": "road"
+    },
+    {
+      "q": 16,
+      "r": 9,
+      "tile": "road"
+    },
+    {
+      "q": 19,
+      "r": 9,
+      "tile": "river"
+    },
+    {
+      "q": 15,
+      "r": 10,
+      "tile": "road"
+    },
+    {
+      "q": 16,
+      "r": 10,
+      "tile": "road"
+    },
+    {
+      "q": 19,
+      "r": 10,
+      "tile": "river"
+    },
+    {
+      "q": 15,
+      "r": 11,
+      "tile": "road"
+    },
+    {
+      "q": 16,
+      "r": 11,
+      "tile": "road"
+    },
+    {
+      "q": 19,
+      "r": 11,
+      "tile": "river"
+    }
+  ]
+}

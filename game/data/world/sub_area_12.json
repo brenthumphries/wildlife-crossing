@@ -1,0 +1,202 @@
+{
+  "data_version": 1,
+  "sub_area_id": 12,
+  "origin": [
+    0,
+    0
+  ],
+  "regions": [
+    {
+      "tile": "boreal",
+      "rect": [
+        0,
+        0,
+        25,
+        11
+      ]
+    },
+    {
+      "tile": "alpine",
+      "rect": [
+        2,
+        0,
+        9,
+        4
+      ]
+    },
+    {
+      "tile": "alpine",
+      "rect": [
+        12,
+        4,
+        19,
+        8
+      ]
+    },
+    {
+      "tile": "alpine",
+      "rect": [
+        20,
+        8,
+        25,
+        11
+      ]
+    },
+    {
+      "tile": "wetland",
+      "rect": [
+        10,
+        9,
+        16,
+        11
+      ]
+    }
+  ],
+  "cells": [
+    {
+      "q": 0,
+      "r": 0,
+      "tile": "road"
+    },
+    {
+      "q": 1,
+      "r": 0,
+      "tile": "road"
+    },
+    {
+      "q": 2,
+      "r": 1,
+      "tile": "road"
+    },
+    {
+      "q": 3,
+      "r": 2,
+      "tile": "road"
+    },
+    {
+      "q": 4,
+      "r": 2,
+      "tile": "road"
+    },
+    {
+      "q": 5,
+      "r": 2,
+      "tile": "road"
+    },
+    {
+      "q": 6,
+      "r": 3,
+      "tile": "road"
+    },
+    {
+      "q": 7,
+      "r": 4,
+      "tile": "road"
+    },
+    {
+      "q": 8,
+      "r": 4,
+      "tile": "road"
+    },
+    {
+      "q": 9,
+      "r": 4,
+      "tile": "road"
+    },
+    {
+      "q": 10,
+      "r": 5,
+      "tile": "road"
+    },
+    {
+      "q": 24,
+      "r": 5,
+      "tile": "river"
+    },
+    {
+      "q": 25,
+      "r": 5,
+      "tile": "river"
+    },
+    {
+      "q": 11,
+      "r": 6,
+      "tile": "road"
+    },
+    {
+      "q": 12,
+      "r": 6,
+      "tile": "road"
+    },
+    {
+      "q": 22,
+      "r": 6,
+      "tile": "river"
+    },
+    {
+      "q": 23,
+      "r": 6,
+      "tile": "river"
+    },
+    {
+      "q": 19,
+      "r": 7,
+      "tile": "river"
+    },
+    {
+      "q": 20,
+      "r": 7,
+      "tile": "river"
+    },
+    {
+      "q": 21,
+      "r": 7,
+      "tile": "river"
+    },
+    {
+      "q": 17,
+      "r": 8,
+      "tile": "river"
+    },
+    {
+      "q": 18,
+      "r": 8,
+      "tile": "river"
+    },
+    {
+      "q": 14,
+      "r": 9,
+      "tile": "river"
+    },
+    {
+      "q": 15,
+      "r": 9,
+      "tile": "river"
+    },
+    {
+      "q": 16,
+      "r": 9,
+      "tile": "river"
+    },
+    {
+      "q": 12,
+      "r": 10,
+      "tile": "river"
+    },
+    {
+      "q": 13,
+      "r": 10,
+      "tile": "river"
+    },
+    {
+      "q": 10,
+      "r": 11,
+      "tile": "river"
+    },
+    {
+      "q": 11,
+      "r": 11,
+      "tile": "river"
+    }
+  ]
+}
