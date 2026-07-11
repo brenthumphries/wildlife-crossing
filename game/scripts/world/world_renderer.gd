@@ -25,6 +25,15 @@ func _draw() -> void:
 func _to_px(c: Vector2i) -> Vector2:
 	return Vector2(c.x * TILE_PX + c.y * TILE_PX * 0.5, c.y * TILE_PX * 0.87)
 
+## Inverse of `_to_px`: the tile coordinate under a point in this node's local
+## space (pass `get_global_mouse_position()` — a Node2D reports it camera-aware).
+## Inverts the sheared basis then rounds; exact enough for the placeholder
+## projection used for pointer-picking in segment mode.
+func coord_at_px(p: Vector2) -> Vector2i:
+	var r := p.y / (TILE_PX * 0.87)
+	var q := (p.x - r * TILE_PX * 0.5) / TILE_PX
+	return Vector2i(roundi(q), roundi(r))
+
 func _tile_color(c: Vector2i) -> Color:
 	if sim.world.is_impassable(c):
 		return Color(0.30, 0.30, 0.30)

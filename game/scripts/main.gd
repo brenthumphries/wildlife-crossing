@@ -75,15 +75,19 @@ func _unhandled_input(event: InputEvent) -> void:
 			and event.button_index == MOUSE_BUTTON_LEFT:
 		_try_select_segment()
 
-## Segment-mode click: select the demo segment and open the confirmation panel.
-## Placeholder hit-testing — the real per-segment hover/click picking needs the
-## authored world maps (B4) and the in-map segment renderer to land.
+## How forgiving segment picking is: a click within this many hex steps of a
+## segment's tiles selects it (helps hit 1-wide river/road corridors).
+const SEGMENT_PICK_RADIUS := 1
+
+## Segment-mode click: pick the segment under the cursor and open the
+## confirmation panel. Real per-segment hit-testing over the loaded sub-area's
+## authored map — the click maps to a tile, the tile resolves to a segment.
 func _try_select_segment() -> void:
 	if _world_select == null or _world_select.mode != WorldSelectController.Mode.SEGMENT:
 		return
 	if _confirm_panel.is_open:
 		return
-	var seg: Dictionary = _registries()["segments"].get(TUTORIAL_SEGMENT, {})
+	var seg: Dictionary = _pick_segment_at_mouse()
 	if seg.is_empty():
 		return
 	var bus := get_node_or_null("/root/EventBus")
@@ -94,6 +98,20 @@ func _try_select_segment() -> void:
 	# min_crossing_cost 0: the budget gate is display-only until the Phase 3
 	# economy gives crossings real costs (roadmap Phase 3).
 	_confirm_panel.open(seg, budget, 0)
+
+## Resolve the tile under the cursor to a segment of the loaded sub-area, or {}.
+## Picking is scoped to the rendered (loaded) sub-area — the placeholder card
+## grid can't yet render an unloaded map to pick on.
+func _pick_segment_at_mouse() -> Dictionary:
+	var segs: Array = _sub_area_segments(sim.active_sub_area_id)
+	if segs.is_empty():
+		return {}
+	var coord: Vector2i = _renderer.coord_at_px(_renderer.get_global_mouse_position())
+	var id: String = SegmentPicker.nearest_segment(
+			segs, coord, SEGMENT_PICK_RADIUS, sim.active_sub_area_id)
+	if id.is_empty():
+		return {}
+	return _registries()["segments"].get(id, {})
 
 ## The construction step: confirm hands over the exact (segment, sub_area).
 func _on_confirm_panel_confirmed(segment_id: String, sub_area_id: int) -> void:
