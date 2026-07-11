@@ -36,7 +36,27 @@ jobs:
         working-directory: game
         run: >
           godot --headless -s addons/gut/gut_cmdln.gd
-          -gdir=res://tests -ginclude_subdirs -gexit
+          -gdir=res://tests -ginclude_subdirs
+          -gjunit_xml_file=res://gut_results.xml -gexit
+
+      # V1: a suite that collects zero tests exits green, which would let a
+      # broken discovery config (bad -gdir, wrong suffix) pass CI silently.
+      # Fail the build unless GUT actually recorded at least one test case.
+      - name: Guard against a silently-empty suite
+        working-directory: game
+        run: |
+          set -euo pipefail
+          XML=gut_results.xml
+          if [ ! -f "$XML" ]; then
+            echo "::error::GUT wrote no results file ($XML) — cannot confirm any tests ran."
+            exit 1
+          fi
+          TESTS="$(grep -oE '<testcase' "$XML" | wc -l | tr -d '[:space:]')"
+          echo "GUT recorded ${TESTS} test case(s)."
+          if [ "${TESTS:-0}" -eq 0 ]; then
+            echo "::error::GUT collected zero tests — failing the build (V1 zero-tests guard)."
+            exit 1
+          fi
 
   export:
     name: Export desktop builds (Godot ${{ env.GODOT_VERSION }} headless)
