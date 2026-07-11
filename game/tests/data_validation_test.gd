@@ -223,3 +223,57 @@ func test_world_map_fixture_resolves() -> void:
 		var key := str(int(cell["q"])) + "," + str(int(cell["r"]))
 		assert_false(occupied.has(key), "cell [" + key + "] appears at most once")
 		occupied[key] = true
+
+# --- segments --------------------------------------------------------------
+
+func test_segments_schema_and_geometry() -> void:
+	var registry := {}
+	for t in _records("tiles.json", "tiles"):
+		registry[t["id"]] = t
+	var worlds := {}   # sub_area_id -> WorldData (built once per sub-area)
+	var segments := _records("segments.json", "segments")
+	assert_gt(segments.size(), 0, "segments.json is non-empty")
+	var ids := {}
+	for seg in segments:
+		var ctx := "segment " + str(seg.get("id", "?"))
+		_has_fields(seg, ["id", "sub_area_id", "label", "tiles", "hazard_type",
+			"connectivity_note"], ctx)
+		assert_false(ids.has(seg["id"]), ctx + " id is unique")
+		ids[seg["id"]] = true
+		var sa := int(seg["sub_area_id"])
+		assert_between(sa, 1, 12, ctx + " sub_area_id is in 1..12")
+		assert_true(["road", "river"].has(seg["hazard_type"]), ctx + " hazard_type is valid")
+		var tiles: Array = seg["tiles"]
+		assert_gt(tiles.size(), 0, ctx + " has at least one tile")
+		if not worlds.has(sa):
+			var wd := WorldData.new()
+			wd.load_from_dict(WorldData.parse_file(WORLD + "sub_area_%d.json" % sa), registry)
+			worlds[sa] = wd
+		var world: WorldData = worlds[sa]
+		# Every tile is a real hazard/barrier in that sub-area's map, so
+		# InfrastructureManager will treat the whole span as dangerous.
+		for pair in tiles:
+			var c := Vector2i(int(pair[0]), int(pair[1]))
+			assert_true(world.is_hazardous(c) or world.is_impassable(c),
+				ctx + " tile " + str(c) + " is a hazard/barrier in its map")
+		# The span must be hex-connected, or build_crossing can never complete it.
+		assert_true(_tiles_connected(tiles), ctx + " tiles form one connected chain")
+
+# True when the tile list is a single hex-connected component.
+func _tiles_connected(tiles: Array) -> bool:
+	if tiles.size() <= 1:
+		return true
+	var want := {}
+	for pair in tiles:
+		want[Vector2i(int(pair[0]), int(pair[1]))] = true
+	var seen := {}
+	var start := Vector2i(int(tiles[0][0]), int(tiles[0][1]))
+	var stack := [start]
+	seen[start] = true
+	while not stack.is_empty():
+		var c: Vector2i = stack.pop_back()
+		for n in HexGrid.neighbors(c):
+			if want.has(n) and not seen.has(n):
+				seen[n] = true
+				stack.append(n)
+	return seen.size() == want.size()

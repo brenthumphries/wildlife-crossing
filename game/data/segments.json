@@ -1,12 +1,176 @@
 {
   "data_version": 1,
   "segments": [
-    { "id": "s7_trans_canada_bow_a", "sub_area_id": 7,
+    {
+      "id": "s7_trans_canada_bow_a",
+      "sub_area_id": 7,
       "label": "Trans-Canada Hwy, Bow Valley sector A",
-      "tiles": [[12,0],[12,1],[12,2],[12,3],[12,4],[12,5],[12,6],[12,7],[12,8],[12,9],
-                [13,0],[13,1],[13,2],[13,3],[13,4],[13,5],[13,6],[13,7],[13,8],[13,9]],
-      "surround_tiles": [[11,0],[11,9],[14,0],[14,9]],
+      "tiles": [[12, 0], [12, 1], [12, 2], [12, 3], [12, 4], [12, 5], [12, 6], [12, 7], [12, 8], [12, 9], [13, 0], [13, 1], [13, 2], [13, 3], [13, 4], [13, 5], [13, 6], [13, 7], [13, 8], [13, 9]],
+      "surround_tiles": [[11, 0], [11, 9], [14, 0], [14, 9]],
       "hazard_type": "road",
-      "connectivity_note": "Splits two forest patches, each below grizzly's viable size; a full span reconnects them." }
+      "connectivity_note": "Splits two forest patches, each below grizzly's viable size; a full span reconnects them."
+    },
+    {
+      "id": "s1_us191_trappers_point_a",
+      "sub_area_id": 1,
+      "label": "US-191 \u2014 Trappers Point, Greater Yellowstone",
+      "tiles": [[4, 1], [4, 2], [4, 3], [4, 4], [4, 5], [4, 6], [4, 7], [4, 8], [4, 9], [4, 10], [5, 1], [5, 2], [5, 3], [5, 4], [5, 5], [5, 6], [5, 7], [5, 8], [5, 9], [5, 10]],
+      "surround_tiles": [[3, 1], [3, 2], [6, 9], [6, 10]],
+      "hazard_type": "road",
+      "connectivity_note": "Cuts the pronghorn's Path of the Pronghorn migration corridor between the Green River basin and summer range; a span reconnects the seasonal route."
+    },
+    {
+      "id": "s1_snake_river_a",
+      "sub_area_id": 1,
+      "label": "Snake River headwaters, Greater Yellowstone",
+      "tiles": [[12, 7], [13, 5], [13, 6], [14, 3], [14, 4], [15, 1], [15, 2], [16, 0]],
+      "surround_tiles": [[13, 7], [12, 6], [16, 2], [17, 0]],
+      "hazard_type": "river",
+      "connectivity_note": "A braided-river reach separating riparian willow patches used by moose and grizzly; a crossing restores movement across the valley floor."
+    },
+    {
+      "id": "s2_i15_monida_pass_a",
+      "sub_area_id": 2,
+      "label": "Interstate 15 \u2014 Monida Pass, High Divide",
+      "tiles": [[20, 1], [20, 2], [20, 3], [20, 4], [20, 5], [20, 6], [20, 7], [20, 8], [20, 9], [20, 10], [21, 1], [21, 2], [21, 3], [21, 4], [21, 5], [21, 6], [21, 7], [21, 8], [21, 9], [21, 10]],
+      "surround_tiles": [[19, 1], [19, 2], [22, 9], [22, 10]],
+      "hazard_type": "road",
+      "connectivity_note": "Four-lane interstate over the Continental Divide splitting Centennial Range forest from Big Hole grassland; a span rejoins two sub-viable elk patches."
+    },
+    {
+      "id": "s3_us93_lost_trail_a",
+      "sub_area_id": 3,
+      "label": "US-93 \u2014 Lost Trail Pass, Bitterroot Range",
+      "tiles": [[23, 1], [23, 2], [23, 3], [23, 4], [23, 5], [23, 6], [23, 7], [23, 8], [23, 9], [23, 10], [24, 1], [24, 2], [24, 3], [24, 4], [24, 5], [24, 6], [24, 7], [24, 8], [24, 9], [24, 10]],
+      "surround_tiles": [[22, 1], [22, 2], [25, 9], [25, 10]],
+      "hazard_type": "road",
+      "connectivity_note": "Highway on the Idaho\u2013Montana divide fragmenting Bitterroot forest either side of the pass; a crossing links wolverine and lynx habitat across the ridgeline."
+    },
+    {
+      "id": "s3_salmon_river_a",
+      "sub_area_id": 3,
+      "label": "Salmon River, Frank Church Wilderness",
+      "tiles": [[5, 8], [6, 7], [7, 7], [8, 7], [9, 7], [10, 6], [11, 6], [12, 6], [13, 6], [14, 5]],
+      "surround_tiles": [[6, 8], [5, 7], [15, 4], [14, 4]],
+      "hazard_type": "river",
+      "connectivity_note": "The River of No Return divides low-elevation winter range from north-slope forest; a crossing reconnects wintering elk and bighorn habitat."
+    },
+    {
+      "id": "s4_us95_purcell_trench_a",
+      "sub_area_id": 4,
+      "label": "US-95 \u2014 Purcell Trench, Cabinet\u2013Purcell",
+      "tiles": [[15, 1], [15, 2], [15, 3], [15, 4], [15, 5], [15, 6], [15, 7], [15, 8], [15, 9], [15, 10], [16, 1], [16, 2], [16, 3], [16, 4], [16, 5], [16, 6], [16, 7], [16, 8], [16, 9], [16, 10]],
+      "surround_tiles": [[14, 1], [14, 2], [17, 9], [17, 10]],
+      "hazard_type": "road",
+      "connectivity_note": "The Purcell Trench highway is the main barrier between the Cabinet and Purcell ranges' grizzly subpopulations; a span reconnects the two."
+    },
+    {
+      "id": "s5_bc3_kootenay_a",
+      "sub_area_id": 5,
+      "label": "BC-3 (Crowsnest) \u2014 Kootenay, Inland Rainforest",
+      "tiles": [[15, 1], [15, 2], [15, 3], [15, 4], [15, 5], [15, 6], [15, 7], [15, 8], [15, 9], [15, 10], [16, 1], [16, 2], [16, 3], [16, 4], [16, 5], [16, 6], [16, 7], [16, 8], [16, 9], [16, 10]],
+      "surround_tiles": [[14, 1], [14, 2], [17, 9], [17, 10]],
+      "hazard_type": "road",
+      "connectivity_note": "Provincial highway severing Selkirk inland-rainforest patches on the Kootenay Lake benches; a crossing rejoins mountain-caribou and grizzly range."
+    },
+    {
+      "id": "s6_us2_marias_pass_a",
+      "sub_area_id": 6,
+      "label": "US-2 \u2014 Marias Pass, Crown of the Continent",
+      "tiles": [[8, 0], [8, 1], [9, 0], [9, 1], [10, 0], [10, 1], [11, 0], [11, 1], [12, 0], [12, 1], [13, 0], [13, 1], [14, 0], [14, 1], [15, 0], [15, 1], [16, 0], [16, 1], [17, 0], [17, 1]],
+      "surround_tiles": [[7, 2], [8, 2], [16, 2], [17, 2]],
+      "hazard_type": "road",
+      "connectivity_note": "The highway along Glacier's southern boundary is a documented grizzly mortality corridor; a span reconnects park habitat with the Great Bear wildlands."
+    },
+    {
+      "id": "s8_bc97_pine_pass_a",
+      "sub_area_id": 8,
+      "label": "BC-97 \u2014 Pine Pass, Peace River Break",
+      "tiles": [[20, 0], [20, 1], [20, 2], [20, 3], [20, 4], [20, 5], [20, 6], [21, 0], [21, 1], [21, 2], [21, 3], [21, 4], [21, 5], [21, 6]],
+      "surround_tiles": [[19, 0], [19, 1], [22, 5], [22, 6]],
+      "hazard_type": "road",
+      "connectivity_note": "Highway 97 through the Hart Ranges pinches the corridor at its narrowest point; a span holds open the last forested link across the Peace River Break."
+    },
+    {
+      "id": "s8_peace_river_a",
+      "sub_area_id": 8,
+      "label": "Peace River canyon, Peace River Break",
+      "tiles": [[9, 2], [10, 2], [11, 2], [12, 2], [13, 2], [14, 2], [15, 2], [16, 2], [17, 2], [18, 2]],
+      "surround_tiles": [[10, 1], [9, 1], [19, 1], [18, 3]],
+      "hazard_type": "river",
+      "connectivity_note": "The Peace River canyon splits boreal patches north and south; a crossing reconnects the constrained wildlife route through the break."
+    },
+    {
+      "id": "s9_alaska_hwy_muskwa_a",
+      "sub_area_id": 9,
+      "label": "Alaska Highway \u2014 Muskwa Ranges",
+      "tiles": [[22, 1], [22, 2], [22, 3], [22, 4], [22, 5], [22, 6], [22, 7], [22, 8], [22, 9], [22, 10], [23, 1], [23, 2], [23, 3], [23, 4], [23, 5], [23, 6], [23, 7], [23, 8], [23, 9], [23, 10]],
+      "surround_tiles": [[21, 1], [21, 2], [24, 9], [24, 10]],
+      "hazard_type": "road",
+      "connectivity_note": "The Alaska Highway threads the Muskwa Ranges, dividing intact boreal patches; a span keeps the Muskwa\u2013Kechika movement network continuous."
+    },
+    {
+      "id": "s9_kechika_river_a",
+      "sub_area_id": 9,
+      "label": "Kechika River, Muskwa\u2013Kechika",
+      "tiles": [[9, 6], [9, 7], [9, 8], [9, 9], [9, 10], [10, 1], [10, 2], [10, 3], [10, 4], [10, 5]],
+      "surround_tiles": [[10, 6], [9, 5], [11, 4], [11, 5]],
+      "hazard_type": "river",
+      "connectivity_note": "The Kechika separates basin wetland from range-front forest; a crossing reconnects caribou and moose seasonal habitat."
+    },
+    {
+      "id": "s10_bc37_cassiar_a",
+      "sub_area_id": 10,
+      "label": "BC-37 (Cassiar) \u2014 Upper Liard Basin",
+      "tiles": [[8, 1], [8, 2], [9, 1], [9, 2], [10, 1], [10, 2], [11, 1], [11, 2], [12, 1], [12, 2], [13, 1], [13, 2], [14, 1], [14, 2], [15, 1], [15, 2], [16, 1], [16, 2], [17, 1], [17, 2]],
+      "surround_tiles": [[9, 0], [8, 0], [18, 0], [17, 3]],
+      "hazard_type": "road",
+      "connectivity_note": "The Stewart\u2013Cassiar Highway fragments Liard Plateau boreal forest; a span reconnects lynx and caribou range across the corridor."
+    },
+    {
+      "id": "s10_liard_river_a",
+      "sub_area_id": 10,
+      "label": "Liard River, Upper Liard Basin",
+      "tiles": [[8, 5], [9, 5], [10, 5], [11, 5], [12, 5], [13, 5], [14, 5], [15, 5], [16, 5], [17, 5]],
+      "surround_tiles": [[9, 4], [8, 4], [18, 4], [17, 6]],
+      "hazard_type": "river",
+      "connectivity_note": "The Liard divides plateau wetland complexes; a crossing restores movement between riparian patches used by moose and bear."
+    },
+    {
+      "id": "s11_bc37_stikine_a",
+      "sub_area_id": 11,
+      "label": "BC-37 (Stewart\u2013Cassiar) \u2014 Sacred Headwaters",
+      "tiles": [[5, 1], [5, 2], [5, 3], [5, 4], [5, 5], [5, 6], [5, 7], [5, 8], [5, 9], [5, 10], [6, 1], [6, 2], [6, 3], [6, 4], [6, 5], [6, 6], [6, 7], [6, 8], [6, 9], [6, 10]],
+      "surround_tiles": [[4, 1], [4, 2], [7, 9], [7, 10]],
+      "hazard_type": "road",
+      "connectivity_note": "The highway crosses the Sacred Headwaters, splitting Spatsizi Plateau habitat; a span reconnects the Stikine\u2013Skeena wildlife network."
+    },
+    {
+      "id": "s11_stikine_headwaters_a",
+      "sub_area_id": 11,
+      "label": "Stikine headwaters, Spatsizi Plateau",
+      "tiles": [[11, 6], [11, 9], [11, 10], [12, 6], [12, 8], [13, 6], [13, 7], [14, 5], [15, 5], [16, 4], [17, 4], [18, 4], [19, 3], [20, 3]],
+      "surround_tiles": [[12, 5], [11, 5], [21, 3], [20, 4]],
+      "hazard_type": "river",
+      "connectivity_note": "Headwater channels divide subalpine range on the plateau; a crossing rejoins caribou calving and summer habitat."
+    },
+    {
+      "id": "s12_canol_road_a",
+      "sub_area_id": 12,
+      "label": "Canol Road \u2014 Mackenzie Mountains",
+      "tiles": [[7, 4], [8, 4], [9, 4]],
+      "surround_tiles": [[8, 3], [7, 3], [10, 3], [9, 5]],
+      "hazard_type": "road",
+      "connectivity_note": "The remote Canol Road breaks the Selwyn\u2013Mackenzie forest belt; even a light-traffic corridor fragments habitat, and a span reconnects it."
+    },
+    {
+      "id": "s12_nahanni_river_a",
+      "sub_area_id": 12,
+      "label": "South Nahanni headwaters, Mackenzie Mtns",
+      "tiles": [[13, 10], [14, 9], [15, 9], [16, 9], [17, 8], [18, 8], [19, 7], [20, 7], [21, 7], [22, 6]],
+      "surround_tiles": [[14, 10], [13, 9], [23, 5], [22, 5]],
+      "hazard_type": "river",
+      "connectivity_note": "Headwaters of the South Nahanni separate range-front forest from valley wetland; a crossing reconnects Dall sheep and moose habitat."
+    }
   ]
 }
