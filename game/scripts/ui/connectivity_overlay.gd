@@ -194,11 +194,4 @@ func _draw() -> void:
 			# Pulsing segment tiles: fragmented hue, breathing alpha.
 			c = COLOR_FRAGMENTED
 			c.a = pulse_a
-		draw_circle(_to_px(coord), WorldRenderer.TILE_PX * 0.45, c)
-
-# Same axial→pixel transform as the placeholder WorldRenderer, so the overlay
-# sits exactly over the Phase 1 world view.
-func _to_px(c: Vector2i) -> Vector2:
-	return Vector2(
-			c.x * WorldRenderer.TILE_PX + c.y * WorldRenderer.TILE_PX * 0.5,
-			c.y * WorldRenderer.TILE_PX * 0.87)
+		draw_circle(WorldRenderer.px_at_coord(coord), WorldRenderer.TILE_PX * 0.45, c)

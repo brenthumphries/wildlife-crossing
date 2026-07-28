@@ -3,10 +3,15 @@
 ## (press B) or open the crossing-location-selection map (press M — placeholder
 ## entry point until the build toolbar exists). Demonstrates the core loop:
 ## watch animals risk the road, build the crossing, watch them cross safely.
+class_name Main
 extends Node2D
 
 const TUTORIAL_SUB_AREA := 7
 const TUTORIAL_SEGMENT := "s7_trans_canada_bow_a"
+## Opening camera framing: a tile on the tutorial highway, so the first view
+## shows the crossing site. Projected through `WorldRenderer.px_at_coord`.
+const CAMERA_FOCUS_COORD := Vector2i(13, 6)
+const CAMERA_ZOOM := 2.0
 const WORLD_SELECT_SCENE := preload("res://scenes/ui/WorldSelectMap.tscn")
 const CROSSING_CUE := preload("res://assets/audio/crossing_chime.wav")
 
@@ -36,8 +41,10 @@ func _ready() -> void:
 	add_child(_overlay)   # draws over the renderer; hidden until segment mode
 
 	var cam := Camera2D.new()
-	cam.position = Vector2(13.0 * WorldRenderer.TILE_PX, 6.0 * WorldRenderer.TILE_PX)
-	cam.zoom = Vector2(2.0, 2.0)
+	# Must go through the renderer's projection: the hex basis is sheared, so
+	# raw `coord * TILE_PX` frames the wrong place (fixed 2026-07-19).
+	cam.position = WorldRenderer.px_at_coord(CAMERA_FOCUS_COORD)
+	cam.zoom = Vector2(CAMERA_ZOOM, CAMERA_ZOOM)
 	add_child(cam)
 
 	_cue_player = AudioStreamPlayer.new()
