@@ -24,3 +24,12 @@ obsidian-vault/.obsidian/
 .idea/
 *.swp
 *.swo
+
+# Generic Godot project-builder toolkit — lives here for convenience,
+# not part of the game. Extract to its own repo before tracking it.
+/fable-game-builder/
+
+# Obsidian local UI state (pane layout, graph view) — machine-specific churn.
+# app/appearance/core-plugins stay tracked so config is shared.
+.obsidian/workspace.json
+.obsidian/graph.json
