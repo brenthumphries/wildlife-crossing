@@ -66,9 +66,10 @@ loop of managing a healthy, connected ecosystem.
 ## Proposed solution
 
 The player selects an overpass tile from the build palette and places it over a
-dangerous tile (road, river, or hard barrier). When tiled continuously across
-the full width of the dangerous terrain, the overpass creates a safe, traversable
-route with zero mortality risk. During simulation, the pathfinding system prefers
+dangerous tile (road, river, or hard barrier), choosing where along the hazard
+the crossing goes. When tiled continuously across the full width of the
+dangerous terrain at that point — not along its length — the overpass creates a
+safe, traversable route with zero mortality risk. During simulation, the pathfinding system prefers
 overpass routes over direct traversal of hazardous tiles. Animals that cross via
 an overpass are guaranteed to survive; those that cross road or river tiles
 directly face a per-step mortality probability loaded from an environment variable.
@@ -90,13 +91,23 @@ crossing tile) and a short audio cue fire to reward the player.
      per-step mortality probability. Animals can and will pathfind across them
      if no safer route exists, but risk dying on every step.
 
-2. **An overpass must span every cell of dangerous terrain to be traversable.**
-   The player tiles overpass tiles across each cell individually (e.g. a
-   three-tile-wide river requires three overpass tiles). A partial span — where
-   one or more cells remain uncovered — does not create a safe route. When the
-   span is complete, the pathfinding graph gains a zero-mortality connection
-   through the full overpass chain. Hard barrier tiles covered by an overpass
-   become traversable.
+2. **An overpass must span the full width of the dangerous terrain at the point
+   it crosses.** The player tiles overpass tiles across each cell of that width
+   individually (e.g. a three-tile-wide river requires three overpass tiles). A
+   partial span — where one or more cells of the width remain uncovered — does
+   not create a safe route. When the span is complete, the pathfinding graph
+   gains a zero-mortality connection through the full overpass chain. Hard
+   barrier tiles covered by an overpass become traversable.
+
+   **A span is not a segment.** *(Clarified 2026-07-19 — see
+   [[segment-vs-span-defect]].)* A **segment** is an entire hazardous corridor,
+   authored in `segments.json`; it is the unit the player *selects* on the world
+   map, and may run for many tiles along its length (the Bow Valley tutorial
+   highway is 2 wide × 10 long = 20 tiles). A **span** is the structure the
+   player *builds* across that corridor's width at one chosen point along it —
+   for Bow Valley, 2 tiles. Completing a crossing requires covering the width,
+   never the corridor's length. The road remains visible and hazardous
+   everywhere the player did not build.
 
 3. **Each hazardous tile type has its own mortality probability and environment
    variable.** Each step an animal takes onto an uncovered hazardous tile triggers
@@ -175,11 +186,14 @@ action.
   *Acceptance: Placing on a plain terrain tile is rejected and shows an error
   state; placing on a dangerous tile succeeds.*
 
-- **Pathfinding graph update.** When overpass tiles span every cell of dangerous
-  terrain, the navigation graph adds zero-mortality traversable edges through the
-  full overpass chain. A partial span does not unlock the route.
-  *Acceptance: Animals cannot safely path through partially-spanned terrain; once
-  every cell is covered, animals route through the overpass and survive.*
+- **Pathfinding graph update.** When overpass tiles span every cell of the
+  dangerous terrain's width at the crossing point, the navigation graph adds
+  zero-mortality traversable edges through the full overpass chain. A partial
+  span does not unlock the route.
+  *Acceptance: Animals cannot safely path through a partially-spanned width;
+  once every cell of that width is covered, animals route through the overpass
+  and survive. Tiles of the same corridor away from the span stay hazardous —
+  building one crossing must not make the whole corridor safe.*
 
 - **Per-terrain hazardous mortality via environment variables.** Each step onto
   an uncovered `is_hazardous` tile triggers a mortality check using a probability
