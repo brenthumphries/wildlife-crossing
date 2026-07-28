@@ -114,7 +114,11 @@ jobs:
           echo "$OUT"
           echo "$OUT" | grep -q "Tutorial loaded" || { echo "::error::exported binary did not boot to the tutorial"; exit 1; }
 
+      # Upload whatever exported, even if a later preset or the smoke test
+      # failed. A single bad preset previously discarded working Linux and
+      # Windows binaries for 16 days (see 2026-07-27 daily log).
       - name: Upload build artifacts
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: wildlife-crossing-desktop-builds

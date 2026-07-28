@@ -32,3 +32,6 @@ enabled=PackedStringArray("res://addons/gut/plugin.cfg")
 
 renderer/rendering_method="gl_compatibility"
 renderer/rendering_method.mobile="gl_compatibility"
+; Required for the macOS "universal" and Linux arm64 export presets — Godot
+; refuses to export either architecture with ETC2 ASTC disabled.
+textures/vram_compression/import_etc2_astc=true
