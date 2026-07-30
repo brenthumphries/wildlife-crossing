@@ -51,9 +51,21 @@ Concretely:
   later ADR if it deviates from the default).
 - **Test framework:** GUT **9.6.0**, vendored at `game/addons/gut/` and pinned by
   exact tag (not a floating `main`).
-- **CI:** the GitHub Actions runner uses a pinned `godot 4.6-stable` headless
-  binary; the engine version is recorded once (e.g. a `GODOT_VERSION=4.6-stable`
+- **CI:** the GitHub Actions runner uses a pinned `godot 4.6.3-stable` headless
+  binary; the engine version is recorded once (a `GODOT_VERSION=4.6.3-stable`
   workflow env var) so the editor and CI never drift.
+
+> **Amendment 2026-07-28.** The CI pin is now the exact patch, `4.6.3-stable`,
+> where it was originally the series `4.6-stable`. The decision above is
+> unchanged — 4.6.x with GUT 9.6.0 — but "4.6-stable" resolved to **4.6.0** on
+> the runner while the vendored `tools/` binary was **4.6.3**, so CI and local
+> were building against different engines. That is precisely the drift this
+> clause exists to prevent, and it had already cost one misdiagnosis
+> ([[../../obsidian-vault/daily-logs/2026-07-27]]). Export-template directories
+> are version-keyed (`4.6.3.stable/`), which makes a floating patch actively
+> hazardous for the export job. Bumping the patch is now a deliberate edit to
+> `.github/workflows/ci.yml` — the env var plus both job names, which inline the
+> version because the `env` context is unavailable there.
 
 ## Consequences
 

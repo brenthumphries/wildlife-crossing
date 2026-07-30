@@ -7,9 +7,16 @@
 
 # Builds (use GitHub Releases instead)
 builds/
+# Artifacts downloaded from a CI run land here; same policy as builds/.
+/wildlife-crossing-desktop-builds/
 
-# Local Godot binary used for running tests (not committed)
-/tools/
+# Local Godot binary used for running tests (not committed).
+# Ignore the *contents* of tools/ rather than the directory itself, so the
+# committed CI scripts below can be re-included — git cannot re-include a file
+# whose parent directory is excluded.
+/tools/*
+!/tools/*.py
+!/tools/*.sh
 
 # macOS
 .DS_Store

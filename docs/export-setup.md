@@ -31,6 +31,63 @@ needed. Each preset writes a binary plus a sidecar `.pck` (macOS produces a
 
 Smoke test: the exported binary run with `--headless` must log
 `Tutorial loaded.` — that is the "launches to Main.tscn" acceptance check.
+Run it through the script rather than by eye, so the noisy-boot case is caught:
+
+```sh
+bash tools/smoke_boot.sh ./builds/wildlife-crossing-linux-x86_64/wildlife-crossing.x86_64
+```
+
+## Engine settings the presets depend on
+
+`textures/vram_compression/import_etc2_astc=true` in `game/project.godot` is
+**required** by the macOS `universal` and Linux `arm64` presets — Godot refuses
+to export either architecture with ETC2 ASTC disabled. It defaulted to absent
+(off), which failed every macOS export for sixteen days; fixed in `62a4a48`.
+
+> **`project.godot` cannot hold durable comments.** Godot rewrites the file on
+> every editor save *and* on `--headless --import`/`--export`, and its writer
+> emits only its own boilerplate header — every hand-written comment is stripped,
+> wherever it sits. This has now happened twice (2026-07-27, 2026-07-28); the
+> 2026-07-27 conclusion that moving comments "above Godot's block" would protect
+> them is wrong. Keep the rationale here, in `docs/`, and treat the in-file
+> comments as a convenience that will vanish. If a comment goes missing after an
+> export run, restore it — the *settings* survive, only the comments are lost.
+
+## What the presets pack, and how to check
+
+`export_filter="all_resources"` on every preset. Godot 4 registers a **JSON
+resource loader**, so `data/*.json` counts as a resource and is packed by that
+filter — no `include_filter` is needed, and adding one is not what makes the
+data ship. `exclude_filter="addons/gut/*,tests/*"` keeps the test framework and
+the suite out of release builds; without it the pack carries 244 development-only
+files and is 10× larger (1.64 MB → 165 KB).
+
+Inspect a pack's real contents — do **not** trust `strings`/grep for this:
+
+```sh
+python3 tools/inspect_pck.py builds/.../wildlife-crossing.pck
+python3 tools/check_pck_contents.py builds/.../wildlife-crossing.pck --data-dir game/data
+```
+
+> **Why a parser and not a string scan.** Godot 4.6 writes **pack format 3**,
+> which stores paths *without* the `res://` prefix and moves the file directory
+> to the end of the pack. Grepping a pack for `res://…` therefore finds nothing
+> from the directory — but it *does* find path literals embedded in compiled
+> `.gdc` bytecode and the global class cache. The result reads as "no data
+> files, but plenty of GUT files", which is exactly backwards. This produced a
+> false diagnosis on 2026-07-28; `tools/inspect_pck.py` reads the directory
+> properly and is the only trustworthy answer.
+
+You can also boot a pack directly, without its binary:
+
+```sh
+godot --headless --main-pack builds/.../wildlife-crossing.pck
+```
+
+A healthy boot prints the Godot banner and `Tutorial loaded` in **3 lines** and
+then keeps running — the game has no auto-quit, so it ends only when the
+timeout stops it (exit **124**). A data-less boot also ends at 124, after
+~11,600 lines of errors, so exit status alone proves nothing; check the output.
 
 ## CI
 

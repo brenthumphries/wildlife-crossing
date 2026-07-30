@@ -6,13 +6,18 @@ on:
   pull_request:
     branches: [ main ]
 
-# Pinned per ADR 0012: Godot 4.6-stable + GUT 9.6.0 (vendored at game/addons/gut/).
+# Pinned per ADR 0012: Godot 4.6.3-stable + GUT 9.6.0 (vendored at game/addons/gut/).
+# Pinned to the exact patch, not the 4.6-stable series: export-template directories
+# are version-keyed, and a floating patch means CI and the local tools/ binary can
+# silently build against different engines. That drift already cost one
+# misdiagnosis (2026-07-27). Bump this and both job names together.
 env:
-  GODOT_VERSION: 4.6-stable
+  GODOT_VERSION: 4.6.3-stable
 
 jobs:
   test:
-    name: GUT tests (Godot 4.6-stable headless)
+    # Version inlined: the `env` context is not available in job names.
+    name: GUT tests (Godot 4.6.3-stable headless)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -59,7 +64,8 @@ jobs:
           fi
 
   export:
-    name: Export desktop builds (Godot 4.6-stable headless)
+    # Version inlined: the `env` context is not available in job names.
+    name: Export desktop builds (Godot 4.6.3-stable headless)
     needs: test
     runs-on: ubuntu-latest
     steps:
@@ -107,12 +113,24 @@ jobs:
           godot --headless --export-release "macOS" \
             ../builds/wildlife-crossing-macos/wildlife-crossing.zip
 
+      # V1: every other gate in this project inspects the *source tree* — the
+      # GUT suite, the zero-tests guard, this job's exit status. None of them
+      # can see inside the artifact, which is why a 2026-07-28 review spent a
+      # day mis-diagnosing the pack's contents by string-scanning it. Read the
+      # pack directory properly and assert what has to be in there.
+      - name: Verify the exported pack's contents
+        run: |
+          python3 tools/check_pck_contents.py \
+            builds/wildlife-crossing-linux-x86_64/wildlife-crossing.pck \
+            --data-dir game/data --github
+
+      # Runs the binary rather than reading the pack, so it catches failures the
+      # contents check cannot: a bad main scene, a crash in _ready(), a missing
+      # export template. See tools/smoke_boot.sh for why `head -20` was wrong.
       - name: Smoke-test the Linux binary (boots to Main.tscn)
         run: |
-          set -euo pipefail
-          OUT="$(timeout 20 ./builds/wildlife-crossing-linux-x86_64/wildlife-crossing.x86_64 --headless 2>&1 | head -20 || true)"
-          echo "$OUT"
-          echo "$OUT" | grep -q "Tutorial loaded" || { echo "::error::exported binary did not boot to the tutorial"; exit 1; }
+          bash tools/smoke_boot.sh \
+            ./builds/wildlife-crossing-linux-x86_64/wildlife-crossing.x86_64 20
 
       # Upload whatever exported, even if a later preset or the smoke test
       # failed. A single bad preset previously discarded working Linux and
