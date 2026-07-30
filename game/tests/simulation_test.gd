@@ -6,6 +6,9 @@ extends GutTest
 
 var _sim: Simulation
 const SEG := "s7_trans_canada_bow_a"
+## ADR 0016's worked minimal span for this segment: a 2-tile crossing at r=5,
+## not the whole 20-tile corridor (matches game/scripts/main.gd's TUTORIAL_SPAN).
+const SPAN: Array[Vector2i] = [Vector2i(12, 5), Vector2i(13, 5)]
 
 func _load_json(path: String) -> Dictionary:
 	return JSON.parse_string(FileAccess.get_file_as_string(path))
@@ -49,7 +52,7 @@ func test_crossing_zeroes_the_route() -> void:
 	var risky := Pathfinding.find_path(_sim.world, west_pt, east_pt, { "covered": _sim.infrastructure.coverage() })
 	assert_true(Pathfinding.path_crosses_hazard(_sim.world, risky, { "covered": _sim.infrastructure.coverage() }),
 		"before the crossing the only route crosses the highway")
-	assert_true(_sim.build_crossing(SEG, "overpass"), "the overpass is built")
+	assert_true(_sim.build_crossing(SEG, "overpass", SPAN), "the overpass is built")
 	assert_true(_sim.graph.same_network(west_pt, east_pt), "the patches are now one network")
 	var opts := { "covered": _sim.infrastructure.coverage() }
 	var safe := Pathfinding.find_path(_sim.world, west_pt, east_pt, opts)
@@ -58,7 +61,7 @@ func test_crossing_zeroes_the_route() -> void:
 	assert_eq(_sim.species.mortality_chance(Vector2i(12, 5)), 0.0, "the covered highway tile is safe")
 
 func test_agent_crossing_emits_and_counts_usage() -> void:
-	_sim.build_crossing(SEG, "overpass")
+	_sim.build_crossing(SEG, "overpass", SPAN)
 	var path := Pathfinding.find_path(_sim.world, Vector2i(6, 5), Vector2i(20, 5), { "covered": _sim.infrastructure.coverage() })
 	# Drive a single deterministic agent across the completed span.
 	_sim.agents = [{
@@ -77,5 +80,5 @@ func test_event_bus_relay_on_crossing_completed() -> void:
 	var bus := get_tree().root.get_node_or_null("EventBus")
 	assert_not_null(bus, "EventBus autoload is available")
 	watch_signals(bus)
-	_sim.build_crossing(SEG, "overpass")
+	_sim.build_crossing(SEG, "overpass", SPAN)
 	assert_signal_emitted(bus, "crossing_completed", "the coordinator relays crossing_completed to EventBus")

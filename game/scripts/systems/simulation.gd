@@ -77,9 +77,9 @@ func tick() -> void:
 	if _ticks % TICKS_PER_MONTH == 0:
 		population.monthly_step()
 
-## Construction-step action: build a full crossing over a segment (UI confirm).
-func build_crossing(segment_id: String, crossing_type: String) -> bool:
-	return infrastructure.build_full(segment_id, crossing_type)
+## Construction-step action: build a span of `tiles` over a segment (UI confirm).
+func build_crossing(segment_id: String, crossing_type: String, tiles: Array) -> bool:
+	return infrastructure.build_span(segment_id, crossing_type, tiles)
 
 # --- agents ----------------------------------------------------------------
 

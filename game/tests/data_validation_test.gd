@@ -251,12 +251,15 @@ func test_segments_schema_and_geometry() -> void:
 			worlds[sa] = wd
 		var world: WorldData = worlds[sa]
 		# Every tile is a real hazard/barrier in that sub-area's map, so
-		# InfrastructureManager will treat the whole span as dangerous.
+		# InfrastructureManager will treat the whole segment as dangerous.
 		for pair in tiles:
 			var c := Vector2i(int(pair[0]), int(pair[1]))
 			assert_true(world.is_hazardous(c) or world.is_impassable(c),
 				ctx + " tile " + str(c) + " is a hazard/barrier in its map")
-		# The span must be hex-connected, or build_crossing can never complete it.
+		# Authoring invariant, not a completion requirement (ADR 0016: a span only
+		# needs a connected *core* within whatever the player places, not the whole
+		# segment) — but a segment that isn't one connected corridor would be a
+		# data error regardless, so this still guards against that.
 		assert_true(_tiles_connected(tiles), ctx + " tiles form one connected chain")
 
 # True when the tile list is a single hex-connected component.

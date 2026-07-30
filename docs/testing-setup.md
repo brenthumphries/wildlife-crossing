@@ -67,7 +67,7 @@ godot --headless -s addons/gut/gut_cmdln.gd -gdir=res://tests -ginclude_subdirs 
 Substitute the path to your local binary for `godot` (e.g.
 `../tools/godot/Godot_v4.6.3-stable_linux.arm64`). A clean run ends with
 `---- All tests passed! ----` and a summary; the suite currently reports
-**5 scripts / 28 tests** passing.
+**15 scripts / 116 tests / 2,740 asserts** passing.
 
 The `ObjectDB instances leaked at exit` warning on shutdown is benign Godot
 teardown noise and can be ignored (or filtered with `grep -v`).
@@ -133,7 +133,7 @@ godot --headless --check-only -s res://tests/<name>_test.gd
 ## CI
 
 `.github/workflows/ci.yml` runs the suite headless on every push/PR to `main`. It
-pins the engine via a `GODOT_VERSION=4.6-stable` env var, downloads the matching
+pins the engine via a `GODOT_VERSION=4.6.3-stable` env var, downloads the matching
 Linux x86_64 headless binary, runs `godot --headless --import`, then the same
 `gut_cmdln.gd` command shown above. Because discovery now comes from
 `game/.gutconfig.json`, the workflow needs no GUT-specific flags.
@@ -144,3 +144,50 @@ GUT exits `0` on `Nothing was run`, so a future discovery regression (renamed
 files, moved `tests/` dir, deleted gutconfig) would silently turn CI green again.
 Consider adding a CI assertion that the run actually collected tests — e.g. grep
 the output for the script/test totals, or fail if `Nothing was run` appears.
+
+---
+
+## Smoke-testing an exported build
+
+`tools/smoke_boot.sh <binary> [timeout_seconds]` boots an **exported** binary
+(not the source tree — see [export-setup.md](export-setup.md) for how builds
+get produced) headless and checks that it reaches the tutorial cleanly. It
+replaced an earlier inline CI check that piped through `head -20` and
+misreported healthy-but-noisy boots as failures (2026-07-28 build review).
+
+```bash
+tools/smoke_boot.sh path/to/exported/binary 20
+tools/smoke_boot.sh --check-log existing-boot-log.txt   # re-check a saved log
+```
+
+A healthy run prints 3 lines (engine banner, blank line, `Tutorial loaded`)
+and exits `124` — still running when the timeout fired, which is expected
+since the game has no auto-quit. The script's own exit code is `0` if the log
+passed every check in `FATAL_PATTERNS`, non-zero otherwise.
+
+### Requires GNU coreutils' `timeout` and `stdbuf`
+
+Both ship natively on Linux (CI and the sandbox). **Neither ships on stock
+macOS.** Install with:
+
+```bash
+brew install coreutils
+```
+
+which provides `gtimeout` / `gstdbuf`. The script detects and uses whichever
+prefix is present (`timeout`/`gtimeout`, `stdbuf`/`gstdbuf`) and fails with an
+explicit message rather than a misleading result if neither exists — a
+missing dependency must never be misreported as "the binary didn't boot,"
+which is exactly the class of bug this script exists to prevent.
+
+`stdbuf -oL -eL` is not optional. Confirmed by hand on a Mac (2026-07-29): a
+killed (non-exiting) process's buffered stdout is **silently lost on macOS**
+— neither `SIGTERM` nor `SIGINT` flushes it, whether the kill comes from
+`timeout` or a plain `kill`. A healthy boot only logs a handful of short
+lines before going idle, so it never fills the buffer on its own — the
+result was a report of **zero lines of output** on a build already confirmed
+playable in a windowed launch, indistinguishable from a hang or a crash.
+Linux does not have this problem (verified: a plain `timeout`-killed boot on
+the same project came through cleanly with no wrapper needed), but the
+script wraps the binary in `stdbuf`/`gstdbuf` on both platforms unconditionally
+so behaviour doesn't silently depend on which OS is running it.

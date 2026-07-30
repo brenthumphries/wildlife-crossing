@@ -91,6 +91,20 @@ zoom threshold measured flat-to-flat).
 - `world_select_controller_test.gd`, `connectivity_overlay_test.gd`,
   `confirm_panel_test.gd`, `data_validation_test.gd` green.
 
+> **Decision logged (2026-07-29): v0.1.0 is scoped to Bow Valley only.** The
+> first build ships sub-area 7 (Central Canadian Rockies / Bow Valley) as the
+> only playable area. The other 11 sub-areas are fully authored and
+> data-complete (`game/data/world/sub_area_*.json`, `segments.json`) but ship
+> **locked** — desaturated with the lock indicator, per this phase's own exit
+> criteria — because their unlock path (trust threshold, `sub_area_unlocked`)
+> is Phase 5 and does not exist yet. This is a deliberate scope choice, not a
+> bug: Bow Valley is one of only two sub-areas whose corridor bisects the map,
+> so the tutorial mechanic is guaranteed to demonstrate correctly (see
+> [[../obsidian-vault/design/detour-cost-question]]). Building a general
+> sub-area load path ahead of Phase 5's unlock system would let a player reach
+> content with no unlock story behind it. Superseded/replaces the sub-area load
+> path option previously carried as build-review B5.
+
 ---
 
 ## Phase 3 — Economy + information

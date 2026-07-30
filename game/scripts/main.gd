@@ -8,6 +8,15 @@ extends Node2D
 
 const TUTORIAL_SUB_AREA := 7
 const TUTORIAL_SEGMENT := "s7_trans_canada_bow_a"
+## Interim default span until the real placement UI exists (build-review B4,
+## which depends on this — ADR 0016). This is the ADR's own worked minimal
+## example: a 2-tile span across the corridor at r=5, valid and cheap (10,000
+## at overpass's 5,000/tile) rather than paving the whole 20-tile highway.
+## v0.1.0 is scoped to Bow Valley only (roadmap Phase 2, 2026-07-29), so both
+## call sites below — the tutorial keybind and the confirm-panel hand-off —
+## only ever target this one segment; replace with a player-chosen span once
+## build-mode UI lands.
+const TUTORIAL_SPAN: Array[Vector2i] = [Vector2i(12, 5), Vector2i(13, 5)]
 ## Opening camera framing: a tile on the tutorial highway, so the first view
 ## shows the crossing site. Projected through `WorldRenderer.px_at_coord`.
 const CAMERA_FOCUS_COORD := Vector2i(13, 6)
@@ -74,7 +83,7 @@ func _sub_area_segments(sub_area_id: int) -> Array:
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and event.keycode == KEY_B:
-		if sim.build_crossing(TUTORIAL_SEGMENT, "overpass"):
+		if sim.build_crossing(TUTORIAL_SEGMENT, "overpass", TUTORIAL_SPAN):
 			_log("Overpass complete — the highway is now a safe crossing.")
 	elif event is InputEventKey and event.pressed and event.keycode == KEY_M:
 		_open_world_select()
@@ -124,9 +133,13 @@ func _pick_segment_at_mouse() -> Dictionary:
 func _on_confirm_panel_confirmed(segment_id: String, sub_area_id: int) -> void:
 	_world_select.exit_selection_mode(false)   # hand-off to construction, not a cancel
 	if sub_area_id != sim.active_sub_area_id:
-		_log("Sub-area %d is not loaded yet — construction needs its world map (B4)." % sub_area_id)
+		# v0.1.0 scope decision (roadmap Phase 2, 2026-07-29): this build ships
+		# Bow Valley only. Confirming outside it is refused, not broken — the
+		# UI should never route here since only sub-area 7 starts unlocked.
+		_log("Sub-area %d is locked — v0.1.0 is scoped to Bow Valley (sub-area %d) only." \
+				% [sub_area_id, TUTORIAL_SUB_AREA])
 		return
-	if sim.build_crossing(segment_id, "overpass"):
+	if sim.build_crossing(segment_id, "overpass", TUTORIAL_SPAN):
 		_log("Overpass complete — the highway is now a safe crossing.")
 
 ## Open the crossing-location-selection map (lazily instanced on first use).
