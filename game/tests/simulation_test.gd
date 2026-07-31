@@ -7,7 +7,9 @@ extends GutTest
 var _sim: Simulation
 const SEG := "s7_trans_canada_bow_a"
 ## ADR 0016's worked minimal span for this segment: a 2-tile crossing at r=5,
-## not the whole 20-tile corridor (matches game/scripts/main.gd's TUTORIAL_SPAN).
+## not the whole 20-tile corridor. Build-review B4 replaced main.gd's own
+## hardcoded version of this with real player placement (BuildMode); this
+## constant stays as the fixture span for these lower-level Simulation tests.
 const SPAN: Array[Vector2i] = [Vector2i(12, 5), Vector2i(13, 5)]
 
 func _load_json(path: String) -> Dictionary:

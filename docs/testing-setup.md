@@ -67,7 +67,8 @@ godot --headless -s addons/gut/gut_cmdln.gd -gdir=res://tests -ginclude_subdirs 
 Substitute the path to your local binary for `godot` (e.g.
 `../tools/godot/Godot_v4.6.3-stable_linux.arm64`). A clean run ends with
 `---- All tests passed! ----` and a summary; the suite currently reports
-**15 scripts / 116 tests / 2,740 asserts** passing.
+**16 scripts / 134 tests / 2,779 asserts** passing (2026-07-30, after
+`build_mode_test.gd` landed with build-review B4).
 
 The `ObjectDB instances leaked at exit` warning on shutdown is benign Godot
 teardown noise and can be ignored (or filtered with `grep -v`).

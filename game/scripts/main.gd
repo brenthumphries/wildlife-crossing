@@ -1,22 +1,18 @@
 ## Phase 1 playable root. Loads the Bow Valley tutorial sub-area, runs the
-## Simulation, shows placeholder visuals, and lets the player build the overpass
-## (press B) or open the crossing-location-selection map (press M — placeholder
-## entry point until the build toolbar exists). Demonstrates the core loop:
-## watch animals risk the road, build the crossing, watch them cross safely.
+## Simulation, shows placeholder visuals, and lets the player build an overpass
+## via build mode (press B for the tutorial segment, or open the
+## crossing-location-selection map with M and confirm a segment there — both
+## converge on the same build-mode flow). Demonstrates the core loop: watch
+## animals risk the road, build the crossing, watch them cross safely.
 class_name Main
 extends Node2D
 
 const TUTORIAL_SUB_AREA := 7
 const TUTORIAL_SEGMENT := "s7_trans_canada_bow_a"
-## Interim default span until the real placement UI exists (build-review B4,
-## which depends on this — ADR 0016). This is the ADR's own worked minimal
-## example: a 2-tile span across the corridor at r=5, valid and cheap (10,000
-## at overpass's 5,000/tile) rather than paving the whole 20-tile highway.
-## v0.1.0 is scoped to Bow Valley only (roadmap Phase 2, 2026-07-29), so both
-## call sites below — the tutorial keybind and the confirm-panel hand-off —
-## only ever target this one segment; replace with a player-chosen span once
-## build-mode UI lands.
-const TUTORIAL_SPAN: Array[Vector2i] = [Vector2i(12, 5), Vector2i(13, 5)]
+## v0.1.0 scope (roadmap Phase 2, 2026-07-29; infrastructure.json
+## `available_in_v1`): overpass is the only crossing type shipped, so build
+## mode has no type selector yet. Add one when underpass/corridor ship.
+const BUILD_CROSSING_TYPE := "overpass"
 ## Opening camera framing: a tile on the tutorial highway, so the first view
 ## shows the crossing site. Projected through `WorldRenderer.px_at_coord`.
 const CAMERA_FOCUS_COORD := Vector2i(13, 6)
@@ -33,6 +29,12 @@ var _cue_player: AudioStreamPlayer
 var _debug: Node
 var _crossed_pending := 0
 var _coalesce_timer := 0.0
+
+## Build-review B4: the current in-progress span selection, or null when the
+## player is not in build mode. Nothing is written to `sim.infrastructure`
+## until confirm succeeds — see `build_mode.gd`.
+var _build_mode: BuildMode = null
+var _build_status_label: Label
 
 func _ready() -> void:
 	_debug = get_node_or_null("/root/Debug")
@@ -60,6 +62,16 @@ func _ready() -> void:
 	_cue_player.stream = CROSSING_CUE
 	add_child(_cue_player)
 
+	# Screen-space, so it survives camera pan/zoom — same reason WorldSelectMap
+	# and ConfirmPanel live under a CanvasLayer rather than as plain children.
+	var hud_layer := CanvasLayer.new()
+	add_child(hud_layer)
+	_build_status_label = Label.new()
+	_build_status_label.position = Vector2(16.0, 16.0)
+	_build_status_label.add_theme_color_override("font_color", Color.WHITE)
+	hud_layer.add_child(_build_status_label)
+	_build_status_label.hide()
+
 	var bus := get_node_or_null("/root/EventBus")
 	if bus:
 		bus.animal_crossed.connect(_on_animal_crossed)
@@ -83,13 +95,23 @@ func _sub_area_segments(sub_area_id: int) -> Array:
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and event.keycode == KEY_B:
-		if sim.build_crossing(TUTORIAL_SEGMENT, "overpass", TUTORIAL_SPAN):
-			_log("Overpass complete — the highway is now a safe crossing.")
+		_enter_build_mode(TUTORIAL_SEGMENT, TUTORIAL_SUB_AREA)
 	elif event is InputEventKey and event.pressed and event.keycode == KEY_M:
-		_open_world_select()
+		if _build_mode == null:
+			_open_world_select()
+	elif event is InputEventKey and event.pressed \
+			and (event.keycode == KEY_ENTER or event.keycode == KEY_KP_ENTER):
+		if _build_mode != null:
+			_confirm_build()
+	elif event is InputEventKey and event.pressed and event.keycode == KEY_ESCAPE:
+		if _build_mode != null:
+			_cancel_build()
 	elif event is InputEventMouseButton and event.pressed \
 			and event.button_index == MOUSE_BUTTON_LEFT:
-		_try_select_segment()
+		if _build_mode != null:
+			_try_toggle_build_tile()
+		else:
+			_try_select_segment()
 
 ## How forgiving segment picking is: a click within this many hex steps of a
 ## segment's tiles selects it (helps hit 1-wide river/road corridors).
@@ -139,8 +161,73 @@ func _on_confirm_panel_confirmed(segment_id: String, sub_area_id: int) -> void:
 		_log("Sub-area %d is locked — v0.1.0 is scoped to Bow Valley (sub-area %d) only." \
 				% [sub_area_id, TUTORIAL_SUB_AREA])
 		return
-	if sim.build_crossing(segment_id, "overpass", TUTORIAL_SPAN):
+	_enter_build_mode(segment_id, sub_area_id)
+
+# --- build mode (build-review B4, ADR 0016) ---------------------------------
+
+## Enter build mode over `segment_id`: the player now clicks individual
+## dangerous tiles of the segment to assemble a span, sees a live ghost
+## preview and running cost, and confirms with Enter or cancels with Escape.
+## Reachable two ways — the KEY_B tutorial shortcut (always targets the Bow
+## Valley segment) and the confirm-panel hand-off (targets whatever segment
+## was selected on the world map) — both converge here.
+func _enter_build_mode(segment_id: String, _sub_area_id: int) -> void:
+	if _build_mode != null:
+		return
+	if _world_select != null and _world_select.mode != WorldSelectController.Mode.INACTIVE:
+		return   # selection mode owns input until it hands off via confirm
+	var seg: Dictionary = _registries()["segments"].get(segment_id, {})
+	if seg.is_empty():
+		return
+	var infra_record: Dictionary = _registries()["infrastructure"].get(BUILD_CROSSING_TYPE, {})
+	_build_mode = BuildMode.new()
+	_build_mode.setup(sim.world, sim.infrastructure, seg, BUILD_CROSSING_TYPE,
+			int(infra_record.get("cost_per_tile", 0)))
+	_renderer.build_mode = _build_mode
+	_build_status_label.show()
+	_update_build_status_label()
+	_log("Build mode — click tiles across the corridor. Enter to confirm, Escape to cancel.")
+
+func _try_toggle_build_tile() -> void:
+	var coord: Vector2i = _renderer.coord_at_px(_renderer.get_global_mouse_position())
+	_build_mode.toggle(coord)
+	_update_build_status_label()
+
+## Confirm attempts completion with the exact predicate `try_complete()` will
+## itself enforce (`BuildMode.is_valid()` wraps the same ADR 0016 static
+## check), so a "valid" preview can never be refused here. An invalid
+## selection is refused in place — build mode stays open — with the reason
+## surfaced in both the log and the status label.
+func _confirm_build() -> void:
+	if not _build_mode.is_valid():
+		var reason := _build_mode.rejection_reason()
+		_log("Can't build yet — " + reason)
+		_update_build_status_label()
+		return
+	if sim.build_crossing(_build_mode.segment_id, _build_mode.crossing_type, _build_mode.chosen_tiles()):
 		_log("Overpass complete — the highway is now a safe crossing.")
+	_exit_build_mode()
+
+func _cancel_build() -> void:
+	_log("Build cancelled.")
+	_exit_build_mode()
+
+func _exit_build_mode() -> void:
+	_build_mode = null
+	_renderer.build_mode = null
+	_build_status_label.hide()
+
+## Refresh the cost/status readout — called on every hover move and toggle
+## so the running cost is never stale (ADR 0016 "Negative": the UI must
+## surface running cost so the bill is never a surprise).
+func _update_build_status_label() -> void:
+	if _build_mode == null:
+		return
+	var text := "Build %s — %d tile(s) selected, $%d" % [
+			_build_mode.crossing_type, _build_mode.chosen_count(), _build_mode.running_cost()]
+	if _build_mode.chosen_count() > 0 and not _build_mode.is_valid():
+		text += "  (%s)" % _build_mode.rejection_reason()
+	_build_status_label.text = text
 
 ## Open the crossing-location-selection map (lazily instanced on first use).
 ## Placeholder trigger for the PRD's "Add crossing" toolbar action.
@@ -172,6 +259,9 @@ func _process(delta: float) -> void:
 			_log("+%d crossed safely" % _crossed_pending)
 			_cue_player.play()
 			_crossed_pending = 0
+	if _build_mode != null:
+		_renderer.build_hover = _renderer.coord_at_px(_renderer.get_global_mouse_position())
+		_update_build_status_label()
 
 func _log(msg: String) -> void:
 	if _debug:

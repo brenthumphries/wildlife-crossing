@@ -66,6 +66,47 @@ status: active
 > **Only B4 (span placement UI) remains on this review's blocker list**, and
 > it is now unblocked — B3 was its sole dependency.
 
+> [!success] Amendment 2026-07-30 — **B4 is closed: no build-review blockers
+> remain open.**
+> Player-chosen placement replaces the hardcoded `TUTORIAL_SPAN`. New
+> `game/scripts/ui/build_mode.gd` (`class_name BuildMode extends RefCounted`)
+> holds an in-progress span selection with no scene-tree or autoload
+> dependency — `toggle()`, `is_selectable()`, `running_cost()`, `is_valid()`,
+> `rejection_reason()` — and writes nothing to a live `InfrastructureManager`
+> until the player confirms. `main.gd` routes both entry points (the `KEY_B`
+> tutorial shortcut and the confirm-panel hand-off) into a shared build-mode
+> flow: left-click toggles the tile under the cursor, Enter confirms, Escape
+> cancels; an invalid confirm attempt is refused in place with a reason shown
+> in a status label ("N tile(s) selected, $cost"). `world_renderer.gd` draws
+> a ghost preview — chosen tiles blue, the hovered tile green (valid
+> candidate) or red (not part of the segment / not coverable by the crossing
+> type) — distinct from the gold completed-crossing fill.
+>
+> Along the way, ADR 0016's two-sided-core predicate
+> (`_contains_two_sided_core` and its helpers) moved from a private
+> `InfrastructureManager` method to a static, `world`-parameterized one
+> (`InfrastructureManager.contains_two_sided_core`). `try_complete()` and
+> `BuildMode.is_valid()` now call the identical function, so the live
+> placement preview and the real completion check are provably the same
+> rule — a "valid" preview can never be refused at confirm time.
+>
+> New `game/tests/build_mode_test.gd` (12 tests) re-covers the same ADR 0016
+> rows `infrastructure_manager_test.gd` already encodes. Full suite: 16
+> scripts / **134** tests / 2,779 asserts, all green (was 122/2,750).
+> Verified two ways this couldn't verify itself: a clean headless boot from
+> source (unchanged, 3 lines, `Tutorial loaded`, no errors), and — since
+> headless can't exercise mouse/keyboard input — a windowed run in the Godot
+> editor: press B, click tiles across the road at r=5, Enter to confirm,
+> confirmed behaving as expected. See [[../daily-logs/2026-07-30]].
+>
+> Crossing type is hardcoded to `"overpass"` (the only `available_in_v1`
+> type in `infrastructure.json`) — no type selector yet, deferred until
+> underpass/corridor ship. The build-mode status label is another ad-hoc
+> code-instantiated `Control`, same pattern as `ConfirmPanel` and
+> `ConnectivityOverlay` — reproduces rather than resolves the `BaseScreen`
+> convention debt in this review's deferrable list; C1's HUD is next to face
+> that choice.
+
 ## 1. Summary
 
 - **Build case:** **FIRST working build** — but for a new reason. As of

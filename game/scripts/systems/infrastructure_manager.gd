@@ -74,7 +74,7 @@ func try_complete(segment_id: String, crossing_type: String) -> bool:
 	var placed: Array = _placed_of_type(dangerous, crossing_type)
 	if placed.is_empty():
 		return false
-	if not _contains_two_sided_core(placed, dangerous):
+	if not contains_two_sided_core(_world, placed, dangerous):
 		return false               # no chain reaches across yet: too small, or runs along the corridor
 	var crossing_id: String = crossing_id_for(segment_id)
 	for c in placed:
@@ -127,10 +127,17 @@ func usage_of(crossing_id: String) -> int:
 	return int(_usage.get(crossing_id, 0))
 
 func _dangerous_tiles(seg: Dictionary) -> Array:
+	return dangerous_tiles(_world, seg)
+
+## The dangerous (hazardous or impassable) tiles of segment `seg` in `world`.
+## Static and `world`-parameterized so a build-mode placement preview can
+## derive the same candidate set (ADR 0016's `S ⊆ dangerous_tiles(G)`, rule 1)
+## without a live InfrastructureManager instance.
+static func dangerous_tiles(world: WorldData, seg: Dictionary) -> Array:
 	var out: Array = []
 	for t in seg["tiles"]:
 		var c := Vector2i(int(t[0]), int(t[1]))
-		if _world.is_hazardous(c) or _world.is_impassable(c):
+		if world.is_hazardous(c) or world.is_impassable(c):
 			out.append(c)
 	return out
 
@@ -150,7 +157,12 @@ func _placed_of_type(dangerous: Array, crossing_type: String) -> Array:
 ## MAX_CORE_TILES, testing the ring at each size reached (a subset is
 ## connected by construction: each step only adds a neighbour already in
 ## `placed`). `seen` dedupes subsets reached by more than one growth order.
-func _contains_two_sided_core(placed: Array, dangerous: Array) -> bool:
+## Static and `world`-parameterized (rather than reading an instance `_world`)
+## so a candidate span can be validated against the exact rule that governs
+## real completion without a live InfrastructureManager — the build-mode
+## placement preview (B4) calls this directly, so the preview and the actual
+## `try_complete()` check can never drift apart into two different rules.
+static func contains_two_sided_core(world: WorldData, placed: Array, dangerous: Array) -> bool:
 	var dangerous_set: Dictionary = {}
 	for d in dangerous:
 		dangerous_set[d] = true
@@ -167,7 +179,7 @@ func _contains_two_sided_core(placed: Array, dangerous: Array) -> bool:
 			if seen.has(key):
 				continue
 			seen[key] = true
-			if _safe_ring_is_two_sided(core, dangerous_set):
+			if _safe_ring_is_two_sided(world, core, dangerous_set):
 				return true
 			if core.size() >= MAX_CORE_TILES:
 				continue
@@ -186,14 +198,14 @@ func _contains_two_sided_core(placed: Array, dangerous: Array) -> bool:
 ## neither in `core` nor a dangerous tile of the segment. Two-sided when that
 ## ring is not one connected piece — flood-filling from any single ring tile
 ## does not reach the rest of it.
-func _safe_ring_is_two_sided(core: Array, dangerous_set: Dictionary) -> bool:
+static func _safe_ring_is_two_sided(world: WorldData, core: Array, dangerous_set: Dictionary) -> bool:
 	var core_set: Dictionary = {}
 	for c in core:
 		core_set[c] = true
 	var ring: Dictionary = {}
 	for c in core:
 		for nb in HexGrid.neighbors(c):
-			if _world.has_tile(nb) and not core_set.has(nb) and not dangerous_set.has(nb):
+			if world.has_tile(nb) and not core_set.has(nb) and not dangerous_set.has(nb):
 				ring[nb] = true
 	if ring.size() < 2:
 		return false
@@ -202,7 +214,7 @@ func _safe_ring_is_two_sided(core: Array, dangerous_set: Dictionary) -> bool:
 
 ## Connected component of `universe` (a Vector2i -> true set, hex-adjacency)
 ## containing `seed`.
-func _flood_fill(seed: Vector2i, universe: Dictionary) -> Dictionary:
+static func _flood_fill(seed: Vector2i, universe: Dictionary) -> Dictionary:
 	var seen: Dictionary = { seed: true }
 	var stack: Array = [seed]
 	while not stack.is_empty():
@@ -213,9 +225,9 @@ func _flood_fill(seed: Vector2i, universe: Dictionary) -> Dictionary:
 				stack.append(nb)
 	return seen
 
-## Canonical string key for a tile set, so `_contains_two_sided_core` can
+## Canonical string key for a tile set, so `contains_two_sided_core` can
 ## dedupe subsets reached by more than one growth order.
-func _core_key(core: Array) -> String:
+static func _core_key(core: Array) -> String:
 	var sorted: Array = core.duplicate()
 	sorted.sort_custom(func(a: Vector2i, b: Vector2i) -> bool:
 		return a.x < b.x or (a.x == b.x and a.y < b.y))
