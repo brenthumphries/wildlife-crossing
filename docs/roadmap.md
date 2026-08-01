@@ -54,6 +54,22 @@ hazards, and cross safely over a completed overpass with legible feedback.
   `connectivity_graph_test.gd`, `habitat_manager_test.gd`,
   `population_model_test.gd` green.
 
+> **Decision logged (2026-07-31): the visual half of the crossing cue ships as
+> an always-on `Hud`, and it pays down the `BaseScreen` convention debt for new
+> UI only.** Build review C1 closed: `game/scripts/ui/hud.gd` extends a new
+> `game/scripts/ui/base_screen.gd` (`game/CLAUDE.md`'s "UI scenes inherit from
+> a BaseScreen scene where possible", implemented as a script base rather than
+> a `.tscn` since none of this project's UI is scene-authored — every screen
+> is instanced with `.new()`). The `Hud` mirrors `Main._log()` on screen (so
+> mode changes and build results, not just the crossing cue, are legible in a
+> windowed export) and shows a dedicated icon + "+N crossed safely" flash on
+> the coalesced `animal_crossed` window, fading independently of the message
+> line. `ConfirmPanel` and `ConnectivityOverlay` predate `BaseScreen` and are
+> **not** retrofitted — migrating them is separate, deliberately deferred
+> work. Placeholder art: `game/assets/sprites/crossing_cue.png` is a generated
+> flat-colour stand-in, not an Aseprite export; real art is still owed.
+> Suite: 18 scripts / 144 tests / 2,799 asserts, all green (was 134/2,779).
+
 ---
 
 ## Phase 2 — Location selection + sub-areas

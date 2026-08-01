@@ -107,6 +107,42 @@ status: active
 > convention debt in this review's deferrable list; C1's HUD is next to face
 > that choice.
 
+> [!success] Amendment 2026-07-31 — **C1 is closed: no items remain before V7.**
+> New `game/scripts/ui/hud.gd` (`class_name Hud`) provides the visual half of
+> the crossing cue and a minimal always-on HUD: a message channel mirroring
+> `Main._log()` so mode changes and build results are legible in a windowed
+> export, and a dedicated icon + "+N crossed safely" flash on the coalesced
+> `animal_crossed` window, fading independently of the message line. All
+> player feedback previously routed through `Debug` to stdout only
+> (§"Defects still open", "On-screen feedback: None") now has an on-screen
+> counterpart; `Debug` logging is unchanged.
+>
+> Along the way, resolved the "BaseScreen convention debt" flagged in the
+> 2026-07-28 and 2026-07-30 amendments: new `game/scripts/ui/base_screen.gd`
+> (`class_name BaseScreen extends Control`) standardises the full-rect-anchor
+> + `_build_ui()` pattern `ConfirmPanel` and `ConnectivityOverlay` each
+> reimplemented ad-hoc, and `Hud` is the first thing to extend it. There is no
+> `BaseScreen.tscn` — every screen in this project is code-instantiated, so a
+> script base is the equivalent of `game/CLAUDE.md`'s "UI scenes inherit from
+> a BaseScreen scene where possible" for this codebase. `ConfirmPanel` and
+> `ConnectivityOverlay` are **not** retrofitted; that migration is separate,
+> deliberately deferred work.
+>
+> Placeholder art: `game/assets/sprites/crossing_cue.png` is a generated
+> flat-colour icon, not an Aseprite export — a real sprite is still owed
+> before release art passes (§5, "Art remains a hard dependency on the
+> owner").
+>
+> New `game/tests/base_screen_test.gd` (3 tests) and `game/tests/hud_test.gd`
+> (7 tests). Full suite: 18 scripts / **144** tests / 2,799 asserts, all green
+> (was 16 scripts / 134 tests / 2,779 asserts as of the 07-30 amendment).
+> Verified two ways: a clean headless boot from source (unchanged,
+> 3 lines, `Tutorial loaded`, no errors — the HUD instantiates in `_ready()`
+> ahead of the existing log line without disturbing it), and the full GUT
+> suite run headless against `game/.gutconfig.json`.
+>
+> **No build-review items remain open.** V7 (cut v0.1.0) is next.
+
 ## 1. Summary
 
 - **Build case:** **FIRST working build** — but for a new reason. As of

@@ -35,6 +35,9 @@ var _coalesce_timer := 0.0
 ## until confirm succeeds — see `build_mode.gd`.
 var _build_mode: BuildMode = null
 var _build_status_label: Label
+## Build-review C1: the on-screen message channel + crossing-cue flash,
+## mirroring `_log()` so player feedback is visible in a windowed export.
+var _hud: Hud
 
 func _ready() -> void:
 	_debug = get_node_or_null("/root/Debug")
@@ -66,6 +69,8 @@ func _ready() -> void:
 	# and ConfirmPanel live under a CanvasLayer rather than as plain children.
 	var hud_layer := CanvasLayer.new()
 	add_child(hud_layer)
+	_hud = Hud.new()
+	hud_layer.add_child(_hud)
 	_build_status_label = Label.new()
 	_build_status_label.position = Vector2(16.0, 16.0)
 	_build_status_label.add_theme_color_override("font_color", Color.WHITE)
@@ -258,6 +263,8 @@ func _process(delta: float) -> void:
 			# 2s window (Phase 1 exit criterion; wildlife-overpass-crossing PRD).
 			_log("+%d crossed safely" % _crossed_pending)
 			_cue_player.play()
+			if _hud:
+				_hud.show_crossing_cue(_crossed_pending)
 			_crossed_pending = 0
 	if _build_mode != null:
 		_renderer.build_hover = _renderer.coord_at_px(_renderer.get_global_mouse_position())
@@ -266,3 +273,5 @@ func _process(delta: float) -> void:
 func _log(msg: String) -> void:
 	if _debug:
 		_debug.info(msg)
+	if _hud:
+		_hud.show_message(msg)
