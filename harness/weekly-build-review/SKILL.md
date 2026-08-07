@@ -179,10 +179,49 @@ Before declaring done:
   work item buildable with acceptance criteria? Are items sequenced with
   dependencies? Is doc drift captured?
 - Confirm front-matter YAML is valid and every link resolves to a real file.
-- For a high-stakes or unusually large review, launch a fresh **general-purpose**
-  subagent to red-team the note: "Given the actual repo state, is anything
-  needed for the next build missing from this list, and is anything listed
-  actually already done?" Fold in its corrections.
+- **Run the `verify` skill on the note.** Sources: `obsidian-vault/daily-logs/`,
+  `docs/adr/`, `docs/roadmap.md`, and the previous build review. It spawns a
+  subagent that has not seen this run's reasoning, and that isolation is the
+  whole point — an author that just wrote a claim remembers *intending* it to be
+  right, which reads as remembering that it *is* right. Fold its findings in
+  before delivering.
+- **Label every claim: Confirmed, Assumed, or Unverifiable.** Record them under a
+  `## Verification` heading in the note. Anything not traceable to something read
+  *this run* is Unverifiable — say so plainly rather than hedging it in prose.
+  "CI appears green" is the exact failure this replaces: it reads as caution and
+  is actually an unlabelled assumption.
+- **CI specifically.** Step 1 records whether CI *exists*; it says nothing about
+  whether the last run *passed*. Without GitHub access on this run, CI status is
+  Unverifiable — label it and move on. Inferring it from the daily log is not
+  evidence, and neither is a green badge in a README.
+- Launch a fresh **general-purpose** subagent to red-team the note: "Given the
+  actual repo state, is anything needed for the next build missing from this
+  list, and is anything listed actually already done?" Fold in its corrections.
+  This asks a different question from `verify` — that one audits whether the
+  claims are true, this one audits whether the list is complete. Run both.
+
+### Step 7 — Refresh the `project-state` artifact
+
+Call `list_artifacts` to get the path of the artifact with id `project-state`,
+Read its current HTML, and rewrite **only the Wildlife Crossing section** from
+this review: open blockers with owner, next actions in order, and build state
+(test counts, build case, blocker count). Write the updated document to a file,
+then call `update_artifact` with id `project-state`.
+
+Rules for this step, and they matter more than the formatting:
+
+- **Update the Wildlife Crossing section's own "as of" date to today. Leave the
+  Attainabl section and its date untouched** — that half is owned by the
+  Attainabl Monday and Friday tasks, which can read a repo this run cannot. A
+  date you did not earn is worse than a stale one you did.
+- **Carry nothing forward that you did not read this run.** Anything labelled
+  Unverifiable in Step 6 is labelled Unverifiable on the page too. A number that
+  survives onto a dashboard because nobody re-checked it is exactly the failure
+  this review exists to catch.
+- **The page has no live data.** Everything is baked in at write time. Do not add
+  code that fetches on load; it will silently fail in the sandbox.
+
+---
 
 Deliver the note path to the user with a two-sentence summary: the build case
 and the number of blockers. Then present the note file.
@@ -197,6 +236,10 @@ and the number of blockers. Then present the note file.
 - **Subagents** — Explore/general-purpose for the Step 1 inventory, Plan for
   Step 3 sequencing, general-purpose for the Step 6 red-team. Delegating keeps
   the main thread's context clean for judgment.
+- **`verify`** — the Step 6 fact-integrity audit. Traces every figure and date to
+  source, recomputes arithmetic, checks cross-references to other notes for
+  staleness, and forces Confirmed / Assumed / Unverifiable labels. Report-only:
+  it never edits the note.
 - **Bash + vendored Godot** — headless test run and export signal in Step 2.
 
 ## Running it weekly (optional)
