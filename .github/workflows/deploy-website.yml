@@ -1,0 +1,85 @@
+name: Deploy website
+
+# Publishes website/ to GitHub Pages. The site is plain static files with no
+# build step (website/CLAUDE.md), so this workflow only verifies that the
+# committed encyclopedia is in sync with the wiki, then uploads the directory.
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'website/**'
+      - 'obsidian-vault/wiki/**'
+      - 'tools/build_encyclopedia.py'
+      - '.github/workflows/deploy-website.yml'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'website/**'
+      - 'obsidian-vault/wiki/**'
+      - 'tools/build_encyclopedia.py'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# One deploy at a time; don't cancel a run that is already publishing.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  check:
+    name: Encyclopedia is in sync with the wiki
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      # The generator is deterministic, so regenerating should be a no-op.
+      # A diff here means someone edited obsidian-vault/wiki/ (or the generator)
+      # without re-running tools/build_encyclopedia.py.
+      - name: Regenerate and diff
+        run: |
+          set -euo pipefail
+          python3 tools/build_encyclopedia.py
+          if ! git diff --quiet -- website/encyclopedia; then
+            echo "::error::website/encyclopedia is stale. Run: python3 tools/build_encyclopedia.py"
+            git diff --stat -- website/encyclopedia
+            exit 1
+          fi
+
+      - name: Check for external asset requests
+        run: |
+          set -euo pipefail
+          # website/CLAUDE.md: no external CDN dependencies in production HTML.
+          if grep -rniE '(src|href)="https?://' website --include='*.html' \
+             | grep -vE 'github\.com|y2y\.net|wikipedia\.org|unesco\.org|pc\.gc\.ca|usgs\.gov|nps\.gov|fws\.gov|fs\.usda\.gov|gov\.bc\.ca|si\.edu|wcs\.org|wyofile\.com|arc-solutions\.org|highdivide\.org|wildsheepfoundation\.org' ; then
+            echo "::error::Found an external asset reference in website/. Assets must be self-hosted."
+            exit 1
+          fi
+
+  deploy:
+    name: Publish to GitHub Pages
+    needs: check
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: website
+
+      - id: deployment
+        uses: actions/deploy-pages@v4

@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Segment — Wildlife Crossing encyclopedia</title>
+<meta name="description" content="A segment is the smallest selectable unit of road or barrier in Wildlife Crossing — the thing the player chooses when deciding where to build a crossing.">
+<meta name="theme-color" content="#f3ead8">
+<link rel="icon" href="../assets/img/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="../assets/css/style.css">
+</head>
+<body>
+
+<a class="skip-link" href="#main">Skip to content</a>
+
+<header class="site-header">
+  <div class="wrap site-header__inner">
+    <a class="wordmark" href="../index.html">
+      <svg width="24" height="24" viewBox="0 0 64 64" aria-hidden="true" focusable="false">
+        <polygon points="32,6 51,17 51,39 32,50 13,39 13,17" fill="#4C7A4A"/>
+        <rect x="26" y="12" width="12" height="38" fill="#57544D"/>
+        <rect x="10" y="26" width="44" height="13" rx="5" fill="#3F6B41"/>
+      </svg>
+      Wildlife Crossing
+    </a>
+    <nav class="site-nav" aria-label="Main">
+      <ul>
+        <li><a href="../index.html">Home</a></li>
+        <li><a href="../user-guide.html">User guide</a></li>
+        <li><a href="../encyclopedia/index.html" aria-current="page">Encyclopedia</a></li>
+        <li><a href="https://github.com/brenthumphries/wildlife-crossing">Source</a></li>
+      </ul>
+    </nav>
+  </div>
+</header>
+
+<main id="main" class="wrap wrap--narrow">
+
+  <article>
+    <header class="entry-header">
+      <div>
+        <p class="kicker">
+          <span class="badge badge--glossary">Mechanic</span>
+        </p>
+        <h1>Segment</h1>
+        <p class="entry-lede">A <strong>segment</strong> is the smallest selectable unit of road or barrier in Wildlife Crossing — the thing the player chooses when deciding <em>where</em> to build a crossing.</p>
+      </div>
+    </header>
+
+    <div class="entry-body">
+    <h2>In-game</h2>
+    <p>A segment is a pre-defined section of roadway or barrier large enough to include all the tiles where crossing infrastructure will go, plus surrounding space for fencing and animal-guidance constructs, and small enough that construction operates without scope ambiguity. <strong>Segment boundaries are fixed in world data and the player never adjusts them.</strong> Only segments flagged <code>is_impassable</code> or <code>is_hazardous</code> are selectable; clicking one opens the confirmation panel with its label, the current budget, and a one-line connectivity note. Confirming passes the segment (and its sub-area) straight into the construction step.</p>
+    <h2>Real-world basis</h2>
+    <p>Real wildlife-crossing projects target specific <strong>road segments</strong> identified as mortality hotspots or pinch points in animal movement — the same logic the game uses to make location selection ecologically meaningful rather than arbitrary.</p>
+
+    <h2>Related entries</h2>
+    <ul class="related-list">
+        <li><a href="patch.html">Patch (Habitat Patch)</a></li>
+        <li><a href="connectivity.html">Connectivity</a></li>
+    </ul>
+    <h2>References</h2>
+    <ul class="reference-list">
+        <li><a href="https://en.wikipedia.org/wiki/Wildlife_crossing">Wildlife crossing — Wikipedia</a></li>
+        <li><a href="https://arc-solutions.org">ARC Solutions (wildlife crossing design)</a></li>
+    </ul>
+      <p class="entry-meta">
+        This entry is generated from the project wiki
+        (<code>obsidian-vault/wiki/segment.md</code>), last revised
+        2026-06-17.
+        <a href="index.html">Back to the encyclopedia</a>.
+      </p>
+    </div>
+  </article>
+
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <div class="site-footer__cols">
+      <div>
+        <h2>Wildlife Crossing</h2>
+        <p>A cozy ecosystem simulation built in Godot 4. Desktop, single-player, offline.</p>
+      </div>
+      <div>
+        <h2>Pages</h2>
+        <ul>
+          <li><a href="../index.html">Home</a></li>
+          <li><a href="../user-guide.html">User guide</a></li>
+          <li><a href="../encyclopedia/index.html">Encyclopedia</a></li>
+        </ul>
+      </div>
+      <div>
+        <h2>Elsewhere</h2>
+        <ul>
+          <li><a href="https://github.com/brenthumphries/wildlife-crossing">Source on GitHub</a></li>
+          <li><a href="https://y2y.net">Yellowstone to Yukon Conservation Initiative</a></li>
+        </ul>
+      </div>
+    </div>
+    <p class="site-footer__fine">
+      Wildlife Crossing is an independent game and is not affiliated with, or
+      endorsed by, the Yellowstone to Yukon Conservation Initiative or any agency
+      depicted. Governing bodies and partnerships in the game are fictional.
+    </p>
+  </div>
+</footer>
+
+<script src="../assets/js/main.js" defer></script>
+</body>
+</html>

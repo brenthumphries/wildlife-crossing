@@ -1,0 +1,901 @@
+/* ==========================================================================
+   Wildlife Crossing — site stylesheet
+   Single file, no frameworks, no build step, no external requests.
+   Palette and tone follow obsidian-vault/design/art-direction.md.
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   1. Design tokens
+   -------------------------------------------------------------------------- */
+
+:root {
+  /* Base environment (art-direction §2) */
+  --parchment:      #f3ead8;
+  --parchment-warm: #ece0c9;
+  --parchment-deep: #e2d3b7;
+  --forest-deep:    #2e4a36;
+  --forest-mid:     #4c7a4a;
+  --grassland:      #a8b560;
+  --alpine-rock:    #8a8e97;
+  --snow:           #e8eef2;
+  --water-deep:     #2b5a72;
+  --water-shallow:  #6fb3b8;
+  --wetland:        #9ca84e;
+  --earth:          #7a5a3a;
+
+  /* Data axis, orange -> teal (colourblind-safe sequential ramp) */
+  --band-poor:      #e08a3c;
+  --band-fair:      #d9a85c;
+  --band-good:      #8fb07a;
+  --band-excellent: #2e8b8b;
+
+  /* Accents. Link/teal is darkened from #2E8B8B so body-size text
+     clears WCAG AA (4.5:1) against parchment. */
+  --accent:         #1f6b6b;
+  --accent-strong:  #14504f;
+  --invalid:        #a63a24;
+  --locked:         #6b6e73;
+
+  /* Ink */
+  --ink:        #23301f;
+  --ink-soft:   #4a5347;
+  /* Darkened from the art-direction muted grey-green so that small print
+     still clears WCAG AA (4.5:1) on the warm card background. */
+  --ink-faint:  #5f655a;
+  --rule:       #cdbf9f;
+
+  /* Type. System stacks only — nothing is fetched from a CDN. */
+  --font-body: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia,
+               "Times New Roman", serif;
+  --font-ui: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+             "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+
+  /* Three sizes, per the style guide, plus small print. */
+  --size-display: clamp(2.1rem, 1.3rem + 3.4vw, 3.7rem);
+  --size-heading: clamp(1.35rem, 1.1rem + 1vw, 1.7rem);
+  --size-body:    1.0625rem;
+  --size-small:   0.9rem;
+
+  --measure: 34rem;
+  --radius: 6px;
+  --shadow-soft: 0 1px 0 rgba(35, 48, 31, 0.06),
+                 0 6px 18px -12px rgba(35, 48, 31, 0.45);
+}
+
+/* --------------------------------------------------------------------------
+   2. Reset and base
+   -------------------------------------------------------------------------- */
+
+*,
+*::before,
+*::after { box-sizing: border-box; }
+
+/* Several components below set `display`, which would otherwise beat the user
+   agent's `[hidden] { display: none }`. Without this, the encyclopedia's
+   JS-only filter bar would render for readers with JavaScript disabled. */
+[hidden] { display: none !important; }
+
+html {
+  -webkit-text-size-adjust: 100%;
+  scroll-behavior: smooth;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+body {
+  margin: 0;
+  background-color: var(--parchment);
+  /* Faint paper tooth, drawn in CSS so the page stays self-contained. */
+  background-image:
+    radial-gradient(circle at 18% 12%, rgba(168, 181, 96, 0.10) 0, transparent 42%),
+    radial-gradient(circle at 84% 6%,  rgba(111, 179, 184, 0.10) 0, transparent 38%);
+  background-attachment: fixed;
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--size-body);
+  line-height: 1.65;
+}
+
+h1, h2, h3 {
+  font-family: var(--font-ui);
+  color: var(--forest-deep);
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+  text-wrap: balance;
+}
+
+h1 { font-size: var(--size-display); margin: 0 0 0.4em; }
+h2 { font-size: var(--size-heading); margin: 2.2rem 0 0.6rem; }
+h3 {
+  font-size: var(--size-body);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--ink-soft);
+  margin: 1.6rem 0 0.4rem;
+}
+
+p, li { max-width: var(--measure); }
+p { margin: 0 0 1rem; }
+
+a {
+  color: var(--accent);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.18em;
+}
+a:hover { color: var(--accent-strong); }
+
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+summary:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+
+img { max-width: 100%; height: auto; }
+
+code, kbd {
+  font-family: var(--font-mono);
+  font-size: 0.88em;
+}
+
+kbd {
+  background: var(--parchment-deep);
+  border: 1px solid var(--rule);
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  padding: 0.1em 0.42em;
+  white-space: nowrap;
+}
+
+hr {
+  border: 0;
+  border-top: 1px solid var(--rule);
+  margin: 2.5rem 0;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px; height: 1px;
+  margin: -1px; padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.skip-link {
+  position: absolute;
+  left: 0.5rem;
+  top: -4rem;
+  z-index: 100;
+  background: var(--forest-deep);
+  color: var(--parchment);
+  padding: 0.6rem 1rem;
+  border-radius: var(--radius);
+  font-family: var(--font-ui);
+}
+.skip-link:focus { top: 0.5rem; color: var(--parchment); }
+
+/* --------------------------------------------------------------------------
+   3. Layout
+   -------------------------------------------------------------------------- */
+
+.wrap {
+  width: min(100% - 2.5rem, 68rem);
+  margin-inline: auto;
+}
+
+.wrap--narrow { width: min(100% - 2.5rem, 46rem); }
+
+/* Top-of-page title block on interior pages. */
+.page-head { padding-block: 2.5rem 0; }
+
+main { display: block; }
+
+section { margin-block: 3.5rem; }
+
+/* --------------------------------------------------------------------------
+   4. Site header and navigation
+   -------------------------------------------------------------------------- */
+
+.site-header {
+  border-bottom: 1px solid var(--rule);
+  background: rgba(243, 234, 216, 0.92);
+  backdrop-filter: saturate(1.2) blur(6px);
+  position: sticky;
+  top: 0;
+  z-index: 50;
+}
+
+.site-header__inner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 1.5rem;
+  padding-block: 0.75rem;
+}
+
+.wordmark {
+  font-family: var(--font-ui);
+  font-weight: 700;
+  font-size: 1.02rem;
+  letter-spacing: 0.02em;
+  color: var(--forest-deep);
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  margin-right: auto;
+}
+.wordmark:hover { color: var(--accent-strong); }
+.wordmark svg { flex: none; }
+
+.site-nav ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 1.25rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  font-family: var(--font-ui);
+  font-size: var(--size-small);
+}
+.site-nav li { max-width: none; }
+
+.site-nav a {
+  color: var(--ink-soft);
+  text-decoration: none;
+  padding: 0.25rem 0;
+  border-bottom: 2px solid transparent;
+  display: inline-block;
+}
+.site-nav a:hover { color: var(--accent-strong); border-bottom-color: var(--rule); }
+.site-nav a[aria-current="page"] {
+  color: var(--forest-deep);
+  font-weight: 700;
+  border-bottom-color: var(--band-excellent);
+}
+
+/* --------------------------------------------------------------------------
+   5. Hero
+   -------------------------------------------------------------------------- */
+
+.hero {
+  padding-block: clamp(2.5rem, 6vw, 4.5rem) clamp(2rem, 5vw, 3.5rem);
+  border-bottom: 1px solid var(--rule);
+  background:
+    linear-gradient(180deg, rgba(76, 122, 74, 0.10), transparent 62%);
+}
+
+.hero__grid {
+  display: grid;
+  gap: clamp(1.5rem, 4vw, 3rem);
+  align-items: center;
+}
+
+@media (min-width: 52rem) {
+  .hero__grid { grid-template-columns: 1.05fr 0.95fr; }
+}
+
+.eyebrow {
+  font-family: var(--font-ui);
+  font-size: var(--size-small);
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin: 0 0 0.7rem;
+}
+
+.hero__tagline {
+  font-size: clamp(1.1rem, 0.95rem + 0.8vw, 1.35rem);
+  color: var(--ink-soft);
+  max-width: 30rem;
+}
+
+.hero__art {
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: var(--parchment-warm);
+  padding: 0.6rem;
+  box-shadow: var(--shadow-soft);
+}
+.hero__art svg { display: block; width: 100%; height: auto; border-radius: 3px; }
+
+.hero__caption {
+  font-family: var(--font-ui);
+  font-size: 0.8rem;
+  color: var(--ink-faint);
+  margin: 0.55rem 0 0;
+  text-align: center;
+  max-width: none;
+}
+
+/* --------------------------------------------------------------------------
+   6. Buttons
+   -------------------------------------------------------------------------- */
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem 1rem;
+  margin-top: 1.6rem;
+}
+
+.btn {
+  font-family: var(--font-ui);
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1.2;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.8rem 1.4rem;
+  border-radius: var(--radius);
+  border: 1px solid transparent;
+  text-decoration: none;
+  transition: transform 120ms ease, background-color 120ms ease;
+}
+.btn:hover { transform: translateY(-1px); }
+
+.btn--primary {
+  background: var(--accent);
+  color: #ffffff;
+}
+.btn--primary:hover { background: var(--accent-strong); color: #ffffff; }
+
+.btn--ghost {
+  background: transparent;
+  border-color: var(--forest-mid);
+  color: var(--forest-deep);
+}
+.btn--ghost:hover { background: rgba(76, 122, 74, 0.12); color: var(--forest-deep); }
+
+.actions__note {
+  font-family: var(--font-ui);
+  font-size: var(--size-small);
+  color: var(--ink-faint);
+  margin: 0;
+  max-width: 22rem;
+}
+
+/* --------------------------------------------------------------------------
+   7. Cards and grids
+   -------------------------------------------------------------------------- */
+
+.card-grid {
+  display: grid;
+  gap: 1.25rem;
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  list-style: none;
+  margin: 1.5rem 0 0;
+  padding: 0;
+}
+.card-grid > li { max-width: none; }
+
+.card {
+  height: 100%;
+  background: var(--parchment-warm);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  padding: 1.25rem 1.35rem;
+  box-shadow: var(--shadow-soft);
+}
+.card h3 { margin-top: 0; color: var(--forest-deep); }
+.card p:last-child { margin-bottom: 0; }
+.card p { max-width: none; }
+
+.card--link {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+  transition: transform 120ms ease, border-color 120ms ease;
+}
+.card--link:hover {
+  transform: translateY(-2px);
+  border-color: var(--band-excellent);
+  color: inherit;
+}
+.card--link .card__more {
+  font-family: var(--font-ui);
+  font-size: var(--size-small);
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.feature__icon {
+  display: block;
+  margin-bottom: 0.7rem;
+}
+
+/* --------------------------------------------------------------------------
+   8. Species grid (homepage + encyclopedia index)
+   -------------------------------------------------------------------------- */
+
+.species-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr));
+  list-style: none;
+  margin: 1.5rem 0 0;
+  padding: 0;
+}
+.species-grid > li { max-width: none; }
+
+.species-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  text-align: center;
+  text-decoration: none;
+  color: inherit;
+  background: var(--parchment-warm);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  padding: 0.85rem 0.7rem 1rem;
+  height: 100%;
+  transition: transform 120ms ease, border-color 120ms ease;
+}
+.species-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--band-excellent);
+  color: inherit;
+}
+
+.species-card img,
+.portrait {
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  border-radius: 4px;
+  background: var(--parchment);
+}
+
+.species-card img { width: 100%; max-width: 9rem; aspect-ratio: 1; }
+
+.species-card__name {
+  font-family: var(--font-ui);
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--forest-deep);
+}
+.species-card__meta {
+  font-family: var(--font-ui);
+  font-size: 0.78rem;
+  color: var(--ink-faint);
+  max-width: none;
+}
+
+/* --------------------------------------------------------------------------
+   9. Encyclopedia article
+   -------------------------------------------------------------------------- */
+
+.entry-header {
+  display: grid;
+  gap: 1.25rem;
+  align-items: start;
+  padding-block: 2rem 1.5rem;
+  border-bottom: 1px solid var(--rule);
+}
+
+@media (min-width: 40rem) {
+  .entry-header--with-art { grid-template-columns: 13rem 1fr; }
+}
+
+.entry-header .portrait {
+  width: 100%;
+  max-width: 13rem;
+  aspect-ratio: 1;
+  border: 1px solid var(--rule);
+  box-shadow: var(--shadow-soft);
+}
+
+.entry-header h1 { margin-bottom: 0.25rem; }
+
+.taxonomy {
+  font-style: italic;
+  color: var(--ink-soft);
+  margin: 0 0 0.75rem;
+}
+
+.entry-lede { font-size: 1.1rem; color: var(--ink-soft); }
+
+.kicker {
+  font-family: var(--font-ui);
+  font-size: var(--size-small);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin: 0 0 0.5rem;
+}
+
+.entry-body { padding-block: 1rem 2rem; }
+.entry-body h2:first-of-type { margin-top: 1.5rem; }
+
+.entry-body ul, .entry-body ol { padding-left: 1.15rem; }
+.entry-body li { margin-bottom: 0.35rem; }
+
+.entry-body blockquote {
+  margin: 1.5rem 0;
+  padding: 0.2rem 0 0.2rem 1.1rem;
+  border-left: 3px solid var(--grassland);
+  color: var(--ink-soft);
+}
+
+/* Stat strip rendered from the wiki "In-game" bullet */
+.statblock {
+  display: grid;
+  gap: 0.1rem 1.5rem;
+  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+  background: var(--parchment-warm);
+  border: 1px solid var(--rule);
+  border-left: 4px solid var(--band-excellent);
+  border-radius: var(--radius);
+  padding: 1rem 1.2rem;
+  margin: 1.25rem 0 1.75rem;
+  font-family: var(--font-ui);
+  font-size: var(--size-small);
+}
+.statblock div { display: flex; flex-direction: column; padding-block: 0.35rem; }
+.statblock dt, .statblock__label {
+  font-size: 0.72rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+.statblock dd, .statblock__value {
+  margin: 0;
+  font-weight: 700;
+  color: var(--forest-deep);
+}
+
+.related-list, .reference-list {
+  list-style: none;
+  padding: 0;
+  margin: 0.5rem 0 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 0.75rem;
+  font-family: var(--font-ui);
+  font-size: var(--size-small);
+}
+.related-list li, .reference-list li { max-width: none; }
+
+.related-list a {
+  display: inline-block;
+  text-decoration: none;
+  background: var(--parchment-warm);
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  padding: 0.28rem 0.85rem;
+}
+.related-list a:hover { border-color: var(--band-excellent); }
+
+.reference-list { flex-direction: column; gap: 0.35rem; overflow-wrap: anywhere; }
+.reference-list li::before { content: "↗ "; color: var(--ink-faint); }
+
+.entry-meta {
+  font-family: var(--font-ui);
+  font-size: 0.8rem;
+  color: var(--ink-faint);
+  border-top: 1px solid var(--rule);
+  padding-top: 1rem;
+  margin-top: 2rem;
+  max-width: none;
+}
+
+/* Badges */
+.badge {
+  display: inline-block;
+  font-family: var(--font-ui);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  border-radius: 999px;
+  padding: 0.2rem 0.7rem;
+  border: 1px solid transparent;
+  vertical-align: 0.15em;
+}
+.badge--species  { background: rgba(46, 139, 139, 0.16); color: #14504f; border-color: rgba(46, 139, 139, 0.4); }
+.badge--sub-area { background: rgba(122, 90, 58, 0.14);  color: #5c4128; border-color: rgba(122, 90, 58, 0.38); }
+.badge--glossary { background: rgba(168, 181, 96, 0.22); color: #4a5119; border-color: rgba(168, 181, 96, 0.55); }
+
+/* Habitat-quality band swatches (used in the user guide) */
+.band-key {
+  display: grid;
+  gap: 0.5rem;
+  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+  list-style: none;
+  padding: 0;
+  margin: 1rem 0 1.5rem;
+  font-family: var(--font-ui);
+  font-size: var(--size-small);
+}
+.band-key li {
+  max-width: none;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  background: var(--parchment-warm);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  padding: 0.5rem 0.75rem;
+}
+.band-key .swatch {
+  width: 1.1rem; height: 1.1rem;
+  border-radius: 3px;
+  border: 1px solid rgba(35, 48, 31, 0.25);
+  flex: none;
+}
+.swatch--poor      { background: var(--band-poor); }
+.swatch--fair      { background: var(--band-fair); }
+.swatch--good      { background: var(--band-good); }
+.swatch--excellent { background: var(--band-excellent); }
+
+/* --------------------------------------------------------------------------
+   10. Encyclopedia index: filter + search
+   -------------------------------------------------------------------------- */
+
+.index-tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1rem;
+  align-items: center;
+  margin: 1.5rem 0 0.5rem;
+  padding: 1rem 1.1rem;
+  background: var(--parchment-warm);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+}
+
+.index-tools label {
+  font-family: var(--font-ui);
+  font-size: var(--size-small);
+  font-weight: 700;
+  color: var(--ink-soft);
+}
+
+.index-tools input[type="search"] {
+  font: inherit;
+  font-family: var(--font-ui);
+  font-size: 0.95rem;
+  padding: 0.5rem 0.75rem;
+  min-width: 12rem;
+  flex: 1 1 14rem;
+  color: var(--ink);
+  background: var(--parchment);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+}
+
+.filter-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.filter-btn {
+  font-family: var(--font-ui);
+  font-size: var(--size-small);
+  font-weight: 700;
+  cursor: pointer;
+  background: var(--parchment);
+  border: 1px solid var(--rule);
+  color: var(--ink-soft);
+  border-radius: 999px;
+  padding: 0.35rem 0.9rem;
+}
+.filter-btn:hover { border-color: var(--band-excellent); }
+.filter-btn[aria-pressed="true"] {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #ffffff;
+}
+
+.no-results {
+  font-family: var(--font-ui);
+  color: var(--ink-soft);
+  padding: 1rem 0;
+}
+
+.entry-list {
+  list-style: none;
+  padding: 0;
+  margin: 1.25rem 0 0;
+  display: grid;
+  gap: 0.9rem;
+  grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr));
+}
+.entry-list > li { max-width: none; }
+
+.entry-list a {
+  display: flex;
+  gap: 0.85rem;
+  align-items: center;
+  height: 100%;
+  text-decoration: none;
+  color: inherit;
+  background: var(--parchment-warm);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  padding: 0.85rem 1rem;
+  transition: transform 120ms ease, border-color 120ms ease;
+}
+.entry-list a:hover {
+  transform: translateY(-2px);
+  border-color: var(--band-excellent);
+  color: inherit;
+}
+.entry-list img {
+  width: 3.5rem; height: 3.5rem;
+  flex: none;
+  border-radius: 4px;
+  border: 1px solid var(--rule);
+}
+.entry-list .entry-list__title {
+  font-family: var(--font-ui);
+  font-weight: 700;
+  color: var(--forest-deep);
+  display: block;
+}
+.entry-list .entry-list__blurb {
+  font-size: var(--size-small);
+  color: var(--ink-soft);
+  display: block;
+  max-width: none;
+}
+
+/* --------------------------------------------------------------------------
+   11. User guide
+   -------------------------------------------------------------------------- */
+
+.toc {
+  background: var(--parchment-warm);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  padding: 1.1rem 1.35rem;
+  margin: 1.75rem 0 2.5rem;
+}
+.toc h2 {
+  margin: 0 0 0.6rem;
+  font-size: 0.78rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+.toc ol {
+  margin: 0;
+  padding-left: 1.2rem;
+  font-family: var(--font-ui);
+  font-size: var(--size-small);
+}
+.toc li { margin-bottom: 0.3rem; max-width: none; }
+
+.guide-step {
+  scroll-margin-top: 5rem;
+  border-top: 1px solid var(--rule);
+  padding-top: 2rem;
+}
+.guide-step:first-of-type { border-top: 0; }
+
+.guide-step__number {
+  font-family: var(--font-ui);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent);
+  display: block;
+  margin-bottom: 0.2rem;
+}
+
+.callout {
+  background: var(--parchment-warm);
+  border: 1px solid var(--rule);
+  border-left: 4px solid var(--grassland);
+  border-radius: var(--radius);
+  padding: 1rem 1.2rem;
+  margin: 1.5rem 0;
+}
+.callout p:last-child { margin-bottom: 0; }
+.callout__title {
+  font-family: var(--font-ui);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  display: block;
+  margin-bottom: 0.35rem;
+}
+
+.key-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--font-ui);
+  font-size: var(--size-small);
+  margin: 1.25rem 0 1.75rem;
+}
+.key-table caption {
+  text-align: left;
+  color: var(--ink-faint);
+  font-size: 0.78rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding-bottom: 0.5rem;
+}
+.key-table th, .key-table td {
+  text-align: left;
+  padding: 0.55rem 0.8rem 0.55rem 0;
+  border-bottom: 1px solid var(--rule);
+  vertical-align: top;
+}
+.key-table thead th { color: var(--forest-deep); white-space: nowrap; }
+.key-table tbody th {
+  color: var(--forest-deep);
+  font-weight: 700;
+  padding-right: 1rem;
+}
+/* Row labels wrap rather than forcing horizontal scroll at 375 px. */
+@media (max-width: 30rem) {
+  .key-table th, .key-table td { padding-right: 0.5rem; }
+}
+
+/* --------------------------------------------------------------------------
+   12. Footer
+   -------------------------------------------------------------------------- */
+
+.site-footer {
+  border-top: 1px solid var(--rule);
+  background: var(--parchment-warm);
+  margin-top: 4rem;
+  padding-block: 2.25rem 2.75rem;
+  font-family: var(--font-ui);
+  font-size: var(--size-small);
+  color: var(--ink-soft);
+}
+.site-footer p { max-width: 40rem; }
+.site-footer__cols {
+  display: grid;
+  gap: 1.5rem 2.5rem;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+}
+.site-footer h2 {
+  font-size: 0.75rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  margin: 0 0 0.5rem;
+}
+.site-footer ul { list-style: none; margin: 0; padding: 0; }
+.site-footer li { margin-bottom: 0.3rem; max-width: none; }
+.site-footer__fine {
+  margin-top: 2rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--rule);
+  color: var(--ink-faint);
+  font-size: 0.82rem;
+}
+
+/* --------------------------------------------------------------------------
+   13. Print
+   -------------------------------------------------------------------------- */
+
+@media print {
+  .site-header, .site-footer, .index-tools, .actions { display: none; }
+  body { background: #fff; color: #000; }
+  a { text-decoration: none; color: #000; }
+}

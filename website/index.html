@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Wildlife Crossing — a cozy game about reconnecting a continent</title>
+<meta name="description" content="Wildlife Crossing is a cozy ecosystem simulation about ecological restoration. Build wildlife crossings along the Yellowstone to Yukon corridor and watch fragmented populations recover.">
+<meta name="theme-color" content="#f3ead8">
+<link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="assets/css/style.css">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Wildlife Crossing">
+<meta property="og:description" content="A cozy ecosystem simulation about reconnecting the Yellowstone to Yukon corridor, one crossing at a time.">
+<meta property="og:image" content="assets/img/hero-corridor.svg">
+</head>
+<body>
+
+<a class="skip-link" href="#main">Skip to content</a>
+
+<header class="site-header">
+  <div class="wrap site-header__inner">
+    <a class="wordmark" href="index.html">
+      <svg width="24" height="24" viewBox="0 0 64 64" aria-hidden="true" focusable="false">
+        <polygon points="32,6 51,17 51,39 32,50 13,39 13,17" fill="#4C7A4A"/>
+        <rect x="26" y="12" width="12" height="38" fill="#57544D"/>
+        <rect x="10" y="26" width="44" height="13" rx="5" fill="#3F6B41"/>
+      </svg>
+      Wildlife Crossing
+    </a>
+    <nav class="site-nav" aria-label="Main">
+      <ul>
+        <li><a href="index.html" aria-current="page">Home</a></li>
+        <li><a href="user-guide.html">User guide</a></li>
+        <li><a href="encyclopedia/index.html">Encyclopedia</a></li>
+        <li><a href="https://github.com/brenthumphries/wildlife-crossing">Source</a></li>
+      </ul>
+    </nav>
+  </div>
+</header>
+
+<main id="main">
+
+  <div class="hero">
+    <div class="wrap hero__grid">
+      <div>
+        <p class="eyebrow">Cozy ecosystem simulation</p>
+        <h1>Reconnect a continent, one crossing at a time.</h1>
+        <p class="hero__tagline">
+          A highway is a wall to a grizzly. Wildlife Crossing puts you in charge
+          of taking those walls down — across 1.3 million square kilometres of
+          mountain corridor, from Yellowstone to the Yukon.
+        </p>
+        <div class="actions">
+          <a class="btn btn--primary"
+             href="https://github.com/brenthumphries/wildlife-crossing/releases">
+            Download for Mac, Windows &amp; Linux
+          </a>
+          <a class="btn btn--ghost" href="user-guide.html">Read the user guide</a>
+        </div>
+        <p class="actions__note">
+          Free and open source. Single-player, offline, no account required.
+        </p>
+      </div>
+      <figure class="hero__art">
+        <img src="assets/img/hero-corridor.svg"
+             width="880" height="440"
+             alt="Hex-tile mountain valley split by a highway, with a vegetated wildlife overpass carrying animals safely across it">
+        <figcaption class="hero__caption">
+          One overpass. Two habitat patches that were separate a moment ago.
+        </figcaption>
+      </figure>
+    </div>
+  </div>
+
+  <div class="wrap">
+
+    <section aria-labelledby="what">
+      <h2 id="what">What is this game?</h2>
+      <p>
+        You coordinate a conservation initiative working along the real
+        <strong>Yellowstone to Yukon corridor</strong> — a chain of connected
+        mountain landscapes running from Wyoming to the Northwest Territories.
+        Roads, fences, and towns have cut that chain into pieces, and the animals
+        that need to move through it are stranded on either side.
+      </p>
+      <p>
+        Your job is to put it back together. Survey the land to find where
+        fragmentation is worst. Choose a road segment. Build a crossing. Then
+        watch what happens: animals find the route, populations that were
+        declining start to recover, donors notice, and the agencies and First
+        Nations partners who steward the next region start to trust you with it.
+      </p>
+      <p>
+        There is no way to lose. A crossing that attracts fewer animals than you
+        hoped is a puzzle, not a punishment — and the landscape keeps living
+        either way.
+      </p>
+    </section>
+
+    <section aria-labelledby="features">
+      <h2 id="features">What makes it tick</h2>
+      <ul class="card-grid">
+        <li>
+          <article class="card">
+            <svg class="feature__icon" width="30" height="30" viewBox="0 0 30 30" aria-hidden="true" focusable="false">
+              <polygon points="15,2 27,9 27,21 15,28 3,21 3,9" fill="#4C7A4A"/>
+              <polygon points="15,7 22,11 22,19 15,23 8,19 8,11" fill="#2E4A36"/>
+            </svg>
+            <h3>Connectivity is mechanical</h3>
+            <p>
+              Habitat is modelled as patches on a hex map, scored on terrain,
+              size, connection, and how much of the edge touches a road. A patch
+              below its species' viable size slowly declines — until a crossing
+              links it into a bigger network. Connectivity isn't a score you
+              admire; it's the thing that decides who survives.
+            </p>
+          </article>
+        </li>
+        <li>
+          <article class="card">
+            <svg class="feature__icon" width="30" height="30" viewBox="0 0 30 30" aria-hidden="true" focusable="false">
+              <circle cx="15" cy="15" r="12" fill="#D9A85C"/>
+              <path d="M15 3a12 12 0 0 1 0 24z" fill="#2E8B8B"/>
+            </svg>
+            <h3>Seasons change the answer</h3>
+            <p>
+              A year is four seasons and about an hour of play. Grizzlies
+              hibernate out of the simulation each winter; elk and pronghorn
+              migrate on a schedule; frozen rivers open routes that were closed.
+              An overpass finished the week before a migration season is worth far
+              more than the same overpass finished the week after.
+            </p>
+          </article>
+        </li>
+        <li>
+          <article class="card">
+            <svg class="feature__icon" width="30" height="30" viewBox="0 0 30 30" aria-hidden="true" focusable="false">
+              <path d="M15 26S4 19 4 11.5A6.5 6.5 0 0 1 15 7a6.5 6.5 0 0 1 11 4.5C26 19 15 26 15 26z" fill="#2E8B8B"/>
+            </svg>
+            <h3>Access is earned, not bought</h3>
+            <p>
+              Eleven of the twelve regions start closed. They open when the
+              agencies, ranching coalitions, territorial governments, and First
+              Nations partnerships who steward them come to trust your work —
+              measured by the crossings you build and the populations that
+              recover. Trust is never taken away.
+            </p>
+          </article>
+        </li>
+        <li>
+          <article class="card">
+            <svg class="feature__icon" width="30" height="30" viewBox="0 0 30 30" aria-hidden="true" focusable="false">
+              <rect x="3" y="6" width="24" height="18" rx="3" fill="#7A5A3A"/>
+              <rect x="7" y="10" width="16" height="2.5" fill="#F3EAD8"/>
+              <rect x="7" y="15" width="16" height="2.5" fill="#F3EAD8"/>
+              <rect x="7" y="20" width="10" height="2.5" fill="#F3EAD8"/>
+            </svg>
+            <h3>The ecology is real</h3>
+            <p>
+              Every species parameter traces back to published science. Pronghorn
+              refuse underpasses because they evolved to watch for predators
+              across open ground. Caribou need old growth because their winter
+              food is lichen that takes decades to grow. If the game and a nature
+              documentary disagree, the game is wrong.
+            </p>
+          </article>
+        </li>
+      </ul>
+    </section>
+
+    <section aria-labelledby="species">
+      <h2 id="species">Eight species at launch</h2>
+      <p>
+        Chosen for ecological accuracy in the corridor and for mechanical
+        variety — each one wants something different from you.
+      </p>
+      <ul class="species-grid">
+        <li><a class="species-card" href="encyclopedia/grizzly-bear.html">
+          <img src="assets/img/species/grizzly-bear.png" width="512" height="512" alt="Pixel-art portrait of a grizzly bear" loading="lazy">
+          <span class="species-card__name">Grizzly bear</span>
+          <span class="species-card__meta">Very large range · overpass</span>
+        </a></li>
+        <li><a class="species-card" href="encyclopedia/elk.html">
+          <img src="assets/img/species/elk.png" width="512" height="512" alt="Pixel-art portrait of an elk" loading="lazy">
+          <span class="species-card__name">Elk</span>
+          <span class="species-card__meta">Migratory · overpass</span>
+        </a></li>
+        <li><a class="species-card" href="encyclopedia/pronghorn.html">
+          <img src="assets/img/species/pronghorn.png" width="512" height="512" alt="Pixel-art portrait of a pronghorn" loading="lazy">
+          <span class="species-card__name">Pronghorn</span>
+          <span class="species-card__meta">Migratory · overpass only</span>
+        </a></li>
+        <li><a class="species-card" href="encyclopedia/mountain-caribou.html">
+          <img src="assets/img/species/mountain-caribou.png" width="512" height="512" alt="Pixel-art portrait of a mountain caribou" loading="lazy">
+          <span class="species-card__name">Mountain caribou</span>
+          <span class="species-card__meta">Endangered · corridor</span>
+        </a></li>
+        <li><a class="species-card" href="encyclopedia/wolverine.html">
+          <img src="assets/img/species/wolverine.png" width="512" height="512" alt="Pixel-art portrait of a wolverine" loading="lazy">
+          <span class="species-card__name">Wolverine</span>
+          <span class="species-card__meta">Alpine · corridor</span>
+        </a></li>
+        <li><a class="species-card" href="encyclopedia/gray-wolf.html">
+          <img src="assets/img/species/gray-wolf.png" width="512" height="512" alt="Pixel-art portrait of a gray wolf" loading="lazy">
+          <span class="species-card__name">Gray wolf</span>
+          <span class="species-card__meta">Generalist · underpass</span>
+        </a></li>
+        <li><a class="species-card" href="encyclopedia/canada-lynx.html">
+          <img src="assets/img/species/canada-lynx.png" width="512" height="512" alt="Pixel-art portrait of a Canada lynx" loading="lazy">
+          <span class="species-card__name">Canada lynx</span>
+          <span class="species-card__meta">Boreal specialist · underpass</span>
+        </a></li>
+        <li><a class="species-card" href="encyclopedia/bighorn-sheep.html">
+          <img src="assets/img/species/bighorn-sheep.png" width="512" height="512" alt="Pixel-art portrait of a bighorn sheep" loading="lazy">
+          <span class="species-card__name">Bighorn sheep</span>
+          <span class="species-card__meta">Cliff-dweller · overpass</span>
+        </a></li>
+      </ul>
+    </section>
+
+    <section aria-labelledby="corridor">
+      <h2 id="corridor">Twelve regions, one corridor</h2>
+      <p>
+        The map is the whole Yellowstone to Yukon corridor, divided into twelve
+        sub-areas. You start in the
+        <a href="encyclopedia/central-canadian-rockies.html">Central Canadian Rockies</a>
+        — Banff and the Bow Valley, where the world's most-studied wildlife
+        overpasses already prove the idea works. From there the corridor runs
+        south to
+        <a href="encyclopedia/greater-yellowstone.html">Greater Yellowstone</a>
+        and north to the
+        <a href="encyclopedia/greater-mackenzie-mountains.html">Greater Mackenzie Mountains</a>.
+      </p>
+      <p>
+        Linking those two ends with an unbroken chain of connected habitat is the
+        capstone <strong>Continental Connection</strong> milestone. Reaching it
+        doesn't end the game — nothing does.
+      </p>
+      <ul class="card-grid">
+        <li><a class="card card--link" href="encyclopedia/index.html">
+          <h3>Encyclopedia</h3>
+          <p>Twenty-four entries on the species, regions, and mechanics — each one
+             explaining both how it works in-game and the real science behind it.</p>
+          <p class="card__more">Browse all entries →</p>
+        </a></li>
+        <li><a class="card card--link" href="user-guide.html">
+          <h3>User guide</h3>
+          <p>Your first hour, step by step: reading the map, picking a segment,
+             building a crossing, and knowing whether it worked.</p>
+          <p class="card__more">Start playing →</p>
+        </a></li>
+      </ul>
+    </section>
+
+    <section aria-labelledby="respect">
+      <h2 id="respect">A note on the land</h2>
+      <p>
+        The Yellowstone to Yukon corridor crosses the traditional territories of
+        more than seventy-five Indigenous peoples. The partnerships you work with
+        in-game are fictional, created to honour rather than represent real
+        Nations, and the narrative content is developed with cultural-advisor
+        review. Consent in this game is something you earn, never something you
+        buy or bypass — because that is how the real work goes.
+      </p>
+    </section>
+
+  </div>
+
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <div class="site-footer__cols">
+      <div>
+        <h2>Wildlife Crossing</h2>
+        <p>
+          A cozy ecosystem simulation built in Godot 4. Desktop, single-player,
+          offline.
+        </p>
+      </div>
+      <div>
+        <h2>Pages</h2>
+        <ul>
+          <li><a href="user-guide.html">User guide</a></li>
+          <li><a href="encyclopedia/index.html">Encyclopedia</a></li>
+          <li><a href="https://github.com/brenthumphries/wildlife-crossing/releases">Downloads</a></li>
+        </ul>
+      </div>
+      <div>
+        <h2>Elsewhere</h2>
+        <ul>
+          <li><a href="https://github.com/brenthumphries/wildlife-crossing">Source on GitHub</a></li>
+          <li><a href="https://y2y.net">Yellowstone to Yukon Conservation Initiative</a></li>
+        </ul>
+      </div>
+    </div>
+    <p class="site-footer__fine">
+      Wildlife Crossing is an independent game and is not affiliated with, or
+      endorsed by, the Yellowstone to Yukon Conservation Initiative or any agency
+      depicted. Governing bodies and partnerships in the game are fictional.
+    </p>
+  </div>
+</footer>
+
+</body>
+</html>

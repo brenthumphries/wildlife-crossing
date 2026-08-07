@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>User guide — Wildlife Crossing</title>
+<meta name="description" content="How to play Wildlife Crossing: getting oriented, reading habitat, choosing a segment, building your first overpass, and using the seasons to your advantage.">
+<meta name="theme-color" content="#f3ead8">
+<link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body>
+
+<a class="skip-link" href="#main">Skip to content</a>
+
+<header class="site-header">
+  <div class="wrap site-header__inner">
+    <a class="wordmark" href="index.html">
+      <svg width="24" height="24" viewBox="0 0 64 64" aria-hidden="true" focusable="false">
+        <polygon points="32,6 51,17 51,39 32,50 13,39 13,17" fill="#4C7A4A"/>
+        <rect x="26" y="12" width="12" height="38" fill="#57544D"/>
+        <rect x="10" y="26" width="44" height="13" rx="5" fill="#3F6B41"/>
+      </svg>
+      Wildlife Crossing
+    </a>
+    <nav class="site-nav" aria-label="Main">
+      <ul>
+        <li><a href="index.html">Home</a></li>
+        <li><a href="user-guide.html" aria-current="page">User guide</a></li>
+        <li><a href="encyclopedia/index.html">Encyclopedia</a></li>
+        <li><a href="https://github.com/brenthumphries/wildlife-crossing">Source</a></li>
+      </ul>
+    </nav>
+  </div>
+</header>
+
+<main id="main" class="wrap wrap--narrow">
+
+  <header class="page-head">
+    <p class="kicker">User guide</p>
+    <h1>Your first hour</h1>
+    <p class="entry-lede">
+      You've just launched the game and you're looking at a valley. This guide
+      takes you from there to your first working overpass, and then to the habit
+      of mind that makes the rest of the corridor click.
+    </p>
+  </header>
+
+  <nav class="toc" aria-labelledby="toc-heading">
+    <h2 id="toc-heading">On this page</h2>
+    <ol>
+      <li><a href="#getting-oriented">Getting oriented</a></li>
+      <li><a href="#reading-the-land">Reading the land</a></li>
+      <li><a href="#species-needs">What the animals need</a></li>
+      <li><a href="#building">Choosing a segment and building</a></li>
+      <li><a href="#seasons">Seasons and the passage of time</a></li>
+      <li><a href="#advanced">Tips and advanced play</a></li>
+    </ol>
+  </nav>
+
+  <section class="guide-step" id="getting-oriented">
+    <span class="guide-step__number">Step one</span>
+    <h2>Getting oriented</h2>
+
+    <p>
+      You begin in the <a href="encyclopedia/central-canadian-rockies.html">Central
+      Canadian Rockies</a> — Banff, Jasper, and the Bow Valley. It's the only
+      region open at the start, and it's the right place to learn: the real
+      wildlife overpasses along the Trans-Canada Highway here are the
+      most-studied in the world, and they work.
+    </p>
+
+    <p>The heads-up display keeps four things in the corners and nothing over the
+      middle of the map:</p>
+
+    <table class="key-table">
+      <caption>What's on screen</caption>
+      <tbody>
+        <tr>
+          <th scope="row">Budget</th>
+          <td>Top left. Your balance, plus the last donation you received. You
+            start with <strong>50,000</strong>.</td>
+        </tr>
+        <tr>
+          <th scope="row">Season calendar</th>
+          <td>Top right. Current season, year, and day, with a four-segment ring
+            showing how far through the year you are.</td>
+        </tr>
+        <tr>
+          <th scope="row">Build toolbar</th>
+          <td>Bottom left. <em>Add crossing</em>, <em>Inspect</em>, and
+            <em>Info</em>.</td>
+        </tr>
+        <tr>
+          <th scope="row">Milestone track</th>
+          <td>Bottom right. A compact "Corridor <em>n</em>/12" counter. Click it
+            for the full list.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3>Controls worth knowing now</h3>
+
+    <table class="key-table">
+      <caption>Core input</caption>
+      <tbody>
+        <tr><th scope="row"><kbd>Space</kbd></th><td>Pause and resume.</td></tr>
+        <tr><th scope="row"><kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd></th><td>Set speed to 1×, 2×, or 4×.</td></tr>
+        <tr><th scope="row"><kbd>Esc</kbd></th><td>Back out of whatever you're in. In selection mode it cancels the whole thing without committing anything.</td></tr>
+        <tr><th scope="row">Scroll / <kbd>+</kbd> <kbd>−</kbd></th><td>Zoom continuously. There are no separate map screens — you just zoom in.</td></tr>
+        <tr><th scope="row">Drag, arrows, screen edge</th><td>Pan. Panning never gets blocked, even with a panel open.</td></tr>
+      </tbody>
+    </table>
+
+    <div class="callout">
+      <span class="callout__title">Pause is free</span>
+      <p>
+        Everything works while paused — building, buying information, opening
+        panels. The game never punishes you for stopping to think, and opening a
+        panel won't secretly unpause you.
+      </p>
+    </div>
+  </section>
+
+  <section class="guide-step" id="reading-the-land">
+    <span class="guide-step__number">Step two</span>
+    <h2>Reading the land</h2>
+
+    <p>
+      You don't place habitat in Wildlife Crossing. The habitat is already
+      there — forest, alpine meadow, grassland, wetland, cliffs — and it's been
+      cut into pieces by roads, fences, and towns. Your job is to read those
+      pieces and work out which ones are worth reconnecting.
+    </p>
+
+    <p>
+      A contiguous run of compatible terrain is a
+      <a href="encyclopedia/patch.html">patch</a>. Click one with the
+      <em>Inspect</em> tool and you'll get a habitat-quality band. Quality comes
+      from four things: how suitable the terrain is, how big the patch is, how
+      well it connects to other patches, and how much of its perimeter is pressed
+      up against a road or an urban zone.
+    </p>
+
+    <ul class="band-key">
+      <li><span class="swatch swatch--poor"></span> Poor</li>
+      <li><span class="swatch swatch--fair"></span> Fair</li>
+      <li><span class="swatch swatch--good"></span> Good</li>
+      <li><span class="swatch swatch--excellent"></span> Excellent</li>
+    </ul>
+
+    <p>
+      The terrain map is never hidden — it's real geography, and hiding it would
+      defeat the point. What's hidden is the <em>living</em> layer. Until you buy
+      information, quality shows only as those coarse bands, populations read
+      "unknown," and the places animals die trying to cross are invisible.
+    </p>
+
+    <h3>Buying information</h3>
+
+    <p>
+      The <em>Info</em> tool sells four products. Each purchase is permanent, and
+      each one is worth it only if it would change what you'd build.
+    </p>
+
+    <table class="key-table">
+      <caption>Information products</caption>
+      <thead>
+        <tr><th scope="col">Product</th><th scope="col">Cost</th><th scope="col">Reveals</th></tr>
+      </thead>
+      <tbody>
+        <tr><th scope="row">Habitat assessment</th><td>1,000 / area</td><td>Numeric habitat quality and patch sizes</td></tr>
+        <tr><th scope="row">Population survey</th><td>2,000 / area</td><td>Which species are present, their counts and trends</td></tr>
+        <tr><th scope="row">Movement corridor study</th><td>3,000 / area</td><td>The routes animals attempt, and where they're dying</td></tr>
+        <tr><th scope="row">Community liaison briefing</th><td>1,500 / entity</td><td>Exactly what one governing body weights when deciding to trust you</td></tr>
+      </tbody>
+    </table>
+
+    <div class="callout">
+      <span class="callout__title">Worth buying first</span>
+      <p>
+        In a region you've never worked in, the <strong>population survey</strong>
+        usually earns its 2,000 back fastest. An endangered species you didn't
+        know was there changes your whole plan; a habitat number you can already
+        guess from the colour band doesn't.
+      </p>
+    </div>
+  </section>
+
+  <section class="guide-step" id="species-needs">
+    <span class="guide-step__number">Step three</span>
+    <h2>What the animals need</h2>
+
+    <p>
+      Eight species share the corridor, and they don't want the same things.
+      Each has a habitat set, a range, a preferred kind of crossing, and a
+      seasonal rhythm. Three of those matter for almost every decision you make.
+    </p>
+
+    <h3>Range and viable size</h3>
+    <p>
+      Every species needs a minimum amount of connected, suitable habitat before
+      it can hold a population. Below that threshold, numbers drift downward —
+      slowly, without drama, but they drift. A
+      <a href="encyclopedia/grizzly-bear.html">grizzly</a> needs an enormous
+      network; a <a href="encyclopedia/canada-lynx.html">lynx</a> needs a
+      moderate one. This is why a crossing that merges two medium patches can
+      flip a species from declining to recovering in one move.
+    </p>
+
+    <h3>Crossing preference</h3>
+    <p>
+      Animals are likelier to use their preferred kind of crossing, but they're
+      never strictly forbidden from the others — with one exception.
+      <a href="encyclopedia/pronghorn.html">Pronghorn</a> will not go under
+      things. They evolved on open ground where seeing a predator coming is
+      everything, and no amount of budget will talk them into a tunnel.
+    </p>
+    <p>
+      In version 1 the overpass is the only crossing you can build. That's
+      deliberate: species that prefer underpasses
+      (<a href="encyclopedia/gray-wolf.html">wolves</a>, lynx) or broad corridors
+      (<a href="encyclopedia/mountain-caribou.html">caribou</a>,
+      <a href="encyclopedia/wolverine.html">wolverines</a>) are harder to serve
+      well right now, and will get easier when those crossing types ship.
+    </p>
+
+    <h3>Seasonal pattern</h3>
+    <p>
+      Some species migrate, some hibernate, some are present all year. Grizzlies
+      leave the simulation entirely each winter. Elk and pronghorn move on a
+      schedule and push hard against barriers when they do.
+    </p>
+
+    <div class="callout">
+      <span class="callout__title">Mortality is the quiet cost</span>
+      <p>
+        An animal stepping onto a hazardous tile — a road, an unfenced highway —
+        rolls against that terrain's mortality rate, and can die there. Crossing
+        on infrastructure you built carries no risk at all. Every crossing you
+        finish is a route where that roll stops happening.
+      </p>
+    </div>
+  </section>
+
+  <section class="guide-step" id="building">
+    <span class="guide-step__number">Step four</span>
+    <h2>Choosing a segment and building</h2>
+
+    <p>
+      Click <em>Add crossing</em> in the toolbar. This puts you in selection mode.
+    </p>
+
+    <ol>
+      <li>
+        <strong>Zoom in.</strong> Keep scrolling until the hexes are large enough
+        for segment detail to switch on. You'll know it happened because the
+        <strong>connectivity overlay</strong> appears — a soft orange-to-teal
+        wash where orange is badly fragmented and teal is well connected. The
+        three worst segments in view pulse gently.
+      </li>
+      <li>
+        <strong>Hover a road.</strong> Only impassable or hazardous segments can
+        be selected. Hovering plain terrain does nothing; hovering a valid segment
+        highlights it.
+      </li>
+      <li>
+        <strong>Click it.</strong> A confirmation panel opens with the segment's
+        name, your current budget, and a one-line note about what it would do for
+        connectivity. Clicking outside the panel, or pressing <kbd>Esc</kbd>,
+        cancels without spending anything.
+      </li>
+      <li>
+        <strong>Build.</strong> Confirming takes you to construction. An overpass
+        costs <strong>5,000 per tile</strong> of road it spans, so a three-tile
+        highway crossing costs 15,000.
+      </li>
+    </ol>
+
+    <div class="callout">
+      <span class="callout__title">A partial span is worth nothing</span>
+      <p>
+        The crossing has to cover <em>every</em> dangerous tile in the segment.
+        Cover four tiles of a five-tile highway and you have not built a route —
+        you've built an expensive shelf. Check the span before you confirm.
+      </p>
+    </div>
+
+    <h3>Knowing whether it worked</h3>
+    <p>
+      Within a few in-game days, animals will start pathfinding through the new
+      route — you'll see the crossing cue fire and a "+<em>n</em> crossed safely"
+      count flash on screen. Over the following weeks the patches on either side
+      recompute upward, populations stop declining, and the first donations tied
+      to that crossing land in your budget.
+    </p>
+    <p>
+      Donations arrive monthly. You always get a base grant of 1,000, plus income
+      for each crossing based on how many animals used it, how threatened those
+      species are (common ×1, vulnerable ×2, endangered ×3), and how fragmented
+      the link was before you fixed it. Recovery milestones pay one-time bonuses
+      on top.
+    </p>
+    <p>
+      That formula is the whole design argument in one line: <strong>building
+      thoughtfully pays measurably better than building randomly.</strong>
+    </p>
+
+    <div class="callout">
+      <span class="callout__title">You cannot get stuck</span>
+      <p>
+        If your budget ever falls below the cheapest thing you could do, a small
+        community fundraising trickle of 500 a month kicks in until you're moving
+        again. Running low is a squeeze, not a dead end.
+      </p>
+    </div>
+  </section>
+
+  <section class="guide-step" id="seasons">
+    <span class="guide-step__number">Step five</span>
+    <h2>Seasons and the passage of time</h2>
+
+    <p>
+      One season is fifteen minutes at 1× speed, so an in-game day passes in about
+      ten seconds and a full year takes an hour. The season ring in the top right
+      is there so you can see what's coming.
+    </p>
+
+    <p>Seasons change three things:</p>
+    <ul>
+      <li><strong>Who's present.</strong> Migratory species appear in some patches
+        only at certain times of year; hibernating species vanish entirely.</li>
+      <li><strong>How badly they want to move.</strong> During a migration season,
+        animals push much harder against barriers — and use new crossings far
+        more.</li>
+      <li><strong>What the terrain does.</strong> Rivers freeze, wetlands flood.
+        Routes open and close.</li>
+    </ul>
+
+    <p>
+      The practical consequence is simple: <strong>finish crossings before
+      migration seasons, not during them.</strong> The same overpass on the same
+      segment can earn dramatically different donations depending on which side
+      of the season change it opens.
+    </p>
+  </section>
+
+  <section class="guide-step" id="advanced">
+    <span class="guide-step__number">Step six</span>
+    <h2>Tips and advanced play</h2>
+
+    <h3>Chase the pinch points, not the pretty places</h3>
+    <p>
+      The most valuable crossing is rarely in the most beautiful patch. It's at
+      the narrowest, most degraded gap between two patches that are each nearly
+      viable on their own. The connectivity overlay is telling you exactly this —
+      the orange is where the money is.
+    </p>
+
+    <h3>Merge, don't decorate</h3>
+    <p>
+      A crossing that links two patches into one network is worth more than two
+      crossings that each improve a patch already doing fine. Ask "what does this
+      join?" before "what does this improve?"
+    </p>
+
+    <h3>Read the entity before you court it</h3>
+    <p>
+      The twelve regions are stewarded by nine different governing bodies, and
+      they don't measure you the same way. Transport authorities count completed
+      infrastructure. Federal land agencies care about crossing usage and reduced
+      road mortality. Territorial governments want sustained stewardship over
+      time. First Nations partnerships weigh demonstrated ecological outcomes and
+      the respect you've shown. A 1,500 liaison briefing tells you which is which.
+    </p>
+    <p>
+      Progress shows as four stages — <strong>Introduced → Engaged → Trusted →
+      Partnered</strong> — with the entity's top three priorities listed and
+      tracked. Reaching the threshold unlocks their region and pays a one-time
+      bonus. Trust is never revoked; neglecting an entity only slows how fast new
+      trust accrues elsewhere.
+    </p>
+    <p>
+      The <a href="encyclopedia/crown-of-the-continent.html">Crown of the
+      Continent</a> is designed to be your first unlock — a deliberately low
+      threshold that introduces the partnership mechanic early.
+    </p>
+
+    <h3>Play the long game</h3>
+    <p>
+      Per-region milestones mark your first crossing, all priority segments
+      addressed, and all resident species stable. The capstone —
+      <strong>Continental Connection</strong> — is an unbroken chain of connected
+      habitat from
+      <a href="encyclopedia/greater-yellowstone.html">Greater Yellowstone</a> to
+      the <a href="encyclopedia/greater-mackenzie-mountains.html">Greater
+      Mackenzie Mountains</a>. It plays a celebration and then the game carries
+      on. Nothing is locked behind it.
+    </p>
+
+    <div class="callout">
+      <span class="callout__title">Where to go next</span>
+      <p>
+        The <a href="encyclopedia/index.html">encyclopedia</a> has an entry for
+        every species, region, and mechanic — including why each number in the
+        simulation is what it is.
+      </p>
+    </div>
+  </section>
+
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <div class="site-footer__cols">
+      <div>
+        <h2>Wildlife Crossing</h2>
+        <p>A cozy ecosystem simulation built in Godot 4. Desktop, single-player, offline.</p>
+      </div>
+      <div>
+        <h2>Pages</h2>
+        <ul>
+          <li><a href="index.html">Home</a></li>
+          <li><a href="encyclopedia/index.html">Encyclopedia</a></li>
+          <li><a href="https://github.com/brenthumphries/wildlife-crossing/releases">Downloads</a></li>
+        </ul>
+      </div>
+      <div>
+        <h2>Elsewhere</h2>
+        <ul>
+          <li><a href="https://github.com/brenthumphries/wildlife-crossing">Source on GitHub</a></li>
+          <li><a href="https://y2y.net">Yellowstone to Yukon Conservation Initiative</a></li>
+        </ul>
+      </div>
+    </div>
+    <p class="site-footer__fine">
+      Wildlife Crossing is an independent game and is not affiliated with, or
+      endorsed by, the Yellowstone to Yukon Conservation Initiative or any agency
+      depicted. Governing bodies and partnerships in the game are fictional.
+    </p>
+  </div>
+</footer>
+
+</body>
+</html>
