@@ -70,6 +70,20 @@ hazards, and cross safely over a completed overpass with legible feedback.
 > flat-colour stand-in, not an Aseprite export; real art is still owed.
 > Suite: 18 scripts / 144 tests / 2,799 asserts, all green (was 134/2,779).
 
+> **Decision logged (2026-08-06): both Phase 1 P1 items — species-preference
+> weighting and the crossing usage counter — are deferred past v0.1.0.** Swept
+> into the same scope call as build-review [[2026-08-04-next-build]] B2 because
+> only the first of the two had ever been recorded as a deferral, leaving the
+> usage counter (`:33`) silently unbuilt across five consecutive reviews.
+> Re-verified 2026-08-06: `preferred_crossing_type`, `usage_count` and
+> `times_used` all return zero hits in `game/scripts/`. Neither appears in
+> Phase 1's exit criteria (`:45-56`), both are marked P1 in the Implements list
+> (`:33`), and neither is observable in a build whose only playable crossing is
+> the tutorial overpass — a usage counter over one crossing counts to one.
+> Revisit when Phase 3's economy gives crossings a cost worth justifying, since
+> "how much is this structure being used" is an economic question before it is
+> an ecological one.
+
 ---
 
 ## Phase 2 — Location selection + sub-areas
@@ -120,6 +134,66 @@ zoom threshold measured flat-to-flat).
 > sub-area load path ahead of Phase 5's unlock system would let a player reach
 > content with no unlock story behind it. Superseded/replaces the sub-area load
 > path option previously carried as build-review B5.
+
+> **Decision logged (2026-08-06): the world-map screen ships look-only in
+> v0.1.0. The in-map segment renderer and hover highlight are deferred to
+> Phase 2 completion.** This resolves build-review [[2026-08-04-next-build]] B2
+> — the scope call on C1–C4 — which existed because those four items went quiet
+> after the 07-28 review rather than being closed or deferred on the record.
+>
+> **Deferred, with reasons:**
+>
+> - **C1, in-map segment renderer → Phase 2 completion (post-v0.1.0).** Not
+>   named anywhere in this roadmap — neither in Phase 2's Implements list
+>   (`:80-92`) nor its exit criteria (`:98-108`). It entered the build reviews
+>   as the fix for the world-map click defect, and that defect is being closed
+>   a cheaper way (below), so the renderer is no longer load-bearing for the
+>   first build. It remains the prerequisite for C2 and for QA'ing the
+>   locked-desaturation and overlay treatments on screen.
+> - **C2, hover highlight → Phase 2 completion (post-v0.1.0).** A P0
+>   *requirement* in this phase's Implements list (`:85`) and a named P0 test in
+>   [test-plan](test-plan.md):172, but **not** one of the five exit criteria at
+>   `:98-108`, so Phase 2 can be judged met without it. Deferred on dependency
+>   rather than on priority: it needs C1's in-map render to have something to
+>   hover over. Note for whoever picks it up — the build-mode tile hover added
+>   by B4 (`world_renderer.gd:20,45-47`) is a *different* feature, and mistaking
+>   the two is why this looked closed for a fortnight.
+>
+> **Replacing C1 for v0.1.0: neutralize the blind click (S).**
+> `game/scenes/ui/WorldSelectMap.tscn` sets `mouse_filter = 2` (IGNORE), so
+> clicks on the world-select screen fall through `main.gd:101` to
+> `_try_select_segment()` (`:127`), which resolves the cursor against the
+> **world** camera (`:154`) beneath an opaque backdrop
+> (`world_select_controller.gd:33,183`). The player sees a placeholder card
+> grid and picks a hex they cannot see — usually nothing, sometimes a real Bow
+> Valley segment they never aimed at, with the confirm panel opening on it.
+> Setting `mouse_filter` to STOP makes world-select consume its own clicks: the
+> map screen is look-only, `B` remains the placement path, and the defect
+> cannot fire. This is a stopgap with an expiry — it is superseded by C1, and
+> C1's acceptance still requires that the drawn map and `_pick_segment_at_mouse()`
+> agree on a coordinate space. Needs a regression test asserting that a click
+> in world-select mode selects no segment.
+>
+> **Shipping in v0.1.0:**
+>
+> - **C3, written visual + audio QA pass (S).** Owed since 2026-07-08. Folded
+>   into the B1 windowed launch, since that launch is happening anyway. Records
+>   each Phase 2 visual criterion observed on screen, the crossing cue seen
+>   *and* heard once per coalesced window, the HUD message line legible, and —
+>   new — the Godot version installed locally, which no log has ever captured.
+>   Scoped down by this decision: the in-map criteria C1 would have made
+>   QA-able are out, so C3 covers the HUD, the cue, and the world view.
+> - **C4, tutorial measurement (S).** Independent of everything above and its
+>   old dependency (span geometry) closed on 07-29. Measures mortality on
+>   `s7_trans_canada_bow_a` before and after a valid span, lands the numbers in
+>   [[../obsidian-vault/design/detour-cost-question]] and moves that note off
+>   `draft`. Kept in scope because it is the one item that could change what
+>   v0.1.0 *is* rather than how it ships: if the tutorial does not demonstrate
+>   the mechanic, that is worth knowing before a public release, not after.
+>
+> **Consequence for the release note (build-review B3):** `v0.1.0` states this
+> scope next to the Bow-Valley-only scope above — the world map is a look-only
+> screen this release, and crossings are placed from the tutorial via `B`.
 
 ---
 
