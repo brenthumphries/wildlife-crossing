@@ -158,3 +158,44 @@ func test_focus_change_emits_and_ignores_unknown_ids() -> void:
 	assert_has(_events, "focused:8")
 	_c.set_focused_sub_area(99)
 	assert_eq(_c.focused_sub_area_id, 8, "unknown sub-area ids are ignored")
+
+# --- look-only map screen (roadmap Phase 2, decision logged 2026-08-06) ---
+#
+# Regression cover for the blind world-map click found by the 2026-08-04 build
+# review. The scene used to be MOUSE_FILTER_IGNORE, so clicks fell through to
+# Main._try_select_segment() and resolved against the world camera hidden under
+# the opaque card grid. These three tests are the guard on that staying fixed.
+
+func _mouse_button(button: int) -> InputEventMouseButton:
+	var ev := InputEventMouseButton.new()
+	ev.button_index = button
+	ev.pressed = true
+	return ev
+
+func test_world_select_map_scene_stops_mouse_events() -> void:
+	var scene: PackedScene = load("res://scenes/ui/WorldSelectMap.tscn")
+	assert_not_null(scene, "WorldSelectMap.tscn loads")
+	var node: Control = scene.instantiate()
+	assert_eq(node.mouse_filter, Control.MOUSE_FILTER_STOP,
+			"the map screen must consume its own clicks — MOUSE_FILTER_IGNORE " \
+			+ "lets them fall through to the world camera underneath")
+	node.free()
+
+func test_left_click_in_segment_mode_selects_nothing() -> void:
+	_c.enter_selection_mode()
+	_zoom_to_px(ACTIVATE_PX)
+	assert_eq(_c.mode, WorldSelectController.Mode.SEGMENT, "precondition: segment mode")
+	var before: int = _events.size()
+	_c._gui_input(_mouse_button(MOUSE_BUTTON_LEFT))
+	assert_eq(_c.mode, WorldSelectController.Mode.SEGMENT, "a click does not change mode")
+	assert_eq(_events.size(), before,
+			"a click on the look-only map emits nothing — no segment is picked")
+
+func test_scroll_wheel_still_zooms_through_gui_input() -> void:
+	_c.enter_selection_mode()
+	var start: float = _c.zoom
+	_c._gui_input(_mouse_button(MOUSE_BUTTON_WHEEL_UP))
+	assert_gt(_c.zoom, start, "wheel-up still zooms in after the mouse_filter change")
+	var zoomed: float = _c.zoom
+	_c._gui_input(_mouse_button(MOUSE_BUTTON_WHEEL_DOWN))
+	assert_lt(_c.zoom, zoomed, "wheel-down still zooms out")

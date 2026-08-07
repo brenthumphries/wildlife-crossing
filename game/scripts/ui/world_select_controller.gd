@@ -165,14 +165,40 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	if event is InputEventKey and event.pressed and event.keycode == KEY_ESCAPE:
 		exit_selection_mode()
+		if is_inside_tree():
+			accept_event()
+
+## Mouse handling lives here rather than in `_unhandled_input` because
+## `WorldSelectMap.tscn` sets `mouse_filter = MOUSE_FILTER_STOP`: while this
+## screen is visible it consumes its own mouse events, so they never reach
+## `Main._unhandled_input()`.
+##
+## That is the point. Roadmap Phase 2, decision logged 2026-08-06: the world map
+## ships **look-only** in v0.1.0. Previously this Control was
+## `MOUSE_FILTER_IGNORE`, so a click on the opaque card grid fell through to
+## `Main._try_select_segment()`, which resolves the cursor against the *world*
+## camera underneath (`main.gd:154`) — the player picked a hex they could not
+## see, and in segment mode that could open the confirm panel on a Bow Valley
+## segment they never aimed at. Stopping the event is a stopgap; the real fix is
+## the in-map segment renderer (build-review C1, deferred), after which the drawn
+## map and the pick path share a coordinate space and this can route clicks again.
+##
+## Scroll-to-zoom is preserved — it is a Phase 2 exit criterion — and every other
+## mouse button is swallowed. The controller is hidden while `Mode.INACTIVE`, and
+## a hidden Control is excluded from mouse picking, so normal play (build-mode
+## tile clicks, segment picking from the tutorial) is unaffected.
+func _gui_input(event: InputEvent) -> void:
+	if mode == Mode.INACTIVE:
+		return
+	if not (event is InputEventMouseButton and event.pressed):
+		return
+	if event.button_index == MOUSE_BUTTON_WHEEL_UP:
+		zoom_in()
+	elif event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
+		zoom_out()
+	# Every press, wheel or not, stops here — nothing falls through to the world.
+	if is_inside_tree():
 		accept_event()
-	elif event is InputEventMouseButton and event.pressed:
-		if event.button_index == MOUSE_BUTTON_WHEEL_UP:
-			zoom_in()
-			accept_event()
-		elif event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
-			zoom_out()
-			accept_event()
 
 # --- placeholder rendering (stand-in until real map art / B2 overlay land) ---
 

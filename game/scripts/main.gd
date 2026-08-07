@@ -125,6 +125,14 @@ const SEGMENT_PICK_RADIUS := 1
 ## Segment-mode click: pick the segment under the cursor and open the
 ## confirmation panel. Real per-segment hit-testing over the loaded sub-area's
 ## authored map — the click maps to a tile, the tile resolves to a segment.
+##
+## **Unreachable from the map screen in v0.1.0.** Roadmap Phase 2, decision
+## logged 2026-08-06: the world map ships look-only, and `WorldSelectMap.tscn`
+## now stops mouse events (see `WorldSelectController._gui_input`), so this is
+## only reached once the in-map segment renderer lands (build-review C1). Until
+## then `B` is the placement path. Kept wired rather than deleted because the
+## logic is correct and covered — what was wrong was the coordinate space it
+## picked in, not the picking.
 func _try_select_segment() -> void:
 	if _world_select == null or _world_select.mode != WorldSelectController.Mode.SEGMENT:
 		return
