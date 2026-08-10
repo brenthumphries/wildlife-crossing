@@ -132,6 +132,25 @@ jobs:
           bash tools/smoke_boot.sh \
             ./builds/wildlife-crossing-linux-x86_64/wildlife-crossing.x86_64 20
 
+      # Godot's export templates statically link the engine into every binary,
+      # and Godot is MIT — its notice has to travel with every copy we ship.
+      # See ADR 0017. Runs with `always()` and tolerates missing directories so
+      # a failed preset cannot strip the notices off the presets that worked.
+      #
+      # Known gap: the macOS preset exports a .zip, so these land beside the
+      # archive rather than inside the .app bundle. The durable fix is an
+      # in-game credits screen built from Engine.get_copyright_info(); until
+      # then, don't repackage the macOS build without carrying these along.
+      - name: Bundle license notices with each build
+        if: always()
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          for dir in builds/*/; do
+            cp LICENSE THIRD-PARTY-NOTICES.md "$dir"
+            echo "notices -> $dir"
+          done
+
       # Upload whatever exported, even if a later preset or the smoke test
       # failed. A single bad preset previously discarded working Linux and
       # Windows binaries for 16 days (see 2026-07-27 daily log).
