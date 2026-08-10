@@ -19,6 +19,10 @@ const CAMERA_FOCUS_COORD := Vector2i(13, 6)
 const CAMERA_ZOOM := 2.0
 const WORLD_SELECT_SCENE := preload("res://scenes/ui/WorldSelectMap.tscn")
 const CROSSING_CUE := preload("res://assets/audio/crossing_chime.wav")
+## In-game shortcut to the credits/attributions overlay. Reachable from the
+## title screen too; duplicated here so the licence notices are never more than
+## one keypress away from wherever the player actually is (ADR 0017).
+const CREDITS_KEY := KEY_F1
 
 var sim: Simulation
 var _renderer: WorldRenderer
@@ -38,6 +42,7 @@ var _build_status_label: Label
 ## Build-review C1: the on-screen message channel + crossing-cue flash,
 ## mirroring `_log()` so player feedback is visible in a windowed export.
 var _hud: Hud
+var _credits: CreditsScreen
 
 func _ready() -> void:
 	_debug = get_node_or_null("/root/Debug")
@@ -77,11 +82,22 @@ func _ready() -> void:
 	hud_layer.add_child(_build_status_label)
 	_build_status_label.hide()
 
+	# Own CanvasLayer above the HUD's: the credits overlay is a modal that must
+	# cover the message channel and build readout, not sit beside them.
+	var credits_layer := CanvasLayer.new()
+	credits_layer.layer = 2
+	add_child(credits_layer)
+	_credits = CreditsScreen.new()
+	credits_layer.add_child(_credits)
+
 	var bus := get_node_or_null("/root/EventBus")
 	if bus:
 		bus.animal_crossed.connect(_on_animal_crossed)
 
-	_log("Tutorial loaded. Press B to build the Bow Valley overpass. Press M for the world map.")
+	# "Tutorial loaded" is asserted verbatim by tools/smoke_boot.sh — keep it
+	# leading this line.
+	_log("Tutorial loaded. Press B to build the Bow Valley overpass. " \
+			+ "Press M for the world map. Press F1 for credits.")
 
 func _registries() -> Dictionary:
 	var r := get_node_or_null("/root/SpeciesRegistry")
@@ -99,7 +115,18 @@ func _sub_area_segments(sub_area_id: int) -> Array:
 	return out
 
 func _unhandled_input(event: InputEvent) -> void:
-	if event is InputEventKey and event.pressed and event.keycode == KEY_B:
+	# The credits overlay is modal. Swallow everything while it is up rather
+	# than relying on _unhandled_input ordering between it and this node —
+	# otherwise Escape would cancel a build behind the screen the player is
+	# actually looking at, and clicks would fall through to segment picking.
+	if _credits != null and _credits.is_open:
+		if event is InputEventKey and event.pressed and event.keycode == KEY_ESCAPE:
+			_credits.close()
+		get_viewport().set_input_as_handled()
+		return
+	if event is InputEventKey and event.pressed and event.keycode == CREDITS_KEY:
+		_credits.open()
+	elif event is InputEventKey and event.pressed and event.keycode == KEY_B:
 		_enter_build_mode(TUTORIAL_SEGMENT, TUTORIAL_SUB_AREA)
 	elif event is InputEventKey and event.pressed and event.keycode == KEY_M:
 		if _build_mode == null:

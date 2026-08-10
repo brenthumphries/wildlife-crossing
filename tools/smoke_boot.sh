@@ -23,9 +23,22 @@
 #      Brent's Mac, 2026-07-29: a healthy boot showed 0 captured lines until
 #      this was added.
 #
+# Since 2026-08-09 the binary boots to a title screen, not straight into play
+# (ADR 0017 — the credits screen carries Godot's MIT notice and needed a home).
+# That would have quietly gutted this gate: a build whose data/*.json never
+# loaded still reaches a working menu, so asserting only "the menu appeared"
+# passes exactly the failure this script exists to catch. So it boots twice:
+#
+#   1. bare            → must reach the title screen
+#   2. -- --skip-menu  → must reach the tutorial, as before
+#
+# Boot 2 is the real gate and is unchanged in what it proves. Boot 1 is cheap
+# and stops the menu itself regressing unnoticed. Both are checked for fatal
+# patterns.
+#
 # Usage:
 #   smoke_boot.sh <binary> [timeout_seconds]   # run a binary, then check
-#   smoke_boot.sh --check-log <file>           # check an existing log only
+#   smoke_boot.sh --check-log <file> [expected_line]   # check an existing log only
 set -uo pipefail
 
 # Substrings that mean the boot is not healthy, however far it got.
@@ -40,6 +53,11 @@ FATAL_PATTERNS=(
   "ERROR:"
 )
 SUCCESS_LINE="Tutorial loaded"
+# Logged by TitleScreen.READY_LOG_LINE. Change one, change the other.
+TITLE_LINE="Title screen ready"
+# Passed after `--` so Godot forwards it to the game as a user arg; consumed by
+# TitleScreen.SKIP_MENU_ARG.
+SKIP_MENU_ARG="--skip-menu"
 
 # GNU coreutils' `timeout` ships on CI's Linux runners but not on stock macOS
 # (Brent's local machine). Prefer the real thing; fall back to Homebrew
@@ -76,7 +94,7 @@ annotate() {
 }
 
 analyse_log() {
-  local log="$1" rc="${2:-}"
+  local log="$1" rc="${2:-}" expected="${3:-$SUCCESS_LINE}"
   local failed=0
 
   echo "--- smoke output ($(wc -l < "$log" | tr -d '[:space:]') line(s)${rc:+, exit $rc}) ---"
@@ -89,8 +107,8 @@ analyse_log() {
   fi
   echo "--- end smoke output ---"
 
-  if ! grep -qF "$SUCCESS_LINE" "$log"; then
-    annotate "exported binary did not reach the tutorial (no '${SUCCESS_LINE}' anywhere in ${total} line(s) of output)"
+  if ! grep -qF "$expected" "$log"; then
+    annotate "exported binary did not reach the expected state (no '${expected}' anywhere in ${total} line(s) of output)"
     failed=1
   fi
 
@@ -107,10 +125,43 @@ analyse_log() {
   return "$failed"
 }
 
+# One boot: run the binary, then assert it reached `expected` cleanly.
+# Usage: run_boot <label> <expected_line> <bin> <secs> <timeout_bin> <stdbuf_bin> [game_args...]
+run_boot() {
+  local label="$1" expected="$2" bin="$3" secs="$4" timeout_bin="$5" stdbuf_bin="$6"
+  shift 6
+
+  echo "=== smoke boot: ${label} ==="
+
+  local log rc result
+  log="$(mktemp)"
+  if [ "$#" -gt 0 ]; then
+    # Everything after `--` is forwarded to the game as user args.
+    "$timeout_bin" "$secs" "$stdbuf_bin" -oL -eL "$bin" --headless -- "$@" > "$log" 2>&1
+  else
+    "$timeout_bin" "$secs" "$stdbuf_bin" -oL -eL "$bin" --headless > "$log" 2>&1
+  fi
+  rc=$?
+
+  # 124 = still running when the timeout stopped it, which is the healthy case.
+  # 0 = quit on its own. Anything else is a crash or a failure to launch.
+  if [ "$rc" -ne 124 ] && [ "$rc" -ne 0 ]; then
+    analyse_log "$log" "$rc" "$expected"
+    annotate "exported binary exited with ${rc} during '${label}' — expected it to still be running (124) or to have quit cleanly (0)"
+    rm -f "$log"
+    return 1
+  fi
+
+  analyse_log "$log" "$rc" "$expected"
+  result=$?
+  rm -f "$log"
+  return "$result"
+}
+
 main() {
   if [ "${1:-}" = "--check-log" ]; then
-    [ -n "${2:-}" ] || { echo "usage: $0 --check-log <file>" >&2; return 2; }
-    analyse_log "$2"
+    [ -n "${2:-}" ] || { echo "usage: $0 --check-log <file> [expected_line]" >&2; return 2; }
+    analyse_log "$2" "" "${3:-$SUCCESS_LINE}"
     return $?
   fi
 
@@ -133,24 +184,15 @@ main() {
     return 2
   fi
 
-  local log rc
-  log="$(mktemp)"
-  "$timeout_bin" "$secs" "$stdbuf_bin" -oL -eL "$bin" --headless > "$log" 2>&1
-  rc=$?
+  # Both boots always run: if the menu is broken AND the tutorial is broken, one
+  # report naming both is more useful than the first failure alone.
+  local failed=0
+  run_boot "title screen" "$TITLE_LINE" "$bin" "$secs" "$timeout_bin" "$stdbuf_bin" \
+    || failed=1
+  run_boot "tutorial (${SKIP_MENU_ARG})" "$SUCCESS_LINE" "$bin" "$secs" "$timeout_bin" "$stdbuf_bin" \
+    "$SKIP_MENU_ARG" || failed=1
 
-  # 124 = still running when the timeout stopped it, which is the healthy case.
-  # 0 = quit on its own. Anything else is a crash or a failure to launch.
-  if [ "$rc" -ne 124 ] && [ "$rc" -ne 0 ]; then
-    analyse_log "$log" "$rc"
-    annotate "exported binary exited with ${rc} — expected it to still be running (124) or to have quit cleanly (0)"
-    rm -f "$log"
-    return 1
-  fi
-
-  analyse_log "$log" "$rc"
-  local result=$?
-  rm -f "$log"
-  return "$result"
+  return "$failed"
 }
 
 main "$@"

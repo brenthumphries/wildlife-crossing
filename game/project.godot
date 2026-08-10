@@ -14,7 +14,13 @@ config_version=5
 
 config/name="Wildlife Crossing"
 config/description="A cozy wildlife-corridor simulation: build crossings, reconnect fragmented habitat."
-run/main_scene="res://scenes/Main.tscn"
+config/version="0.1.0"
+; Boots to the title screen, not straight into play (ADR 0017): the credits
+; screen carries Godot's MIT notice and needs a reachable home. `Main.tscn` is
+; still the playable root — TitleScreen changes into it on Play, or immediately
+; when passed `-- --skip-menu`, which is how tools/smoke_boot.sh keeps testing
+; the full data-loading path.
+run/main_scene="res://scenes/TitleScreen.tscn"
 config/features=PackedStringArray("4.6", "GL Compatibility")
 
 [autoload]
