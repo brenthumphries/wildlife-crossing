@@ -111,6 +111,39 @@ Always read the relevant scoped CLAUDE.md before working in that area.
 
 ---
 
+## Licensing
+
+The repo is dual-licensed by material type. Copyright holder is
+**Brent Humphries**. See [ADR 0017](docs/adr/0017-licensing.md) for reasoning.
+
+- **Code** (`.gd`, `.tscn`, `.cfg`, `.html`, `.css`, `.js`) and **released
+  binaries** → MIT, in `LICENSE`.
+- **Everything else original** — `game/assets/`, `game/data/`,
+  `obsidian-vault/`, `docs/`, `website/` copy → CC0 1.0, in `LICENSE-ASSETS`.
+- **Third-party material** → its own license, recorded in
+  `THIRD-PARTY-NOTICES.md`. Never covered by either file above.
+
+Rules to apply without being asked:
+
+- **Never add a third-party dependency, asset, font, or addon without adding a
+  notice to `THIRD-PARTY-NOTICES.md`** stating its license and whether the
+  export presets exclude it. Flag anything that is not MIT/BSD/Apache/CC0/OFL
+  before vendoring it — copyleft or non-commercial terms are a decision for the
+  product owner, not a default.
+- **Do not reproduce a license, copyright line, or attribution from memory.**
+  Read it from the vendored file or fetch it from the upstream source. A notice
+  file with an invented copyright holder is worse than no notice file.
+- Exported binaries must ship `LICENSE` and `THIRD-PARTY-NOTICES.md`. The
+  Godot engine is statically linked and its MIT notice must travel with every
+  copy. CI copies both into `builds/<platform>/` before artifact upload.
+- Keep `exclude_filter="addons/gut/*,tests/*"` on every export preset. Removing
+  it pulls GUT and its OFL fonts into shipped binaries and changes what must be
+  attributed.
+- The name "Wildlife Crossing" and project branding are **not** licensed for
+  derivative works. Don't write docs or copy implying otherwise.
+- Don't add per-file SPDX headers or copyright banners to `.gd` files. The
+  root `LICENSE` covers the tree; per-file headers are noise to maintain.
+
 ## Git workflow
 
 - **Branch strategy**: Feature branches off `main`. Branch name format:
