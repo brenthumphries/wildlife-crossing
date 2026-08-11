@@ -92,9 +92,18 @@ timeout stops it (exit **124**). A data-less boot also ends at 124, after
 ## CI
 
 `.github/workflows/ci.yml` has an `export` job (after `test`): it installs the
-pinned Godot + templates, exports the Linux/Windows/macOS presets, smoke-tests
-the Linux binary, and uploads everything as a workflow artifact (14-day
-retention). Releases are cut manually for now: download the artifact, tag
+pinned Godot + templates, exports the Linux/Windows/macOS presets, runs
+`tools/check_pck_contents.py` against **all three** packs, smoke-tests the
+Linux binary, and uploads everything as a workflow artifact (14-day retention).
+A `smoke-windows` job then boots the exported `.exe` headless on a
+`windows-latest` runner (build-review V2). macOS is not booted in CI: it is
+launched and watched by hand during every visual QA and signing session
+([signing-runbook.md](signing-runbook.md) A8), which is a stronger check than a
+headless boot.
+
+The macOS pack sits inside the `.app` inside the zip and is named from
+`config/name` (`Wildlife Crossing.pck`), not from the export path — pass the
+gate the `.zip` or the `.app` and it finds the pack itself. Releases are cut manually for now: download the artifact, tag
 `vX.Y.Z`, attach the binaries to a GitHub Release (per `docs/CLAUDE.md`
 versioning).
 
