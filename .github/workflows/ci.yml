@@ -40,6 +40,37 @@ jobs:
       - name: Run tool tests
         run: python3 -m unittest discover -s tools/tests -b
 
+  # CONTRIBUTING.md requires a Signed-off-by trailer on every commit and, until
+  # now, nothing enforced it. ADR 0017 is why it matters beyond bookkeeping:
+  # with a DCO and no CLA, the first merged outside contribution is the point of
+  # no return on the licensing model, and a missing trailer costs a history
+  # rewrite on a public branch once it has landed.
+  #
+  # Pull requests only, and only the commits the pull request *adds*. 33 of the
+  # 40 commits on main as of 2026-08-10 predate CONTRIBUTING.md and carry no
+  # trailer — all of them by the copyright holder, so there is nothing to
+  # attest — and a check that read whole history would leave main permanently
+  # red. A permanently red check teaches everyone to scroll past it.
+  #
+  # Direct pushes to main are not gated here: that path is tools/ship.py, which
+  # refuses to commit without a sign-off and adds the trailer itself.
+  dco:
+    name: DCO sign-off (pull requests)
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      # fetch-depth: 0 is required, not tidiness — a shallow clone has no base
+      # ref to diff against, and check_dco.py exits 2 with that diagnosis rather
+      # than reporting a green it did not earn.
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check DCO sign-off on this pull request's commits
+        run: |
+          set -euo pipefail
+          python3 tools/check_dco.py "origin/${GITHUB_BASE_REF}" HEAD
+
   test:
     # Version inlined: the `env` context is not available in job names.
     name: GUT tests (Godot 4.6.3-stable headless)
