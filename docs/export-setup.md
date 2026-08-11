@@ -100,9 +100,13 @@ versioning).
 
 ## Known limitations (first-build placeholders)
 
-- **No code signing / notarization.** The macOS export is ad-hoc signed at
-  best and will trip Gatekeeper; Windows is unsigned. Fine for testing;
-  proper signing needs owner-provided identities before public release.
+- **CI builds are unsigned and always will be.** The macOS export is ad-hoc
+  signed at best and will trip Gatekeeper; Windows is unsigned. This is correct
+  for CI — signing is a *release* path, not a *CI* path. Release builds are
+  signed by hand on Brent's Mac per [signing-runbook.md](signing-runbook.md):
+  macOS is signed and notarized, every artifact is covered by a GPG-signed
+  SHA-256 manifest, and **Windows ships unsigned by decision**
+  ([ADR 0018](adr/0018-code-signing-and-notarization.md)).
 - **No icons** — presets ship the default Godot icon until art lands.
 - The Linux arm64 preset exists mainly so the export path can be verified in
   arm64 sandboxes/CI; player-facing builds are the other three presets.
