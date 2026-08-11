@@ -32,6 +32,11 @@ var _usage: Dictionary = {}     # crossing_id -> int
 var _tile_crossing: Dictionary = {}   # Vector2i -> crossing_id
 var _crossings: Array = []
 
+## In-game day stamped onto crossings completed from here on (§14
+## `built_on_day`). The simulation coordinator keeps this current because it
+## owns the clock; it stays 0 under direct unit instantiation, which has none.
+var current_day: int = 0
+
 func setup(world: WorldData, graph: ConnectivityGraph, infrastructure_registry: Dictionary, segments_registry: Dictionary) -> void:
 	_world = world
 	_graph = graph
@@ -85,6 +90,7 @@ func try_complete(segment_id: String, crossing_type: String) -> bool:
 	_crossings.append({
 		"id": crossing_id, "segment_id": segment_id, "crossing_type": crossing_type,
 		"sub_area_id": int(seg["sub_area_id"]), "covered_tiles": placed,
+		"built_on_day": current_day,
 	})
 	crossing_completed.emit(segment_id, crossing_type, int(seg["sub_area_id"]))
 	return true
@@ -95,6 +101,12 @@ func try_complete(segment_id: String, crossing_type: String) -> bool:
 ## Pathfinding so covered cells are traversable and zero-mortality.
 func coverage() -> Dictionary:
 	return _covered.duplicate()
+
+## Every completed crossing, in completion order — the source for §14's
+## `crossings[]`. Deep-copied so a caller serialising it cannot reach back into
+## the manager's own records.
+func crossings() -> Array:
+	return _crossings.duplicate(true)
 
 func crossing_id_for(segment_id: String) -> String:
 	return "x_" + segment_id

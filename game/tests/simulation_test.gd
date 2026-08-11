@@ -84,3 +84,182 @@ func test_event_bus_relay_on_crossing_completed() -> void:
 	watch_signals(bus)
 	_sim.build_crossing(SEG, "overpass", SPAN)
 	assert_signal_emitted(bus, "crossing_completed", "the coordinator relays crossing_completed to EventBus")
+
+# --- agent respawn (ADR 0009) ----------------------------------------------
+
+## Living agents belonging to one patch/species pool.
+func _pool_size(patch_index: int, species_id: String) -> int:
+	var n: int = 0
+	for a: Dictionary in _sim.agents:
+		if a["alive"] and int(a["patch"]) == patch_index and String(a["species_id"]) == species_id:
+			n += 1
+	return n
+
+func _kill_all_agents() -> void:
+	for a: Dictionary in _sim.agents:
+		a["alive"] = false
+
+func test_agents_respawn_while_the_population_survives() -> void:
+	var before: int = _sim.agents.size()
+	assert_gt(before, 0, "the world starts with a rendered pool")
+	_kill_all_agents()
+	_sim.resync_agents()
+	assert_eq(_sim.agents.size(), before,
+		"rendered deaths are observable, not demographic — the pool re-renders from the surviving counts")
+
+func test_dead_agents_are_pruned_rather_than_accumulating() -> void:
+	_kill_all_agents()
+	var dead: int = _sim.agents.size()
+	_sim.resync_agents()
+	var still_dead: int = 0
+	for a: Dictionary in _sim.agents:
+		if not a["alive"]:
+			still_dead += 1
+	assert_eq(still_dead, 0, "corpses are not carried in the agent array forever")
+	assert_gt(dead, 0, "the fixture actually had agents to kill")
+
+func test_the_pool_shrinks_when_a_population_falls() -> void:
+	var patch: int = _sim.graph.patch_at(Vector2i(0, 0))
+	var full: int = _pool_size(patch, "grizzly_bear")
+	assert_gt(full, 0, "the west patch renders grizzlies to begin with")
+	_sim.population.set_count(patch, "grizzly_bear", 0)
+	_sim.resync_agents()
+	assert_eq(_pool_size(patch, "grizzly_bear"), 0,
+		"a patch emptied of animals stops rendering them")
+
+func test_an_extirpated_patch_repopulates_when_the_count_returns() -> void:
+	var patch: int = _sim.graph.patch_at(Vector2i(0, 0))
+	_sim.population.set_count(patch, "grizzly_bear", 0)
+	_sim.resync_agents()
+	assert_eq(_pool_size(patch, "grizzly_bear"), 0, "the patch is empty on screen")
+	_sim.population.set_count(patch, "grizzly_bear", 40)
+	_sim.resync_agents()
+	assert_gt(_pool_size(patch, "grizzly_bear"), 0,
+		"recovery is visible — the whole point of separating counts from rendered agents")
+
+func test_respawned_agents_are_given_a_route() -> void:
+	_kill_all_agents()
+	_sim.resync_agents()
+	var routed: int = 0
+	for a: Dictionary in _sim.agents:
+		if (a["path"] as Array).size() > 0:
+			routed += 1
+	assert_gt(routed, 0, "a respawned agent has a goal and a path, not a stalled one")
+
+func test_the_monthly_boundary_resyncs_the_pool() -> void:
+	_kill_all_agents()
+	for i in Simulation.TICKS_PER_MONTH:
+		_sim.tick()
+	var living: int = 0
+	for a: Dictionary in _sim.agents:
+		if a["alive"]:
+			living += 1
+	assert_gt(living, 0, "the monthly step re-renders the pool without anyone calling resync directly")
+
+# --- save / load round trip (ADR 0014) --------------------------------------
+
+func _restored_copy(state: Dictionary) -> Simulation:
+	var other: Simulation = Simulation.new()
+	autofree(other)
+	other.restore_state(state, _registries(), 42)
+	return other
+
+func test_save_state_matches_the_schema_shape() -> void:
+	_sim.build_crossing(SEG, "overpass", SPAN)
+	var state: Dictionary = _sim.save_state()
+	assert_eq(int(state["active_sub_area_id"]), 7, "the sub-area is recorded")
+	var crossings: Array = state["crossings"]
+	assert_eq(crossings.size(), 1, "the completed crossing is saved")
+	var c: Dictionary = crossings[0]
+	for key: String in ["crossing_id", "segment_id", "sub_area_id", "crossing_type",
+			"covered_tiles", "built_on_day"]:
+		assert_true(c.has(key), "§14 crossings[] requires '%s'" % key)
+	assert_eq(c["covered_tiles"], [[12, 5], [13, 5]],
+		"covered tiles are saved as [q, r] pairs — a Vector2i would stringify into text")
+	var patches: Array = state["patches"]
+	assert_gt(patches.size(), 0, "population records are saved")
+	assert_true((patches[0] as Dictionary).has("patch_id"), "§14 patches[] are keyed by patch_id")
+
+func test_the_saved_state_is_json_serialisable() -> void:
+	_sim.build_crossing(SEG, "overpass", SPAN)
+	var text: String = JSON.stringify(_sim.save_state())
+	var back: Variant = JSON.parse_string(text)
+	assert_eq(typeof(back), TYPE_DICTIONARY,
+		"nothing engine-specific leaks into the payload that JSON cannot represent")
+
+func test_restore_rebuilds_the_crossing_and_its_connectivity() -> void:
+	assert_true(_sim.build_crossing(SEG, "overpass", SPAN), "the overpass is built")
+	var other: Simulation = _restored_copy(_sim.save_state())
+	assert_true(other.graph.same_network(Vector2i(6, 5), Vector2i(20, 5)),
+		"the connectivity graph is rebuilt from the saved crossings, not stored (ADR 0014)")
+	assert_eq(other.species.mortality_chance(Vector2i(12, 5)), 0.0,
+		"coverage is re-derived, so the crossed highway tile is safe again after a load")
+	assert_eq(other.infrastructure.crossings().size(), 1, "the crossing is present exactly once")
+
+func test_restore_preserves_population_records() -> void:
+	var patch: int = _sim.graph.patch_at(Vector2i(0, 0))
+	var key: String = _sim.graph.patch_key(patch)
+	_sim.population.restore(patch, "grizzly_bear", 33, "declining", "sub_viable")
+	var other: Simulation = _restored_copy(_sim.save_state())
+	var there: int = other.graph.index_of_patch_key(key)
+	assert_ne(there, -1, "a saved patch_id re-resolves in a freshly derived world")
+	assert_eq(other.population.count_of(there, "grizzly_bear"), 33, "the count survives")
+	assert_eq(other.population.trend_of(there, "grizzly_bear"), "declining",
+		"the trend survives — a loaded game shows the arrow the player saved with")
+	assert_eq(other.population.connectivity_status_of(there, "grizzly_bear"), "sub_viable",
+		"connectivity status survives")
+
+func test_restore_renders_a_pool_for_the_restored_counts() -> void:
+	var other: Simulation = _restored_copy(_sim.save_state())
+	assert_gt(other.agents.size(), 0, "a loaded game has animals in it")
+
+func test_built_on_day_records_when_the_crossing_went_up() -> void:
+	for i in Simulation.TICKS_PER_DAY * 3:
+		_sim.tick()
+	_sim.build_crossing(SEG, "overpass", SPAN)
+	var crossings: Array = _sim.save_state()["crossings"]
+	assert_eq(int((crossings[0] as Dictionary)["built_on_day"]), 3,
+		"the crossing is stamped with the in-game day it was completed")
+
+func test_restore_does_not_re_announce_the_crossings_it_replays() -> void:
+	_sim.build_crossing(SEG, "overpass", SPAN)
+	var state: Dictionary = _sim.save_state()
+	var bus := get_tree().root.get_node_or_null("EventBus")
+	watch_signals(bus)
+	var other: Simulation = _restored_copy(state)
+	assert_signal_emit_count(bus, "crossing_completed", 0,
+		"loading rebuilds crossings silently — the player should not get build toasts for old work")
+	assert_eq(other.infrastructure.coverage().size(), SPAN.size(),
+		"even though the replay went through the real placement path")
+
+func test_a_patch_id_that_no_longer_exists_is_skipped_not_fatal() -> void:
+	var state: Dictionary = _sim.save_state()
+	(state["patches"] as Array).append({
+		"patch_id": "999:nowhere:0,0", "sub_area_id": 999,
+		"species": [{ "species_id": "grizzly_bear", "count": 5,
+			"trend": "stable", "connectivity_status": "connected" }],
+	})
+	var other: Simulation = _restored_copy(state)
+	assert_push_warning("999:nowhere:0,0", "the skipped patch is named rather than dropped silently")
+	assert_gt(other.agents.size(), 0,
+		"a stale patch_id (ADR 0014's noted risk) is skipped and the rest of the save still loads")
+
+func test_a_saved_span_that_no_longer_validates_is_skipped_not_fatal() -> void:
+	var state: Dictionary = _sim.save_state()
+	(state["crossings"] as Array).append({
+		"crossing_id": "x_bogus", "segment_id": SEG, "sub_area_id": 7,
+		"crossing_type": "overpass", "covered_tiles": [[0, 0]], "built_on_day": 1,
+	})
+	var other: Simulation = _restored_copy(state)
+	assert_push_warning("x_bogus", "the refused span is named")
+	assert_eq(other.infrastructure.crossings().size(), 0,
+		"a span the current rules reject is refused on load by the same check that governs building")
+	assert_gt(other.agents.size(), 0, "and the rest of the save still loads")
+
+func test_patch_keys_are_stable_across_two_derivations_of_the_same_world() -> void:
+	var other: Simulation = Simulation.new()
+	autofree(other)
+	other.load_world(7, _registries(), 7)   # different seed, same static map
+	for idx in _sim.graph.patches.size():
+		assert_eq(other.graph.patch_key(idx), _sim.graph.patch_key(idx),
+			"patch_id is deterministic from the static map, which is what makes a save re-resolve")

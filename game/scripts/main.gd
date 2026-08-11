@@ -23,6 +23,12 @@ const CROSSING_CUE := preload("res://assets/audio/crossing_chime.wav")
 ## title screen too; duplicated here so the licence notices are never more than
 ## one keypress away from wherever the player actually is (ADR 0017).
 const CREDITS_KEY := KEY_F1
+## Quick save / quick load (architecture §7). Keyboard shortcuts rather than
+## menu items because v0.1.0 has no pause menu — the Phase 4 UI supersedes
+## these. They exist now so the save round-trip is reachable in an actual build
+## instead of living only in the test suite.
+const QUICKSAVE_KEY := KEY_F5
+const QUICKLOAD_KEY := KEY_F9
 
 var sim: Simulation
 var _renderer: WorldRenderer
@@ -97,7 +103,8 @@ func _ready() -> void:
 	# "Tutorial loaded" is asserted verbatim by tools/smoke_boot.sh — keep it
 	# leading this line.
 	_log("Tutorial loaded. Press B to build the Bow Valley overpass. " \
-			+ "Press M for the world map. Press F1 for credits.")
+			+ "Press M for the world map. Press F1 for credits. " \
+			+ "F5 saves, F9 loads.")
 
 func _registries() -> Dictionary:
 	var r := get_node_or_null("/root/SpeciesRegistry")
@@ -126,6 +133,10 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	if event is InputEventKey and event.pressed and event.keycode == CREDITS_KEY:
 		_credits.open()
+	elif event is InputEventKey and event.pressed and event.keycode == QUICKSAVE_KEY:
+		_quick_save()
+	elif event is InputEventKey and event.pressed and event.keycode == QUICKLOAD_KEY:
+		_quick_load()
 	elif event is InputEventKey and event.pressed and event.keycode == KEY_B:
 		_enter_build_mode(TUTORIAL_SEGMENT, TUTORIAL_SUB_AREA)
 	elif event is InputEventKey and event.pressed and event.keycode == KEY_M:
@@ -144,6 +155,54 @@ func _unhandled_input(event: InputEvent) -> void:
 			_try_toggle_build_tile()
 		else:
 			_try_select_segment()
+
+# --- save / load (architecture §7, ADR 0005/0014) ---------------------------
+
+## Fold the simulation's mutable state into GameState and write the slot. The
+## simulation owns the population records and completed crossings; GameState
+## owns the clock, economy and progression — `to_dict()` only sees the whole
+## §14 shape once both halves are in it.
+func _quick_save() -> void:
+	var game_state := get_node_or_null("/root/GameState")
+	if game_state == null:
+		return
+	var world_state: Dictionary = sim.save_state()
+	game_state.active_sub_area_id = int(world_state["active_sub_area_id"])
+	game_state.patches = world_state["patches"]
+	game_state.crossings = world_state["crossings"]
+	var error: String = SaveManager.save(game_state.to_dict())
+	if error.is_empty():
+		_log("Game saved.")
+	else:
+		_log("Save failed — " + error)
+
+## Read the slot, apply it to GameState, then rebuild the simulation from it.
+## Nothing is mutated until the file has parsed and migrated cleanly, so a
+## corrupt save leaves the running game exactly as it was.
+func _quick_load() -> void:
+	var game_state := get_node_or_null("/root/GameState")
+	if game_state == null:
+		return
+	var data: Dictionary = SaveManager.load_save()
+	if data.is_empty():
+		_log("No save to load.")
+		return
+	if not game_state.from_dict(data):
+		_log("That save can't be read by this version of the game.")
+		return
+	if _build_mode != null:
+		_exit_build_mode()   # the span being placed belongs to the world being replaced
+	sim.restore_state({
+		"active_sub_area_id": game_state.active_sub_area_id,
+		"patches": game_state.patches,
+		"crossings": game_state.crossings,
+	}, _registries(), randi())
+	# `restore_state` builds a fresh WorldData and ConnectivityGraph, so anything
+	# holding the previous pair is now pointing at a dead world. The renderer
+	# reads `sim.world` every frame and needs nothing; the overlay cached both at
+	# setup and has to be re-pointed.
+	_overlay.setup(sim.world, sim.graph, _sub_area_segments(sim.active_sub_area_id))
+	_log("Game loaded.")
 
 ## How forgiving segment picking is: a click within this many hex steps of a
 ## segment's tiles selects it (helps hit 1-wide river/road corridors).

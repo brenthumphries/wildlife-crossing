@@ -128,6 +128,22 @@ func count_of(patch_index: int, species_id: String) -> int:
 		return _pop[patch_index][species_id]["count"]
 	return 0
 
+## Overwrite one patch/species record wholesale from a saved §14 `patches[]`
+## entry. Unlike `set_count`, this keeps the saved `trend` and
+## `connectivity_status` instead of resetting them to the seeding defaults — a
+## loaded game must show the same trend arrow the player saved with, not
+## "stable" for everything until the next monthly step.
+func restore(patch_index: int, species_id: String, count: int, trend: String, connectivity_status: String) -> void:
+	_write(patch_index, species_id, count)
+	var rec: Dictionary = _pop[patch_index][species_id]
+	rec.trend = trend
+	rec.connectivity_status = connectivity_status
+
+func connectivity_status_of(patch_index: int, species_id: String) -> String:
+	if _pop.has(patch_index) and _pop[patch_index].has(species_id):
+		return _pop[patch_index][species_id]["connectivity_status"]
+	return ""
+
 func trend_of(patch_index: int, species_id: String) -> String:
 	if _pop.has(patch_index) and _pop[patch_index].has(species_id):
 		return _pop[patch_index][species_id]["trend"]

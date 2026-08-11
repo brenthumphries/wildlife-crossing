@@ -95,6 +95,43 @@ func add_safe_link(patch_a: int, patch_b: int) -> void:
 func patch_at(coord: Vector2i) -> int:
 	return _patch_of.get(coord, -1)
 
+## The stable save key for a patch — ADR 0014's `patch_id`, the field saved
+## population records are keyed by. Composed of the sub-area, the patch's
+## compatible-biome group, and an anchor: the lexicographically smallest tile
+## coordinate in the patch.
+##
+## ADR 0014's worked example writes the third part as a cardinal locator
+## ("7:forest:w"). An anchor coordinate is used instead because patch derivation
+## produces no cardinal label, and because the anchor is a property of the tile
+## set itself — it survives `_derive_patches` visiting `all_coords()` in a
+## different order, which a positional label assigned at derivation time would
+## not. The ADR's rule (deterministic from the static map, so a saved key
+## re-resolves to the same patch on load) is what is being honoured here.
+func patch_key(patch_index: int) -> String:
+	if patch_index < 0 or patch_index >= patches.size():
+		return ""
+	var anchor: Vector2i = _anchor_of(patch_index)
+	return "%d:%s:%d,%d" % [
+		_world.sub_area_id, String(patches[patch_index]["group"]), anchor.x, anchor.y]
+
+## The patch a saved `patch_key` refers to, or -1 when it resolves to nothing in
+## the currently loaded world (ADR 0014's noted risk: the static map changed
+## under the save).
+func index_of_patch_key(key: String) -> int:
+	for i in patches.size():
+		if patch_key(i) == key:
+			return i
+	return -1
+
+## Smallest tile coordinate in a patch, ordered by q then r.
+func _anchor_of(patch_index: int) -> Vector2i:
+	var tiles: Array = patches[patch_index]["tiles"]
+	var best: Vector2i = tiles[0]
+	for t: Vector2i in tiles:
+		if t.x < best.x or (t.x == best.x and t.y < best.y):
+			best = t
+	return best
+
 func patch_tile_count(patch_index: int) -> int:
 	if patch_index < 0 or patch_index >= patches.size():
 		return 0
