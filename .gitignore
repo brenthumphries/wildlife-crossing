@@ -17,6 +17,22 @@ builds/
 /tools/*
 !/tools/*.py
 !/tools/*.sh
+# Same trick one level down: re-include the tests directory itself before its
+# contents, or `/tools/*` keeps them out and CI's `unittest discover` finds an
+# empty suite that passes vacuously.
+!/tools/tests/
+!/tools/tests/*.py
+
+# Commit plans consumed by tools/ship.py are per-session scratch. They must be
+# ignored rather than merely untracked: ship.py refuses to run when a changed
+# path is unaccounted for, and the plan file sitting in the repo would be one.
+/commit-plan*.json
+
+# Python bytecode. Must come after the /tools/ re-includes above: re-including
+# /tools/tests/ exposes everything inside it, __pycache__ included, and later
+# rules win.
+__pycache__/
+*.pyc
 
 # macOS
 .DS_Store

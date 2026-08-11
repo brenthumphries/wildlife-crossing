@@ -26,6 +26,51 @@ terminal.
 
 ---
 
+## The short version (Steps 0–1 automated)
+
+`tools/ship.py` does the mechanical half of Steps 0 and 1: clears a stale
+`.git/index.lock`, refuses a working tree that is not safe to commit, stages
+each group, and commits it with a DCO sign-off. It stops before the push.
+
+It executes a commit plan; it does not write one. Ask Claude for a
+`commit-plan.json` covering the unpushed work — that grouping is judgment, and
+the 2026-08-09 session is the case in point: `tools/smoke_boot.sh` belonged
+with the game commit rather than the CI commit, because it asserts against the
+boot scene that the same commit moves.
+
+```bash
+cd ~/wildlife-crossing
+```
+
+```bash
+tools/ship.py commit-plan.json
+```
+
+Read the dry run. It prints each commit and every file it will stage, and
+fails if the plan does not account for every changed path.
+
+```bash
+tools/ship.py commit-plan.json --execute
+```
+
+```bash
+git push origin main
+```
+
+```bash
+tools/ship.py --verify
+```
+
+Everything before the push is one `git reset` away from undone, and `ship.py`
+prints the exact reset command if it fails partway. If any of it misbehaves,
+the manual steps below are the fallback and remain the specification — the
+script was written from them, so **if the two ever disagree, this document is
+right and the script has a bug**.
+
+Steps 3 to 5 are not automated and are still yours.
+
+---
+
 ## Step 0 — Clear the stale lock, confirm the starting point
 
 `harness/weekly-build-review` (and, occasionally, an interrupted editor
@@ -218,6 +263,9 @@ or the CI runner logs.
 - **`.git/index.lock` reappears most sessions.** Traced to the
   `weekly-build-review` harness leaving it behind ([[../obsidian-vault/daily-logs/2026-07-28]]).
   Always clear it in Step 0 rather than assuming last session's fix stuck.
+  `ship.py` clears it only if it is more than two minutes old, on the grounds
+  that deleting a lock a live git process still holds corrupts the index —
+  pass `--force-lock` if you know nothing is running.
 - **`git push` failing with a host-key error means you're in the sandbox, not
   a real terminal.** Not a credentials problem to debug — just switch shells.
 - **A pck that looks empty from a `grep 'res://'` scan may not be.** Godot
@@ -235,6 +283,8 @@ or the CI runner logs.
 
 ## Related
 
+- [`tools/ship.py`](../tools/ship.py) — Steps 0–1 automated; `--help` documents
+  the plan format. Tests in `tools/tests/test_ship.py`.
 - [testing-setup.md](testing-setup.md) — suite mechanics, `smoke_boot.sh` details
 - [export-setup.md](export-setup.md) — how builds get produced, pack format 3 notes
 - [ADR 0012](adr/0012-godot-and-gut-version-pin.md) — the Godot/GUT version pin

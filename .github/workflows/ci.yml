@@ -15,6 +15,31 @@ env:
   GODOT_VERSION: 4.6.3-stable
 
 jobs:
+  # Everything in tools/ was untested until 2026-08-09, which was tolerable
+  # while those scripts only read and reported. tools/ship.py stages and
+  # commits, and its value is the set of things it refuses to do, so its
+  # refusals need a gate. Stdlib unittest only — no pip install step, nothing
+  # to add to THIRD-PARTY-NOTICES.md. Runs in seconds and needs no engine, so
+  # it is deliberately not a dependency of the jobs below.
+  tools:
+    name: Tool tests (Python, stdlib unittest)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # No git identity is configured here on purpose. An earlier version of
+      # this job set a global user.name/user.email "for the fixtures", which
+      # broke the one test that asserts ship.py refuses to commit without an
+      # identity: that test unsets only the *local* identity, so git answered
+      # from the global fallback and the refusal never fired. The fixtures now
+      # redirect HOME, GIT_CONFIG_GLOBAL and GIT_CONFIG_SYSTEM at a throwaway
+      # directory and write their own local identity, so they need nothing from
+      # the runner. A bare checkout is the correct environment, and
+      # test_fixture_identity_comes_only_from_the_repo fails if that stops
+      # being true.
+      - name: Run tool tests
+        run: python3 -m unittest discover -s tools/tests -b
+
   test:
     # Version inlined: the `env` context is not available in job names.
     name: GUT tests (Godot 4.6.3-stable headless)
