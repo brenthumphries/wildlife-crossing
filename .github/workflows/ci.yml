@@ -240,6 +240,7 @@ jobs:
         with:
           name: wildlife-crossing-desktop-builds
           path: builds/
+          retention-days: 14
 
   # V2, second half: boot a non-Linux binary. Windows rather than macOS because
   # of who can check what by hand — the product owner has a Mac, so the macOS
@@ -276,4 +277,3 @@ jobs:
           test -f "$BIN" || { echo "::error::no Windows binary in the artifact"; exit 1; }
           chmod +x "$BIN"
           bash tools/smoke_boot.sh "$BIN" 30
-          retention-days: 14
