@@ -67,7 +67,9 @@ the manual steps below are the fallback and remain the specification — the
 script was written from them, so **if the two ever disagree, this document is
 right and the script has a bug**.
 
-Steps 3 to 5 are not automated and are still yours.
+Step 4 is automated too, by `tools/fetch_build.py` — see that step. Steps 3
+and 5 are still yours: watching CI needs `gh` credentials the sandbox does not
+have, and the windowed launch is the one check nothing can stand in for.
 
 ---
 
@@ -121,11 +123,18 @@ For each group:
 
 ```bash
 git add <file1> <file2> ...
-git commit -m "<type>(<scope>): <summary>
+git commit -s -m "<type>(<scope>): <summary>
 
 <body — what changed and why, 2-4 sentences. Include the suite count
 (e.g. '15 scripts / 122 tests / 2,750 asserts green') if tests ran.>"
 ```
+
+**`-s` is not optional.** `792b237` added a CI job that rejects any commit a
+pull request adds without a `Signed-off-by` trailer, as CONTRIBUTING.md
+requires. This snippet omitted it until 2026-08-14, so the manual fallback
+produced commits that gate would refuse — `ship.py` passes `-s` itself, which
+is why it went unnoticed. To repair a commit already made without it:
+`git commit --amend -s --no-edit`.
 
 Verify the split before moving on:
 
@@ -142,11 +151,31 @@ so, as this file's predecessor did).
 
 ## Step 2 — Push
 
+**Know what this triggers before you run it.** `ci.yml` fires on exactly two
+events: `push` to `main`, and `pull_request` targeting `main`. Nothing else
+runs CI. Pushing a feature branch uploads the commits and runs **no jobs at
+all** — which is a useful property (it is a free off-machine backup you can
+take mid-work), but it means a green terminal here is not evidence of
+anything.
+
+Working directly on `main`:
+
 ```bash
 git push origin main
 ```
 
-If this fails with a host-key or permission error, you are not on Brent's
+Working on a feature branch — the push is silent, and the pull request is what
+actually runs CI:
+
+```bash
+git push -u origin <branch>
+```
+
+```bash
+gh pr create --base main --head <branch> --title "<title>" --body "<why>"
+```
+
+If the push fails with a host-key or permission error, you are not on Brent's
 Mac — the sandbox cannot push. Re-run from a real terminal.
 
 ---
@@ -169,8 +198,9 @@ gh run watch $(gh run list --limit 1 --json databaseId --jq '.[0].databaseId')
 gh run view $(gh run list --limit 1 --json databaseId --jq '.[0].databaseId')
 ```
 
-Both jobs (`GUT tests`, `Export desktop builds`) should report success, and
-their names should show the pinned engine version (currently
+All five jobs should report success: `Tool tests`, `DCO sign-off` (pull
+requests only), `GUT tests`, `Export desktop builds`, and `Smoke-test the
+Windows binary`. The engine job names should show the pinned version (currently
 `Godot 4.6.3-stable headless` — see
 [ADR 0012](adr/0012-godot-and-gut-version-pin.md)). If the job name shows a
 different patch version, the pin has drifted; fix `ci.yml` before trusting
@@ -187,16 +217,30 @@ gh run view $(gh run list --limit 1 --json databaseId --jq '.[0].databaseId') --
 
 ## Step 4 — Download and verify the artifact's contents
 
+`tools/fetch_build.py` does this step. It downloads into a directory named for
+the run, unpacks the macOS zip, then **globs** for the bundle and the binaries
+rather than reconstructing their names, and prints Step 5's commands with the
+real names already quoted:
+
 ```bash
-gh run download $(gh run list --limit 1 --json databaseId --jq '.[0].databaseId') -D ~/Downloads/wc-latest-build
-find ~/Downloads/wc-latest-build -name "*.pck" -o -iname "*.app" -o -iname "*.exe" -o -iname "*.x86_64"
+tools/fetch_build.py <run-id> --check
 ```
 
-Run the contents guard against each `.pck` (works cross-platform since it's
-pure Python — no Godot needed):
+Both halves of that matter, and both were learned the hard way on 2026-08-13
+when these steps were first walked end to end:
+
+- **The directory is named for the run.** The old fixed `~/Downloads/wc-latest-build`
+  collided with the previous download and `gh run download` aborted partway,
+  leaving a half-extracted tree. The error was the lucky outcome: without the
+  collision you verify July's `.pck` and nothing tells you. `--reuse` reports on
+  a directory that already exists instead of refusing it.
+- **Nothing is addressed by name.** See Step 5.
+
+`--check` runs the contents guard over every pack, the way CI does. To run it
+by hand (works cross-platform — pure Python, no Godot needed):
 
 ```bash
-python3 tools/check_pck_contents.py <path-to-.pck>
+python3 tools/check_pck_contents.py <path-to-.pck|.app|macos.zip>
 ```
 
 Expect: all 20 `data/*.json` files present, **zero** `addons/gut` or `tests`
@@ -214,36 +258,79 @@ data (this happened once, see
 
 ### macOS (windowed)
 
-The artifact may come through as a `.zip` or as a bare `.app` depending on
-how the export step packaged it — check what `find` in Step 4 turned up.
+**Do not type the bundle's name.** The macOS preset exports to
+`wildlife-crossing.zip`, but Godot names the `.app` inside it from
+`config/name` in `project.godot` — currently **`Wildlife Crossing.app`**, with
+a space and different capitalisation. Every command below therefore needs
+quoting, and an unquoted one addresses `Wildlife` and reports `No such file`.
+This runbook hardcoded `wildlife-crossing.app` until 2026-08-14, so its Step 5
+had never been able to work as written; `check_pck_contents.py` had already
+learned the same lesson and globs (see its module docstring).
 
-If it's a zip:
-
-```bash
-cd ~/Downloads/wc-latest-build/wildlife-crossing-desktop-builds/wildlife-crossing-macos
-unzip -o wildlife-crossing.zip -d .
-xattr -dr com.apple.quarantine wildlife-crossing.app
-```
-
-If it's already a bare `.app`, the `xattr` quarantine step is unnecessary
-(downloaded-and-zipped artifacts trigger Gatekeeper's quarantine flag; a
-directly-uploaded `.app` from `actions/upload-artifact` does not).
+`fetch_build.py` prints these three lines with the real path filled in and
+quoted. Run what it prints, rather than the illustrative form here:
 
 ```bash
-open wildlife-crossing.app
+xattr -dr com.apple.quarantine "<bundle>.app"
 ```
 
-Confirm windowed: the Bow Valley tutorial loads, animals move along the
-corridor, **B** builds a small span (a couple of tiles, not the whole
-highway — confirms ADR 0016 span geometry is live, not the old whole-segment
-behavior), **M** opens the world map with only Bow Valley unlocked and the
-other 11 sub-areas locked/desaturated.
+```bash
+codesign -dv --verbose=2 "<bundle>.app" 2>&1 | head -5
+```
+
+```bash
+open "<bundle>.app"
+```
+
+The `codesign` check is worth reading, not skipping. The preset sets
+`codesign/codesign=1` (Godot's built-in ad-hoc signer) but leaves `identity`,
+`apple_team_id` and `notarization` at their defaults, and the export runs on a
+Linux runner. If it reports `code object is not signed at all`, the binary is
+`universal` and macOS will refuse it as *"damaged"* — a signing gap, not a
+corrupt download. Ad-hoc sign locally to continue, and record which happened:
+it is evidence for ADR 0018.
+
+```bash
+codesign --force --deep --sign - "<bundle>.app"
+```
+
+Confirm windowed, in this order:
+
+1. **The title screen appears** — not the tutorial. ADR 0017 put a menu in
+   front on 2026-08-09; this runbook said "the Bow Valley tutorial loads" until
+   2026-08-14.
+2. **F1 opens credits.** This is where Godot's MIT notice lives and is the
+   reason the title screen exists at all — a licensing obligation, not a
+   nicety.
+3. **Start → the Bow Valley tutorial loads.**
+4. **B builds a small span** — a couple of tiles, not the whole highway.
+   Confirms ADR 0016 span geometry is live, not the old whole-segment
+   behaviour.
+5. **M opens the world map**, only Bow Valley unlocked, the other 11 sub-areas
+   locked/desaturated.
+6. **F5 then F9 round-trip a save.** Build a span with **B**, press **F5**,
+   **quit the app entirely**, relaunch, press **F9**, and confirm the span is
+   still there. A quickload inside one session does not prove the thing
+   save/load exists to do. Added because `7e10b0c` shipped this system and no
+   human had watched it run.
+
+**One thing that looks like a regression and is not.** The old wording asked
+you to confirm "animals move along the corridor". Expect not to see crossings
+from the opening camera: `main.gd` sets `CAMERA_FOCUS_COORD := Vector2i(13, 6)`,
+and the 2026-08-10 measurement found crossings happen on rows 0–2, with row 1
+logging 192 uses. That is a known, measured, open defect (C4 in
+[[../obsidian-vault/build-reviews/2026-08-12-next-build]]) — record what you see
+against it rather than filing it new.
 
 ### Headless (optional — confirms the exported binary boots clean with no
 ### error storm, not just that it looks right on screen)
 
+`fetch_build.py` prints this line too, with the executable located by glob —
+it is named from `config/name` as well, so it is `Contents/MacOS/Wildlife
+Crossing`, spaces and all.
+
 ```bash
-tools/smoke_boot.sh <path-to-macos-app>/Contents/MacOS/<executable-name> 20
+tools/smoke_boot.sh "<bundle>.app/Contents/MacOS/<executable>" 20
 ```
 
 Requires GNU coreutils (`brew install coreutils` if `gtimeout`/`gstdbuf` are
@@ -268,6 +355,17 @@ or the CI runner logs.
   pass `--force-lock` if you know nothing is running.
 - **`git push` failing with a host-key error means you're in the sandbox, not
   a real terminal.** Not a credentials problem to debug — just switch shells.
+- **A green branch push is not a green CI run.** `ci.yml` triggers only on
+  `push` to `main` and `pull_request` targeting `main`. A feature branch can
+  sit on GitHub indefinitely having run no jobs at all. Open the pull request.
+- **`gh run download` refuses to overwrite** and aborts partway through, on the
+  first colliding file, leaving a tree that looks complete and is not. Never
+  reuse a download directory; `tools/fetch_build.py` names it for the run id.
+- **Nothing in the macOS artifact is named after the export path.** The zip is
+  `wildlife-crossing.zip`; the bundle inside is `Wildlife Crossing.app` and the
+  pack inside that is `Wildlife Crossing.pck`, both from `config/name`. Glob,
+  quote, and let `fetch_build.py` print the paths — every hand-typed name in
+  this file's Step 5 was wrong for two weeks before anyone ran it.
 - **A pck that looks empty from a `grep 'res://'` scan may not be.** Godot
   4.6's pack format 3 doesn't prefix paths with `res://`. Use
   `tools/check_pck_contents.py`, which parses the real pack directory.
@@ -285,6 +383,9 @@ or the CI runner logs.
 
 - [`tools/ship.py`](../tools/ship.py) — Steps 0–1 automated; `--help` documents
   the plan format. Tests in `tools/tests/test_ship.py`.
+- [`tools/fetch_build.py`](../tools/fetch_build.py) — Step 4 automated: run-scoped
+  download, and the bundle located by glob rather than by name. Tests in
+  `tools/tests/test_fetch_build.py`.
 - [testing-setup.md](testing-setup.md) — suite mechanics, `smoke_boot.sh` details
 - [export-setup.md](export-setup.md) — how builds get produced, pack format 3 notes
 - [ADR 0012](adr/0012-godot-and-gut-version-pin.md) — the Godot/GUT version pin
