@@ -17,6 +17,37 @@ status: active
 > 2026-08-12. Where a claim could not be re-checked, it is labelled in
 > [§Verification](#verification).
 
+> [!success] Amendment 2026-08-13 — **B1 is closed: `smoke-windows` runs and passes.**
+> `retention-days: 14` moved back under the `Upload build artifacts` `with:`
+> block (`13857e0`). `grep -n 'retention-days' .github/workflows/ci.yml` now
+> returns that line and nowhere else, and `smoke-windows` was observed green,
+> not skipped, in run `31762062722`.
+>
+> This item predicted that a `stdbuf` failure would be a separate finding. A
+> separate finding did surface, but not that one. Git Bash on `windows-latest`
+> supplies both `timeout` and `stdbuf`, so both boots ran. What failed was the
+> gate's own `ERROR:` pattern matching Godot's at-exit noise on a healthy build,
+> fixed in `6db1e3d` and now covered by `tools/tests/test_smoke_boot.py`. See
+> [[../daily-logs/2026-08-13]].
+
+> [!note] Amendment 2026-08-13 — **B2, B3 and V5 advanced. None of them closed.**
+> Ten commits are on `origin/feat/save-load-and-agent-respawn` and PR #1 is open
+> and green, so CI has now executed the DCO gate, the three-pack gate, the
+> Windows smoke job and every line of the save/load system. B2's acceptance asks
+> for `git rev-list --count origin/main..HEAD` to reach 0, and `origin/main` has
+> not moved since 2026-08-10. Merging PR #1 closes it.
+>
+> B3: all three packs passed the contents gate, both the Linux and Windows
+> binaries boot in CI, and a windowed macOS build of `HEAD` was launched and ran,
+> the first any human has seen. The keyed checklist was not walked, so `B`, `M`,
+> `F1`, left-click, `Enter`, `Escape`, `F5` and `F9`, credits legibility, and the
+> crossing cue and chime remain unconfirmed. Quicksave to `user://` has still
+> never run from an exported binary.
+>
+> V5: the `dco` job executed for the first time and passed. Its acceptance also
+> requires observing it red on a deliberately unsigned commit, which has not
+> happened.
+
 ## 1. Summary
 
 - **Build case:** **FIRST working build**, for the sixth consecutive review, on
