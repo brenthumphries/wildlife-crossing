@@ -200,20 +200,29 @@ Before declaring done:
   This asks a different question from `verify` — that one audits whether the
   claims are true, this one audits whether the list is complete. Run both.
 
-### Step 7 — Refresh the `project-state` artifact
+### Step 7 — Refresh the `wildlife-crossing-project-state` artifact
 
-Call `list_artifacts` to get the path of the artifact with id `project-state`,
-Read its current HTML, and rewrite **only the Wildlife Crossing section** from
-this review: open blockers with owner, next actions in order, and build state
-(test counts, build case, blocker count). Write the updated document to a file,
-then call `update_artifact` with id `project-state`.
+Call `list_artifacts` to get the path of the artifact with id
+**`wildlife-crossing-project-state`**, Read its current HTML, and rewrite it
+from this review: open blockers with owner, next actions in order, and build
+state (test counts, build case, blocker count). Write the updated document to a
+file, then call `update_artifact` with id `wildlife-crossing-project-state`.
+
+**Do not write to the artifact with id `project-state`.** That was the original
+combined Attainabl + Wildlife Crossing board. It was **split into two per-project
+artifacts on 2026-08-19** because one page rewritten by three different scheduled
+tasks meant half of it was always stale, and `project-state` now carries no
+status — it is a pointer to its two successors and is marked safe to delete. If
+`list_artifacts` still returns it, leave it alone.
 
 Rules for this step, and they matter more than the formatting:
 
-- **Update the Wildlife Crossing section's own "as of" date to today. Leave the
-  Attainabl section and its date untouched** — that half is owned by the
+- **Update the "as of" date in the header to today**, and say what time zone.
+  The whole page is this project's, so the date applies to the whole page.
+- **Do not touch the `attainabl-yt-project-state` artifact.** It is owned by the
   Attainabl Monday and Friday tasks, which can read a repo this run cannot. A
-  date you did not earn is worse than a stale one you did.
+  date you did not earn is worse than a stale one you did. The same rule that
+  used to protect the Attainabl *section* now protects the Attainabl *page*.
 - **Carry nothing forward that you did not read this run.** Anything labelled
   Unverifiable in Step 6 is labelled Unverifiable on the page too. A number that
   survives onto a dashboard because nobody re-checked it is exactly the failure
