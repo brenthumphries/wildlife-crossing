@@ -23,6 +23,54 @@ status: active
 > **expires around 2026-08-27** under `ci.yml:243`'s `retention-days: 14`. That
 > is roughly two days from today. See [§5](#5-risks--open-questions).
 
+> [!success] Amendment 2026-08-26 — **B1's GPG half is closed. B2's commit half landed; B2 itself did not close.**
+> ed25519 signing key created, fingerprint
+> `7F68A7E06349DA136226F04E2D5F1ED6EFFC08FD`, expiring 2029-08-26, with its
+> revocation certificate generated and stored off the machine that holds it.
+> All three publication steps at `signing-runbook.md:278-284` are done, which
+> no previous review's acceptance had named individually: the public key is
+> committed at the repo root in `e7ebf9a`, it is on keys.openpgp.org with its
+> email address confirmed, and the full fingerprint is in `README.md` under a
+> new `## Verifying a download` section carrying runbook B4's two commands. The
+> website half of step (c) is C6 and stays open.
+>
+> B2: all eight uncommitted paths were committed at 22:29 local on 2026-08-26
+> and pushed, in `c952a2c`, `ec06258` and `e7ebf9a`. Two consecutive build
+> reviews are inside the repository for the first time since 08-12. B2 does not
+> close on that: PR #1 is unmerged, `origin/main` is still at `0c31c85`, and
+> `origin/main..HEAD` is 13. **The merge must be a merge commit or a rebase.** A
+> squash rewrites the branch into a commit that is not an ancestor of `HEAD`, so
+> B2's own acceptance would still read 10 after a successful merge. That
+> consequence was not stated anywhere before now.
+>
+> On the Time-critical warning above: run `31762062722`'s artifacts were
+> confirmed still present on 2026-08-26, one day inside the estimated expiry.
+> They were not re-checked after that. See [[../daily-logs/2026-08-26]].
+
+> [!note] Amendment 2026-08-27 — **B1b submitted. V9 written, not landed. A failure mode this note did not anticipate.**
+> Apple Developer Program enrolment was submitted on 2026-08-27, Individual /
+> Sole Proprietor. It is recorded in [[../daily-logs/2026-08-27]], which is the
+> first record of it anywhere in the repository, as B1's acceptance asked. A2
+> cannot proceed until Apple approves: a Developer ID Application certificate
+> requires the Account Holder role and an active paid membership, so before
+> approval Xcode offers only the free Personal Team's "Apple Development". A4 is
+> gated the same way. A3 is not.
+>
+> V9 is written into `.github/workflows/ci.yml` and is uncommitted, so it is not
+> closed.
+>
+> **New, and not in any list here.** On 2026-08-26 the `export` job failed at
+> `Upload build artifacts` with *"Failed to CreateArtifact: Artifact storage
+> quota has been hit"* against the 500 MB GitHub Free allowance. The export
+> itself succeeded; eleven files were staged. Because `upload-artifact` is
+> `export`'s last step and `smoke-windows` carries `needs: export`, a full quota
+> fails `export` and skips `smoke-windows`, which is on its own enough to fail
+> B2's acceptance. Mitigated three ways: `retention-days` now splits by event
+> (uncommitted), the account moved to GitHub Pro, and B5 removes the problem
+> outright, since Actions is unmetered on public repositories using standard
+> runners. **That is a second, independent argument for B5 that this note did
+> not have.**
+
 ## 1. Summary
 
 - **Build case:** **FIRST working build**, for the eighth consecutive review, on
