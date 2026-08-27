@@ -5,6 +5,13 @@ on:
     branches: [ main ]
   pull_request:
     branches: [ main ]
+  # Manual trigger (V9). Without it the Actions UI shows no "Run workflow"
+  # button, so regenerating an expired build artifact meant `gh run rerun <id>`
+  # against a run that still exists, or pushing a throwaway commit to fire a
+  # real one. The 08-25 review hit exactly that: the artifact its first
+  # executable step depends on was two days from expiry with no way to rebuild
+  # it on demand. One line, copied from deploy-website.yml:21.
+  workflow_dispatch:
 
 # Pinned per ADR 0012: Godot 4.6.3-stable + GUT 9.6.0 (vendored at game/addons/gut/).
 # Pinned to the exact patch, not the 4.6-stable series: export-template directories
@@ -240,7 +247,18 @@ jobs:
         with:
           name: wildlife-crossing-desktop-builds
           path: builds/
-          retention-days: 14
+          # Split by event. On 2026-08-27 this upload failed outright with
+          # "Failed to CreateArtifact: Artifact storage quota has been hit" on
+          # the 500 MB Free-plan allowance -- which failed the export job, which
+          # skipped smoke-windows through `needs: export`, which blocked a merge
+          # that had nothing wrong with it. The export itself was fine: eleven
+          # files were staged and ready to upload.
+          #
+          # A pull-request build only has to outlive its own run, since
+          # smoke-windows downloads it seconds later in the same run. Only main
+          # builds get fetched days afterwards by tools/fetch_build.py, and for
+          # those 14 days is already tight -- see the 08-25 review, finding 1.
+          retention-days: ${{ github.event_name == 'pull_request' && 1 || 14 }}
 
   # V2, second half: boot a non-Linux binary. Windows rather than macOS because
   # of who can check what by hand — the product owner has a Mac, so the macOS
