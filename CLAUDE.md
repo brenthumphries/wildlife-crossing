@@ -40,6 +40,8 @@ wildlife-crossing/
 ├── docs/             # Technical docs, ADRs, release notes, prompt templates
 ├── website/          # Static site (GitHub Pages)
 ├── builds/           # Exported binaries (excluded from git, use GitHub Releases)
+├── tools/            # Build, test and release scripts, with their tests
+├── harness/          # The weekly-build-review skill and its references
 └── README.md
 ```
 

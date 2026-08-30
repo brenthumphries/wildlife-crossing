@@ -10,11 +10,14 @@ and help species thrive across a living, breathing landscape.
 | Folder            | Purpose                                         |
 |-------------------|-------------------------------------------------|
 | `.claude/`        | Claude AI configuration, commands, context      |
+| `.github/`        | GitHub Actions workflows (CI, website deploy)   |
 | `obsidian-vault/` | Design notes, PRDs, wiki, daily logs            |
 | `game/`           | Godot project (code, scenes, assets)            |
 | `docs/`           | Technical docs, ADRs, release notes             |
 | `website/`        | Static site and user-facing documentation       |
 | `builds/`         | Exported binaries (see GitHub Releases)         |
+| `tools/`          | Build, test and release scripts, plus tests     |
+| `harness/`        | The skill that writes the weekly build reviews  |
 
 ## Development
 
