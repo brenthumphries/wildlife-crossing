@@ -22,7 +22,7 @@ and help species thrive across a living, breathing landscape.
 ## Development
 
 This project is built with Claude as the primary developer.
-See `.claude/CLAUDE.md` for full context and conventions.
+See [`CLAUDE.md`](CLAUDE.md) for full context and conventions.
 
 ## License
 
