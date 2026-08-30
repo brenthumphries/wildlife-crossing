@@ -65,6 +65,17 @@ To sign off automatically for this repository:
 git config format.signOff true
 ```
 
+### How this is checked
+
+CI runs `tools/check_dco.py` on every pull request. It looks at the commits
+your pull request adds — not the whole history — and fails if any of them
+lacks a `Signed-off-by` trailer whose email matches the commit author. Merge
+commits are skipped.
+
+Commits on `main` from before this file existed are not signed off. They are
+all by the copyright holder, so there was nothing to certify, and the check
+deliberately does not reach back to them.
+
 ### If you forgot
 
 For the most recent commit:

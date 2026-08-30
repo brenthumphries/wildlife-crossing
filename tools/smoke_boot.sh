@@ -52,6 +52,32 @@ FATAL_PATTERNS=(
   "SCRIPT ERROR"
   "ERROR:"
 )
+
+# Substrings matching engine noise emitted *during shutdown*, after the game has
+# already done its job. Stripped from the log before FATAL_PATTERNS are counted —
+# but nothing else is, and the number of lines stripped is printed on every run,
+# so this list cannot quietly grow into a gate that never fails.
+#
+# Why this exists (2026-08-13, CI run 31760975487 — the Windows job's first-ever
+# real execution): both boots reached their expected state, "Title screen ready"
+# and "Tutorial loaded", and both were then killed by `timeout` at 30s, which is
+# the healthy path this script is built around (rc 124). On Windows, unlike
+# Linux, that kill runs enough of Godot's static-destruction path to emit
+# diagnostics — 25 and 28 `ERROR:` lines respectively, every one an at-exit
+# report, none from game code. The Linux boot of the same commit logged zero. So
+# `ERROR:` was failing a healthy build for doing the one thing this script
+# requires of it: still running when time ran out.
+#
+# Deliberately narrow, per the note above. The RID entry names the two engine
+# parser types actually observed rather than the generic "were leaked at exit.",
+# so a leak of a *game* type still fails; the PagedAllocator entry names the
+# Variant pool rather than any allocator. Widen only against a real log, never
+# speculatively.
+BENIGN_PATTERNS=(
+  "ERROR: BUG: Unreferenced static string to 0:"
+  "RID allocations of type '23NavMeshGeometryParser"
+  "ERROR: Pages in use exist at exit in PagedAllocator: N7Variant5Pools"
+)
 SUCCESS_LINE="Tutorial loaded"
 # Logged by TitleScreen.READY_LOG_LINE. Change one, change the other.
 TITLE_LINE="Title screen ready"
@@ -112,15 +138,30 @@ analyse_log() {
     failed=1
   fi
 
-  local pat n
+  # Strip the at-exit engine diagnostics before counting fatals, and say how
+  # many went. Reporting the number is the point: a silent filter is how a gate
+  # stops being one, and this script exists because a gate stopped being one.
+  local scan pat n stripped
+  scan="$(mktemp)"
+  cp "$log" "$scan"
+  for pat in "${BENIGN_PATTERNS[@]}"; do
+    grep -vF -- "$pat" "$scan" > "${scan}.next"
+    mv "${scan}.next" "$scan"
+  done
+  stripped=$(( $(wc -l < "$log") - $(wc -l < "$scan") ))
+  if [ "$stripped" -gt 0 ]; then
+    echo "    note: ignored ${stripped} at-exit engine diagnostic line(s) (BENIGN_PATTERNS)"
+  fi
+
   for pat in "${FATAL_PATTERNS[@]}"; do
-    n="$(grep -cF -- "$pat" "$log")"
+    n="$(grep -cF -- "$pat" "$scan")"
     if [ "${n:-0}" -gt 0 ]; then
       annotate "exported binary logged ${n} occurrence(s) of '${pat}'"
-      grep -m3 -F -- "$pat" "$log" | sed 's/^/    /'
+      grep -m3 -F -- "$pat" "$scan" | sed 's/^/    /'
       failed=1
     fi
   done
+  rm -f "$scan"
 
   return "$failed"
 }

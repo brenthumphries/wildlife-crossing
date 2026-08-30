@@ -10,11 +10,14 @@ and help species thrive across a living, breathing landscape.
 | Folder            | Purpose                                         |
 |-------------------|-------------------------------------------------|
 | `.claude/`        | Claude AI configuration, commands, context      |
+| `.github/`        | GitHub Actions workflows (CI, website deploy)   |
 | `obsidian-vault/` | Design notes, PRDs, wiki, daily logs            |
 | `game/`           | Godot project (code, scenes, assets)            |
 | `docs/`           | Technical docs, ADRs, release notes             |
 | `website/`        | Static site and user-facing documentation       |
 | `builds/`         | Exported binaries (see GitHub Releases)         |
+| `tools/`          | Build, test and release scripts, plus tests     |
+| `harness/`        | The skill that writes the weekly build reviews  |
 
 ## Development
 
@@ -64,6 +67,40 @@ executable as a second copy, and release archives from CI already contain both.
 
 Reasoning behind these choices is recorded in
 [ADR 0017](docs/adr/0017-licensing.md).
+
+## Verifying a download
+
+Every release ships a `SHA256SUMS.txt` covering all platforms, with a detached
+OpenPGP signature. One signature covers every artifact, so verifying a download
+is two commands rather than six.
+
+Releases are signed with this key:
+
+```
+Brent Humphries <brent.humphries@gmail.com>
+ed25519  7F68 A7E0 6349 DA13 6226 F04E 2D5F 1ED6 EFFC 08FD
+```
+
+The public key is in this repository as
+[`wildlife-crossing-signing-key.asc`](wildlife-crossing-signing-key.asc) and on
+the [keys.openpgp.org](https://keys.openpgp.org/search?q=7F68A7E06349DA136226F04E2D5F1ED6EFFC08FD)
+keyserver. Prefer the keyserver: a key delivered over the same channel as the
+file it signs proves very little.
+
+```bash
+gpg --keyserver keys.openpgp.org --recv-keys 7F68A7E06349DA136226F04E2D5F1ED6EFFC08FD
+```
+
+Then, with `SHA256SUMS.txt`, `SHA256SUMS.txt.asc` and the build you downloaded
+in the same directory:
+
+```bash
+gpg --verify SHA256SUMS.txt.asc SHA256SUMS.txt
+shasum -a 256 -c SHA256SUMS.txt
+```
+
+The first proves the manifest was signed with the key above; the second proves
+the files match the manifest. Both must pass.
 
 ## Contributing
 

@@ -9,6 +9,52 @@ status: active
 > roadmap [[roadmap|Phases 1–2]]). One question: what work is needed to get
 > there?
 
+> [!success] Amendment 2026-08-06 — **B2 is closed: the v0.1.0 scope call is on the record.**
+> `docs/roadmap.md` Phase 2 logs the decision that the world map ships
+> look-only, with C1 (in-map segment renderer) and C2 (hover highlight)
+> deferred to Phase 2 completion with reasons, and C3 and C4 shipping. Phase 1
+> logs both P1 items, species-preference weighting and the usage counter,
+> deferred past v0.1.0. The blind world-map click was neutralized instead by
+> setting `WorldSelectMap` to `MOUSE_FILTER_STOP` (`cb9f9b8`), a stopgap C1
+> supersedes. Recorded retrospectively: see [[../daily-logs/2026-08-06]], which
+> was itself reconstructed on 2026-08-10.
+
+> [!success] Amendment 2026-08-10 — **V2 is closed: all three packs are gated, and the Windows binary boots in CI.**
+> `tools/check_pck_contents.py` now accepts a macOS `.app` bundle or the export
+> `.zip` as well as a bare `.pck`, and the export job runs it against Linux,
+> Windows and macOS, reporting every platform before failing. A new
+> `smoke-windows` job boots the exported `.exe` headless on `windows-latest`,
+> reusing `tools/smoke_boot.sh` unchanged. macOS is not booted in CI by
+> decision: it is launched and watched by hand during every visual QA and
+> signing session, which V2's own acceptance allows.
+>
+> The locating half is what needed tests. A macOS bundle names its pack from
+> `config/name`, not from the export path, so this project exports
+> `wildlife-crossing.zip` and the pack inside is `Wildlife Crossing.pck`.
+> Verified end to end against the real 2026-07-27 artifacts still on disk: all
+> four inputs resolve, and all four correctly exit 1, since they predate the
+> `exclude_filter`. See [[../daily-logs/2026-08-10]].
+
+> [!success] Amendment 2026-08-10 — **C4 is closed: the tutorial does demonstrate the mechanic.**
+> Measured with `tools/measure_tutorial.gd` against the real systems. No
+> hazard-free route crosses Bow Valley, baseline mortality is 6.30 of 10 agents
+> in the first in-game day, and a span where the animals actually cross reduces
+> that to 1.20 with about 192 traversals logged.
+> [[../design/detour-cost-question]] is off `draft`.
+>
+> Two corrections to how this item was framed. First, the acceptance criterion
+> asked whether mortality "measurably drops", and measured at the end of a run
+> it does not: deaths are absorbing, nothing respawns agents, and every arm
+> converges on "most of them died". The first two attempts reported 4% and 1.4%
+> and would have concluded the crossing achieves nothing. The horizon is the
+> finding. Second, the measurement surfaced a defect this review did not look
+> for: `main.gd:18` focuses the opening camera on row 6, which has zero measured
+> deaths, while 70 of 73 deaths happen on rows 0 to 2. Flagged to the owner, not
+> fixed.
+>
+> Scope: Bow Valley only. The other 17 segments, which do not bisect, remain
+> unmeasured.
+
 ## 1. Summary
 
 - **Build case:** **FIRST working build** — by the harness's own test, which is

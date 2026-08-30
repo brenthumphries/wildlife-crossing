@@ -5,6 +5,13 @@ on:
     branches: [ main ]
   pull_request:
     branches: [ main ]
+  # Manual trigger (V9). Without it the Actions UI shows no "Run workflow"
+  # button, so regenerating an expired build artifact meant `gh run rerun <id>`
+  # against a run that still exists, or pushing a throwaway commit to fire a
+  # real one. The 08-25 review hit exactly that: the artifact its first
+  # executable step depends on was two days from expiry with no way to rebuild
+  # it on demand. One line, copied from deploy-website.yml:21.
+  workflow_dispatch:
 
 # Pinned per ADR 0012: Godot 4.6.3-stable + GUT 9.6.0 (vendored at game/addons/gut/).
 # Pinned to the exact patch, not the 4.6-stable series: export-template directories
@@ -39,6 +46,37 @@ jobs:
       # being true.
       - name: Run tool tests
         run: python3 -m unittest discover -s tools/tests -b
+
+  # CONTRIBUTING.md requires a Signed-off-by trailer on every commit and, until
+  # now, nothing enforced it. ADR 0017 is why it matters beyond bookkeeping:
+  # with a DCO and no CLA, the first merged outside contribution is the point of
+  # no return on the licensing model, and a missing trailer costs a history
+  # rewrite on a public branch once it has landed.
+  #
+  # Pull requests only, and only the commits the pull request *adds*. 33 of the
+  # 40 commits on main as of 2026-08-10 predate CONTRIBUTING.md and carry no
+  # trailer — all of them by the copyright holder, so there is nothing to
+  # attest — and a check that read whole history would leave main permanently
+  # red. A permanently red check teaches everyone to scroll past it.
+  #
+  # Direct pushes to main are not gated here: that path is tools/ship.py, which
+  # refuses to commit without a sign-off and adds the trailer itself.
+  dco:
+    name: DCO sign-off (pull requests)
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      # fetch-depth: 0 is required, not tidiness — a shallow clone has no base
+      # ref to diff against, and check_dco.py exits 2 with that diagnosis rather
+      # than reporting a green it did not earn.
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check DCO sign-off on this pull request's commits
+        run: |
+          set -euo pipefail
+          python3 tools/check_dco.py "origin/${GITHUB_BASE_REF}" HEAD
 
   test:
     # Version inlined: the `env` context is not available in job names.
@@ -143,11 +181,35 @@ jobs:
       # can see inside the artifact, which is why a 2026-07-28 review spent a
       # day mis-diagnosing the pack's contents by string-scanning it. Read the
       # pack directory properly and assert what has to be in there.
-      - name: Verify the exported pack's contents
+      #
+      # V2 (2026-08-10): all three packs, not just Linux. The Windows pack is
+      # not byte-identical to the Linux one — md5 a2dbbbee… against 934e8b12…,
+      # measured in the 2026-08-04 review — so "the Linux pack is fine" was
+      # never evidence about the other two, and under ADR 0018 the Windows
+      # binary goes into a public Release having been checked by nothing.
+      # The macOS pack lives inside the .app inside the zip, and is named from
+      # config/name rather than the export path; check_pck_contents.py globs
+      # for it rather than reconstructing the name.
+      #
+      # Every pack is checked even after one fails. Three platforms diverging
+      # in three different ways is one report worth reading; the first failure
+      # alone sends you round the loop twice. Same reasoning smoke_boot.sh
+      # gives for always running both of its boots.
+      - name: Verify every exported pack's contents
         run: |
-          python3 tools/check_pck_contents.py \
+          set -uo pipefail
+          failed=0
+          for target in \
             builds/wildlife-crossing-linux-x86_64/wildlife-crossing.pck \
-            --data-dir game/data --github
+            builds/wildlife-crossing-windows-x86_64/wildlife-crossing.pck \
+            builds/wildlife-crossing-macos/wildlife-crossing.zip
+          do
+            echo "::group::pack gate — ${target}"
+            python3 tools/check_pck_contents.py "$target" \
+              --data-dir game/data --github || failed=1
+            echo "::endgroup::"
+          done
+          exit "$failed"
 
       # Runs the binary rather than reading the pack, so it catches failures the
       # contents check cannot: a bad main scene, a crash in _ready(), a missing
@@ -185,4 +247,51 @@ jobs:
         with:
           name: wildlife-crossing-desktop-builds
           path: builds/
-          retention-days: 14
+          # Split by event. On 2026-08-27 this upload failed outright with
+          # "Failed to CreateArtifact: Artifact storage quota has been hit" on
+          # the 500 MB Free-plan allowance -- which failed the export job, which
+          # skipped smoke-windows through `needs: export`, which blocked a merge
+          # that had nothing wrong with it. The export itself was fine: eleven
+          # files were staged and ready to upload.
+          #
+          # A pull-request build only has to outlive its own run, since
+          # smoke-windows downloads it seconds later in the same run. Only main
+          # builds get fetched days afterwards by tools/fetch_build.py, and for
+          # those 14 days is already tight -- see the 08-25 review, finding 1.
+          retention-days: ${{ github.event_name == 'pull_request' && 1 || 14 }}
+
+  # V2, second half: boot a non-Linux binary. Windows rather than macOS because
+  # of who can check what by hand — the product owner has a Mac, so the macOS
+  # build gets launched and watched during every visual QA and signing session
+  # (signing-runbook.md A8). Nobody here owns a Windows machine, so without this
+  # job the .exe ships to a public Release having never been executed by
+  # anything, anywhere. That is the gap worth spending a runner on.
+  #
+  # It re-uses tools/smoke_boot.sh unchanged: Git Bash on windows-latest
+  # provides bash, timeout and stdbuf, which is everything the script probes
+  # for. The script already handles the non-Linux case it was written for
+  # (Brent's Mac) the same way.
+  smoke-windows:
+    name: Smoke-test the Windows binary (boots to Main.tscn)
+    needs: export
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download the exported builds
+        uses: actions/download-artifact@v4
+        with:
+          name: wildlife-crossing-desktop-builds
+          path: builds
+
+      # A Windows .exe carries no executable bit, and smoke_boot.sh refuses a
+      # target that is not `-x`. Setting it in the runner's POSIX layer is
+      # cheaper and clearer than teaching the script a platform exception.
+      - name: Boot the Windows binary headless
+        shell: bash
+        run: |
+          set -euo pipefail
+          BIN=builds/wildlife-crossing-windows-x86_64/wildlife-crossing.exe
+          test -f "$BIN" || { echo "::error::no Windows binary in the artifact"; exit 1; }
+          chmod +x "$BIN"
+          bash tools/smoke_boot.sh "$BIN" 30

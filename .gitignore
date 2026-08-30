@@ -17,6 +17,10 @@ builds/
 /tools/*
 !/tools/*.py
 !/tools/*.sh
+# GDScript measurement harnesses run via `godot -s` (measure_tutorial.gd). The
+# Godot binary itself lives at tools/godot/ and stays ignored — this pattern
+# only re-includes files directly in tools/, and none of them is the engine.
+!/tools/*.gd
 # Same trick one level down: re-include the tests directory itself before its
 # contents, or `/tools/*` keeps them out and CI's `unittest discover` finds an
 # empty suite that passes vacuously.
