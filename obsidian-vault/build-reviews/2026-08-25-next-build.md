@@ -71,6 +71,12 @@ status: active
 > runners. **That is a second, independent argument for B5 that this note did
 > not have.**
 
+> [!success] Amendment 2026-08-27 (later the same day) — **V9 is closed.**
+> `workflow_dispatch` and the per-event `retention-days` split committed in
+> `e5687cf` and pushed. The note above, written a few hours earlier, says V9 was
+> written and not landed; it has since landed. Nothing else in this review moved.
+> B2 still waits on the merge. See [[../daily-logs/2026-08-27]].
+
 ## 1. Summary
 
 - **Build case:** **FIRST working build**, for the eighth consecutive review, on
