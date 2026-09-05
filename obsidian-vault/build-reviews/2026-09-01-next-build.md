@@ -84,6 +84,48 @@ status: active
 > `title_screen.gd` binds no keys, so that step has never been runnable in the
 > order written.
 
+> [!success] Amendment 2026-09-05 — **The float-key defect is closed, and the world map is correct in the artifact.**
+> The defect this note's 09-02 amendment recorded as untracked and unnumbered is
+> fixed, merged as `829e36b` from PR #2, and confirmed by looking. See
+> [[../daily-logs/2026-09-05]].
+>
+> **Fixed at the data boundary.** `species_registry.gd` `_index()` now
+> normalises a whole-number float id to `int` and writes the coerced value back
+> into the record. Brent's call, against patching
+> `world_select_controller.gd:65,232`, on three checked facts: `sub_areas.json`
+> is the only numeric-id data file, `world_select_controller` is the only
+> consumer of `registry.sub_areas` in `game/`, and the controller must key
+> `_unlocked` by `int` regardless because `unlock_sub_area()` and EventBus's
+> `sub_area_unlocked` both deliver ints.
+>
+> **`roadmap.md:116` is met by observation now, not only in tests.** Eleven
+> cards desaturated with the padlock, one not, the white selection outline on
+> the Bow Valley card, and every card showing its name as text. That also
+> settles the two consequences the 09-02 log left unverified: focus was falling
+> through to `ids[0]`, and `:232`'s label lookup was missing the same way.
+>
+> **The suite can see it now.** New `game/tests/species_registry_test.gd` and
+> two controller tests read `res://data/` through the registry instead of the
+> int-keyed fixtures that missed this. 24 scripts / 246 tests / 3,154 asserts,
+> from 23 / 237 / 3,032. With the fix backed out, 6 of them fail, one through
+> GUT's unexpected-error check on the engine error the walk saw verbatim.
+>
+> **C8 is half closed and V2 is part closed.** The 08-29 log is committed, along
+> with the whole five-day vault backlog, in `c070b12`. C8's remaining clause is
+> the durable sentence in a tracked file. V2's remaining half is the three
+> constants files.
+>
+> **`dco` executed for the first time since the 08-29 merge** and returned
+> green on PR #2. **V5 is not advanced by that**: its acceptance needs the job
+> observed red on an unsigned commit, and every commit in PR #2 was signed off.
+>
+> **The stale-lock account is settled, in the sandbox's favour.** This note's §4
+> ruled the cause well-supported rather than proven. Each `ship.py` dry run this
+> session left a fresh `.git/index.lock` that blocked the next run, and `mv`
+> cleared it where `rm` could not, which is the 2026-08-11 mechanism reproduced.
+> Also new: `git checkout -- <path>` cannot restore a file over the mount at
+> all, and reports the failure as a warning while leaving the file unchanged.
+
 ## 1. Summary
 
 - **Build case:** **FIRST working build**, for the ninth consecutive review, on

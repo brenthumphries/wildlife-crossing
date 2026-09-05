@@ -76,6 +76,18 @@ Commits on `main` from before this file existed are not signed off. They are
 all by the copyright holder, so there was nothing to certify, and the check
 deliberately does not reach back to them.
 
+### Machine-written commits
+
+Some commits in this repository are written by Claude and carry a
+`Co-Authored-By: Claude` trailer. They are authored by and signed off by the
+copyright holder, whose certificate covers them: the DCO attests to provenance
+and the right to submit, and machine-generated output carries no third-party
+rights that would need anyone else's permission. The reasoning is in
+[ADR 0019](docs/adr/0019-dco-sign-off-on-automated-commits.md), which builds on
+[ADR 0017](docs/adr/0017-licensing.md).
+
+This changes nothing for you. Sign off your own contributions as above.
+
 ### If you forgot
 
 For the most recent commit:
