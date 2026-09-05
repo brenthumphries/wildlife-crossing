@@ -200,35 +200,24 @@ Before declaring done:
   This asks a different question from `verify` — that one audits whether the
   claims are true, this one audits whether the list is complete. Run both.
 
-### Step 7 — Refresh the `wildlife-crossing-project-state` artifact
+### The project-state dashboard is not this skill's job
 
-Call `list_artifacts` to get the path of the artifact with id
-**`wildlife-crossing-project-state`**, Read its current HTML, and rewrite it
-from this review: open blockers with owner, next actions in order, and build
-state (test counts, build case, blocker count). Write the updated document to a
-file, then call `update_artifact` with id `wildlife-crossing-project-state`.
+Earlier versions of this skill ended with a Step 7 that called `list_artifacts`
+and `update_artifact` to rewrite the `wildlife-crossing-project-state` board.
+**That step is deleted. Do not add it back.**
 
-**Do not write to the artifact with id `project-state`.** That was the original
-combined Attainabl + Wildlife Crossing board. It was **split into two per-project
-artifacts on 2026-08-19** because one page rewritten by three different scheduled
-tasks meant half of it was always stale, and `project-state` now carries no
-status — it is a pointer to its two successors and is marked safe to delete. If
-`list_artifacts` still returns it, leave it alone.
+Two reasons, and the second is the one that matters.
 
-Rules for this step, and they matter more than the formatting:
+Those tools exist only in a session linked to Brent's Mac, so the step made a
+skill that otherwise reads as machine-independent silently Mac-only, and it is
+the only thing here that cannot run on a GitHub Actions runner. And the board
+now has an owner: a scheduled cloud session refreshes it daily from the public
+repository, seeded 2026-09-05. Two writers on one page is what made the
+original combined `project-state` board half stale at all times, and splitting
+it on 2026-08-19 was the fix. Re-adding this step would rebuild the same defect
+from the other side.
 
-- **Update the "as of" date in the header to today**, and say what time zone.
-  The whole page is this project's, so the date applies to the whole page.
-- **Do not touch the `attainabl-yt-project-state` artifact.** It is owned by the
-  Attainabl Monday and Friday tasks, which can read a repo this run cannot. A
-  date you did not earn is worse than a stale one you did. The same rule that
-  used to protect the Attainabl *section* now protects the Attainabl *page*.
-- **Carry nothing forward that you did not read this run.** Anything labelled
-  Unverifiable in Step 6 is labelled Unverifiable on the page too. A number that
-  survives onto a dashboard because nobody re-checked it is exactly the failure
-  this review exists to catch.
-- **The page has no live data.** Everything is baked in at write time. Do not add
-  code that fetches on load; it will silently fail in the sandbox.
+Write the note. The board reads the note.
 
 ---
 
