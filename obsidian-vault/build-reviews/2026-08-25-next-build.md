@@ -77,6 +77,44 @@ status: active
 > written and not landed; it has since landed. Nothing else in this review moved.
 > B2 still waits on the merge. See [[../daily-logs/2026-08-27]].
 
+> [!success] Amendment 2026-08-29 — **B2 and B5 are both closed. The repository is public.**
+> B2: PR #1 merged as `2e5f452`, a merge commit with parents `0c31c85` and
+> `8340749`. `HEAD` is on `main` and `git rev-list --count origin/main..HEAD` is
+> **0**, which is this item's acceptance verbatim. `origin/main` had not moved
+> since 2026-08-10.
+>
+> B5: `gh repo view --json visibility` returns `PUBLIC`. This note's acceptance
+> asked for the flip or its scheduling, plus a written record; the record is
+> [[../daily-logs/2026-08-29]], and a line in `README.md` or `CONTRIBUTING.md`
+> is still owed as the durable version.
+>
+> **This note's pre-flight row was right about what mattered.** `harness/` and
+> the tracked `tools/` files were the real exposure, not the ignored clutter,
+> and both are now in the structure tables of `README.md` and `CLAUDE.md`
+> (`8340749`). A third gap this note did not name: `README.md` had also omitted
+> `.github/`.
+>
+> **The flip also settled the storage problem the 08-27 amendment describes.**
+> Actions is unmetered on public repositories using standard runners, so B5 did
+> what neither the retention split nor GitHub Pro could: it removed the ceiling
+> rather than raising it. Worth recording for the next reviewer, because the
+> ordering looks accidental and was not.
+>
+> **Two new items nothing here tracks**, both on C1's path rather than this
+> note's. `.gitignore` carries no credential patterns at all (`*.p8`, `*.p12`,
+> `*.cer`, `*.mobileprovision`, `.env`), which matters because A4 delivers a
+> `.p8` Apple permits one download of. And `.gitignore:5-6` says to re-ignore
+> `export_presets.cfg` once identities or keys are added, which will not work on
+> its own: the file is tracked, so it needs `git rm --cached` too.
+>
+> **One of this note's three falsified claims is itself now corrected.** Running
+> `ship.py` from the Cowork mount printed `warning: unable to unlink
+> '.../.git/index.lock': Operation not permitted`. The mount forbids `unlink`,
+> so every git command run there leaves its lock behind, which is what the 08-13
+> log said and what this note set to "cause unknown". The 08-13 account holds
+> for the sandbox. It does not describe the Mac, where `ship.py` cleared a
+> 1,552-second-old lock the same evening without complaint.
+
 ## 1. Summary
 
 - **Build case:** **FIRST working build**, for the eighth consecutive review, on

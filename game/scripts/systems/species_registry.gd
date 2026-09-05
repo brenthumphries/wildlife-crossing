@@ -46,8 +46,23 @@ func _load_object(file_name: String) -> Dictionary:
 	return parsed
 
 ## Build an id -> record dictionary from an array of records.
+##
+## `JSON.parse_string` returns every JSON number as a float and Godot
+## dictionaries treat `7` and `7.0` as distinct keys, so a numeric id would
+## index under `7.0` and miss every `int`-typed lookup in the codebase. Numeric
+## ids are normalised to `int` here, at the data boundary, and written back into
+## the record so the key and the record's own id field agree.
 func _index(records: Array, key: String) -> Dictionary:
 	var out: Dictionary = {}
 	for rec in records:
-		out[rec[key]] = rec
+		var id: Variant = _normalise_id(rec[key])
+		rec[key] = id
+		out[id] = rec
 	return out
+
+## Narrow a whole-number float id to `int`. Any other value — a string id, a
+## fractional number — is returned unchanged rather than silently truncated.
+func _normalise_id(id: Variant) -> Variant:
+	if typeof(id) == TYPE_FLOAT and is_equal_approx(id, floor(id)):
+		return int(id)
+	return id
