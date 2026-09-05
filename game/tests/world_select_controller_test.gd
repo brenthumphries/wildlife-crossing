@@ -81,6 +81,38 @@ func test_setup_derives_lock_state_from_starts_unlocked() -> void:
 func test_default_focus_is_first_unlocked_sub_area() -> void:
 	assert_eq(_c.focused_sub_area_id, 7)
 
+# --- lock state from registry-parsed data (regression, 2026-09-02) ---
+#
+# SUB_AREAS above is hand-built with int keys. Production data arrives through
+# SpeciesRegistry, where `JSON.parse_string` returns every number as a float —
+# the difference the windowed build walk of 2026-09-02 found and which 237 green
+# tests could not see. These feed real registry output through `setup()`.
+
+const REGISTRY_SCRIPT := preload("res://scripts/systems/species_registry.gd")
+
+func _controller_from_real_data() -> WorldSelectController:
+	var reg := REGISTRY_SCRIPT.new()
+	reg.load_all()
+	var c := WorldSelectController.new()
+	c.setup(reg.sub_areas)
+	reg.free()
+	return c
+
+func test_registry_data_unlocks_the_tutorial_sub_area() -> void:
+	var c := _controller_from_real_data()
+	assert_true(c.is_sub_area_unlocked(7),
+			"sub-area 7 is unlocked from res://data/ — every card drew locked " \
+			+ "while the registry keyed sub_areas by float")
+	assert_eq(c.focused_sub_area_id, 7,
+			"focus lands on the unlocked sub-area rather than falling to ids[0]")
+	c.free()
+
+func test_registry_data_leaves_the_other_sub_areas_locked() -> void:
+	var c := _controller_from_real_data()
+	assert_false(c.is_sub_area_unlocked(1), "sub-area 1 stays locked")
+	assert_false(c.is_sub_area_unlocked(12), "sub-area 12 stays locked")
+	c.free()
+
 # --- zoom hysteresis (PRD resolved threshold: activate ≥16 px, deactivate <12 px) ---
 
 func test_zoom_to_activate_threshold_enters_segment_mode() -> void:
