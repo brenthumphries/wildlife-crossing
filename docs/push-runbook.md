@@ -20,13 +20,27 @@ there with a host-key/auth error — Claude can stage and even commit inside the
 sandbox (it writes the real `.git`), but the push step must run in a real
 terminal.
 
+**`main` is protected and there is no bypass actor.** Since 2026-09-06 the
+`Protect main` ruleset — checked in at
+[`.github/rulesets/protect_main.json`](../.github/rulesets/protect_main.json),
+§6.5 of [pipeline-design.md](pipeline-design.md) — requires a pull request,
+requires all five CI checks, requires the branch to be up to date, and blocks
+force pushes and deletion of `main`. `git push origin main` is rejected, for
+Brent too, deliberately: ADR 0019 signs machine-written commits off in advance
+partly because nothing signed in advance can reach `main` without a human merge
+click, and an admin bypass would leave that guarantee resting on habit.
+
+So every route through this runbook now goes: branch, commit, push the branch,
+open a pull request, merge it. Steps 1, 4 and 5 are unchanged by that. Steps 0,
+2 and 3 are the ones that moved.
+
 > **Run one command per line**, not a pasted multi-line block, unless a block
 > is explicitly fenced as a single unit (e.g. the Python heredocs below). zsh
 > can mash multiple pasted lines into one invocation and fail confusingly.
 
 ---
 
-## The short version (Steps 0–1 automated)
+## The short version
 
 `tools/ship.py` does the mechanical half of Steps 0 and 1: clears a stale
 `.git/index.lock`, refuses a working tree that is not safe to commit, stages
@@ -43,23 +57,45 @@ cd ~/wildlife-crossing
 ```
 
 ```bash
+git checkout main
+```
+
+**Read that line's output before running the next one.** If it refuses with
+"Your local changes would be overwritten", stop and deal with it — see Step 0.
+
+```bash
+git pull
+```
+
+```bash
+git checkout -b <type>/<short-description>
+```
+
+```bash
 tools/ship.py commit-plan.json
 ```
 
 Read the dry run. It prints each commit and every file it will stage, and
-fails if the plan does not account for every changed path.
+fails if the plan does not account for every changed path. It also checks the
+plan's `branch` field against the branch you are actually on.
 
 ```bash
 tools/ship.py commit-plan.json --execute
 ```
 
 ```bash
-git push origin main
+git push -u origin <branch>
+```
+
+```bash
+gh pr create --fill
 ```
 
 ```bash
 tools/ship.py --verify
 ```
+
+Then Step 3: watch the five checks and merge when they are all green.
 
 Everything before the push is one `git reset` away from undone, and `ship.py`
 prints the exact reset command if it fails partway. If any of it misbehaves,
@@ -73,7 +109,7 @@ have, and the windowed launch is the one check nothing can stand in for.
 
 ---
 
-## Step 0 — Clear the stale lock, confirm the starting point
+## Step 0 — Clear the stale lock, confirm the starting point, branch off `main`
 
 `harness/weekly-build-review` (and, occasionally, an interrupted editor
 session) leaves `.git/index.lock` behind. This has recurred across the
@@ -98,6 +134,35 @@ git log --oneline -3
 
 Read the output before continuing — it tells you what's actually changed and
 whether `HEAD` is where you expect.
+
+Now get onto a fresh branch cut from an up-to-date `main`. Under the ruleset
+there is no other route, and doing it now rather than later matters: commits
+made straight onto `main` cannot be pushed, and discovering that after
+`ship.py --execute` means unpicking commits instead of retyping one command.
+
+```bash
+git checkout main
+```
+
+**Confirm that succeeded before running the next line.** A checkout that aborts
+with "Your local changes would be overwritten" leaves you on the branch you
+started on, and everything after it then operates on the wrong base. That
+happened on 2026-09-05: a daily log had just been edited, `checkout` refused,
+and the new branch was cut from the pre-merge tip rather than from `main`. It
+was harmless that once only because the old tip was already an ancestor of
+`main` through the merge commit. If the checkout refuses, commit or stash the
+offending files first, then re-run it.
+
+```bash
+git pull
+```
+
+```bash
+git checkout -b <type>/<short-description>
+```
+
+Branch names take the same `feat/`, `fix/`, `docs/`, `chore/`, `test/` prefixes
+as commits — see root `CLAUDE.md`.
 
 ---
 
@@ -149,49 +214,51 @@ so, as this file's predecessor did).
 
 ---
 
-## Step 2 — Push
+## Step 2 — Push the branch, open the pull request
 
 **Know what this triggers before you run it.** `ci.yml` fires on exactly two
 events: `push` to `main`, and `pull_request` targeting `main`. Nothing else
 runs CI. Pushing a feature branch uploads the commits and runs **no jobs at
 all** — which is a useful property (it is a free off-machine backup you can
 take mid-work), but it means a green terminal here is not evidence of
-anything.
-
-Working directly on `main`:
-
-```bash
-git push origin main
-```
-
-Working on a feature branch — the push is silent, and the pull request is what
-actually runs CI:
+anything. The pull request is what runs CI, and under the ruleset it is also
+the only thing that can change `main`.
 
 ```bash
 git push -u origin <branch>
 ```
 
 ```bash
-gh pr create --base main --head <branch> --title "<title>" --body "<why>"
+gh pr create --fill
 ```
+
+`--fill` takes the title and body from the commits, which is the right default
+when the messages were written from the daily log. Use `--title` and `--body`
+when the branch carries several commits that need a summary they do not already
+have between them.
 
 If the push fails with a host-key or permission error, you are not on Brent's
 Mac — the sandbox cannot push. Re-run from a real terminal.
 
+If `git push origin main` fails with `GH013: Repository rule violations found`,
+that is the ruleset working, not a broken remote, and nothing is lost — the
+commits are sitting in your local history. Branch from where you are, push the
+branch, and open the pull request:
+
+```bash
+git checkout -b <type>/<short-description>
+```
+
 ---
 
-## Step 3 — Watch CI
+## Step 3 — Watch CI, then merge
 
 `gh` is installed and authorized on Brent's Mac; the GitHub MCP connector is
 **not** authorized in Cowork sessions, so watching CI is a you-run-it step,
 not a Claude-run-it step.
 
 ```bash
-gh run list --limit 5
-```
-
-```bash
-gh run watch $(gh run list --limit 1 --json databaseId --jq '.[0].databaseId')
+gh pr checks --watch
 ```
 
 ```bash
@@ -200,7 +267,9 @@ gh run view $(gh run list --limit 1 --json databaseId --jq '.[0].databaseId')
 
 All five jobs should report success: `Tool tests`, `DCO sign-off` (pull
 requests only), `GUT tests`, `Export desktop builds`, and `Smoke-test the
-Windows binary`. The engine job names should show the pinned version (currently
+Windows binary`. **All five are required status checks**, so on a pull request
+this is no longer a judgement call — the merge is refused until every one of
+them is green. The engine job names should show the pinned version (currently
 `Godot 4.6.3-stable headless` — see
 [ADR 0012](adr/0012-godot-and-gut-version-pin.md)). If the job name shows a
 different patch version, the pin has drifted; fix `ci.yml` before trusting
@@ -213,6 +282,35 @@ If a job is red, pull the failure log directly rather than opening the web UI:
 gh run view $(gh run list --limit 1 --json databaseId --jq '.[0].databaseId') --log-failed
 ```
 
+Merge when they are green. Auto-merge is **not** enabled on this repository —
+`gh pr merge --auto` fails with `Auto merge is not allowed for this repository`
+— so this is a command you run once the checks finish, not one you queue up in
+advance:
+
+```bash
+gh pr merge --merge --delete-branch
+```
+
+`--merge`, not `--squash`: the ruleset permits merge commits only, matching the
+existing history and keeping a mis-cut branch as recoverable as it has been.
+
+If the merge is refused because the branch is behind `main`, that is the
+ruleset's strict policy asking for an update. This re-runs the checks:
+
+```bash
+gh pr update-branch
+```
+
+One failure mode is worth recognising on sight, because with no bypass actor
+there is no way to click past it: **a check showing "expected" or "waiting for
+status" rather than red is a job that never reported at all.** `ci.yml` guards
+the two known causes — `if: ${{ !cancelled() }}` on `export` and
+`smoke-windows` so a `needs:` failure cannot skip them, and a tolerated
+artifact upload — which leaves renaming a job as the live risk. Bumping
+`GODOT_VERSION` renames two of the five required contexts. Fix the name,
+in `ci.yml` or in the ruleset, whichever is wrong; do not go looking for a way
+around the gate.
+
 ---
 
 ## Step 4 — Download and verify the artifact's contents
@@ -224,6 +322,16 @@ real names already quoted:
 
 ```bash
 tools/fetch_build.py <run-id> --check
+```
+
+**Use the post-merge run on `main`, not the pull request's run.** Since
+`e5687cf` artifact retention is split by event: a pull-request build is kept for
+**1 day**, because it only has to outlive its own run (`smoke-windows`
+downloads it seconds later), while a `main` build is kept for 14. Fetching the
+PR run's artifact works on the day and then quietly stops working.
+
+```bash
+gh run list --branch main --limit 3
 ```
 
 Both halves of that matter, and both were learned the hard way on 2026-08-13
@@ -294,25 +402,40 @@ it is evidence for ADR 0018.
 codesign --force --deep --sign - "<bundle>.app"
 ```
 
-Confirm windowed, in this order:
+Confirm windowed, in this order. **The order matters, and was wrong from
+2026-08-09 to 2026-09-06.** Credits are reachable two different ways — a menu
+button before Play, and F1 after it — and the old list asked for the keyboard
+one while the menu was still up. `title_screen.gd` binds no keys at all; every
+key below lives in `main.gd` and works only once the tutorial is running.
 
 1. **The title screen appears** — not the tutorial. ADR 0017 put a menu in
    front on 2026-08-09; this runbook said "the Bow Valley tutorial loads" until
-   2026-08-14.
-2. **F1 opens credits.** This is where Godot's MIT notice lives and is the
-   reason the title screen exists at all — a licensing obligation, not a
-   nicety.
-3. **Start → the Bow Valley tutorial loads.**
-4. **B builds a small span** — a couple of tiles, not the whole highway.
+   2026-08-14. Expect three buttons — **Play**, **Credits & Licences**,
+   **Quit** — over a version line (`main_menu.gd`).
+2. **Credits & Licences opens the credits overlay.** The button, not a key.
+   This is where Godot's MIT notice lives and is the reason the title screen
+   exists at all — a licensing obligation, not a nicety. Close it and come back
+   to the menu.
+3. **Play → the Bow Valley tutorial loads.** The button reads "Play"; this
+   runbook said "Start" until 2026-09-06.
+4. **F1 opens credits again, in-game, and Escape closes it.** A second route,
+   not a repeat of step 2: `main.gd`'s `CREDITS_KEY`, reaching the same overlay
+   through different code. Worth its own line because the overlay is modal and
+   swallows all input while it is up, so one that fails to close is
+   indistinguishable from a frozen game.
+5. **B builds a small span** — a couple of tiles, not the whole highway.
    Confirms ADR 0016 span geometry is live, not the old whole-segment
    behaviour.
-5. **M opens the world map**, only Bow Valley unlocked, the other 11 sub-areas
+6. **M opens the world map**, only Bow Valley unlocked, the other 11 sub-areas
    locked/desaturated.
-6. **F5 then F9 round-trip a save.** Build a span with **B**, press **F5**,
-   **quit the app entirely**, relaunch, press **F9**, and confirm the span is
-   still there. A quickload inside one session does not prove the thing
-   save/load exists to do. Added because `7e10b0c` shipped this system and no
-   human had watched it run.
+7. **F5 then F9 round-trip a save.** Build a span with **B**, press **F5**,
+   **quit the app entirely**, relaunch, **Play back into the tutorial**, then
+   press **F9**, and confirm the span is still there. That Play step is not
+   optional and was missing until 2026-09-06 — F9 is a `main.gd` binding, so
+   pressing it at the title screen after a relaunch does nothing at all, which
+   reads exactly like a save that failed to persist. A quickload inside one
+   session does not prove the thing save/load exists to do. Added because
+   `7e10b0c` shipped this system and no human had watched it run.
 
 **One thing that looks like a regression and is not.** The old wording asked
 you to confirm "animals move along the corridor". Expect not to see crossings
@@ -355,9 +478,18 @@ or the CI runner logs.
   pass `--force-lock` if you know nothing is running.
 - **`git push` failing with a host-key error means you're in the sandbox, not
   a real terminal.** Not a credentials problem to debug — just switch shells.
+- **`git push origin main` failing with `GH013: Repository rule violations
+  found` is the ruleset, not a broken remote.** Nothing is lost — the commits
+  are in your local history. Branch, push the branch, open the pull request.
 - **A green branch push is not a green CI run.** `ci.yml` triggers only on
   `push` to `main` and `pull_request` targeting `main`. A feature branch can
   sit on GitHub indefinitely having run no jobs at all. Open the pull request.
+- **A required check stuck on "expected" is worse than a red one.** A skipped
+  job reports no conclusion, and with `bypass_actors` empty nobody can override
+  it; the only exit is editing the ruleset. Usual cause: a job renamed without
+  its context being renamed in `protect_main.json`.
+- **Pull-request artifacts expire after one day.** Retention is split by event
+  in `ci.yml`. Step 4 wants the run on `main` after the merge.
 - **`gh run download` refuses to overwrite** and aborts partway through, on the
   first colliding file, leaving a tree that looks complete and is not. Never
   reuse a download directory; `tools/fetch_build.py` names it for the run id.
@@ -386,6 +518,9 @@ or the CI runner logs.
 - [`tools/fetch_build.py`](../tools/fetch_build.py) — Step 4 automated: run-scoped
   download, and the bundle located by glob rather than by name. Tests in
   `tools/tests/test_fetch_build.py`.
+- [`.github/rulesets/protect_main.json`](../.github/rulesets/protect_main.json) —
+  the `main` ruleset in importable form; §6.5 of
+  [pipeline-design.md](pipeline-design.md) is why it exists
 - [testing-setup.md](testing-setup.md) — suite mechanics, `smoke_boot.sh` details
 - [export-setup.md](export-setup.md) — how builds get produced, pack format 3 notes
 - [ADR 0012](adr/0012-godot-and-gut-version-pin.md) — the Godot/GUT version pin
