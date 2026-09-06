@@ -261,6 +261,15 @@ not a Claude-run-it step.
 gh pr checks --watch
 ```
 
+**Give the pull request a few seconds before running that**, and run it on its
+own rather than pasted in with the commands above it. Fired immediately after
+`gh pr create` it exits at once with `no checks reported on the '<branch>'
+branch`, because GitHub has not registered the workflow run yet — there is
+genuinely nothing to watch, so the command has nothing to wait for and returns
+instead of blocking. That is a race, not a failure, and not a sign the pull
+request is broken. Re-run it. Observed on PR #5, 2026-09-06, where the run was
+already queued and went on to pass all five checks.
+
 ```bash
 gh run view $(gh run list --limit 1 --json databaseId --jq '.[0].databaseId')
 ```
