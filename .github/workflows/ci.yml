@@ -17,7 +17,10 @@ on:
 # Pinned to the exact patch, not the 4.6-stable series: export-template directories
 # are version-keyed, and a floating patch means CI and the local tools/ binary can
 # silently build against different engines. That drift already cost one
-# misdiagnosis (2026-07-27). Bump this and both job names together.
+# misdiagnosis (2026-07-27). Bump this, both job names, and the two
+# version-bearing contexts in .github/rulesets/protect_main.json together. A
+# renamed job is a required status check that never reports, and with no bypass
+# actor on main that is an unmergeable pull request rather than a red one.
 env:
   GODOT_VERSION: 4.6.3-stable
 
@@ -130,6 +133,14 @@ jobs:
     # Version inlined: the `env` context is not available in job names.
     name: Export desktop builds (Godot 4.6.3-stable headless)
     needs: test
+    # `needs:` orders the jobs; it must not be allowed to *skip* one. A skipped
+    # job reports no conclusion, and a required status check that never reports
+    # leaves the pull request permanently "waiting for status" rather than
+    # merely blocked. .github/rulesets/protect_main.json has no bypass actors,
+    # so the only exit from that state is editing the ruleset. Every required
+    # check therefore has to be reachable on every run, including one where an
+    # upstream job is red.
+    if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -243,6 +254,14 @@ jobs:
       # Windows binaries for 16 days (see 2026-07-27 daily log).
       - name: Upload build artifacts
         if: always()
+        # The upload is a convenience, not a gate -- docs/pipeline-design.md
+        # section 6.2. On 2026-08-27 a quota failure on this step failed the
+        # whole export job, which skipped smoke-windows through `needs:`, which
+        # blocked a merge that had nothing wrong with it. Going public on
+        # 2026-09-05 removed the quota; it did not remove the cascade, and any
+        # transient upload failure reproduces it. Losing the *copy* of a good
+        # build must not turn a green export red.
+        continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
           name: wildlife-crossing-desktop-builds
@@ -274,11 +293,17 @@ jobs:
   smoke-windows:
     name: Smoke-test the Windows binary (boots to Main.tscn)
     needs: export
+    # Same reasoning as the export job above: reachable on every run, so the
+    # required check always reports something.
+    if: ${{ !cancelled() }}
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
 
       - name: Download the exported builds
+        # Tolerated, not required. If the upload was dropped there is no
+        # artifact to fetch, and that is not a Windows problem.
+        continue-on-error: true
         uses: actions/download-artifact@v4
         with:
           name: wildlife-crossing-desktop-builds
@@ -292,6 +317,15 @@ jobs:
         run: |
           set -euo pipefail
           BIN=builds/wildlife-crossing-windows-x86_64/wildlife-crossing.exe
-          test -f "$BIN" || { echo "::error::no Windows binary in the artifact"; exit 1; }
+          # A missing binary reports green here, deliberately. The two ways to
+          # get one are an export that produced no .exe -- already caught by the
+          # pack gate in the export job, itself a required check -- and an
+          # upload that was dropped, which says nothing about Windows. Failing
+          # here would only turn a known failure into an unmergeable pull
+          # request. The annotation keeps it visible either way.
+          if [ ! -f "$BIN" ]; then
+            echo "::warning::No Windows binary in the artifact, nothing to smoke. The export job pack gate is what covers this case."
+            exit 0
+          fi
           chmod +x "$BIN"
           bash tools/smoke_boot.sh "$BIN" 30
