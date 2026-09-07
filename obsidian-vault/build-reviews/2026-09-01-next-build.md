@@ -126,6 +126,49 @@ status: active
 > Also new: `git checkout -- <path>` cannot restore a file over the mount at
 > all, and reports the failure as a warning while leaving the file unchanged.
 
+> [!success] Amendment 2026-09-06 — **`main` is protected, with no bypass actor. B8's ruleset line is done; B8 is not.**
+> Ruleset `22403399`, `enforcement: active`, `bypass_actors: []`,
+> `current_user_can_bypass: "never"`, checked in at
+> `.github/rulesets/protect_main.json` and applied through the REST API rather
+> than the settings UI. It requires a pull request, requires all five CI
+> contexts, requires the branch up to date, and blocks force pushes and
+> deletion. `git push origin main` returns `GH013`.
+>
+> **This goes further than B8 scoped, and both of B8's cautions hold.** That
+> entry asked for a ruleset limited to blocking force pushes and restricting
+> deletions, explicitly not linear history and not required approvals.
+> `required_linear_history` is absent, so B2's merge commits still work, and
+> `required_approving_review_count` is **0**, since GitHub does not let an
+> author approve their own pull request. Requiring the pull request and the
+> checks on top of that was Brent's call, taken because ADR 0019 rests on
+> nothing signed in advance reaching `main` without a human merge click, and on
+> 2026-09-05 that rested on habit.
+>
+> **B8 does not close.** Its acceptance is untouched: `.gitignore` still carries
+> no credential patterns, secret scanning and push protection are still
+> unconfirmed, and the `git rm --cached export_presets.cfg` pre-flight is still
+> only a `.gitignore` comment.
+>
+> **The `ci.yml:275` row in §4 stops being cosmetic.** That job name is now a
+> required status check context. Renaming it to fix the wrong scene name,
+> without editing `protect_main.json` in the same commit, yields a context that
+> never reports, and under an empty `bypass_actors` that is an unmergeable pull
+> request rather than a red one. Two of the five contexts also carry the Godot
+> version string, so a `GODOT_VERSION` bump has the same shape.
+>
+> **The `push-runbook.md:302` drift recorded in the 09-02 amendment is fixed.**
+> F1 moved after Play, credits are checked twice because they are reachable
+> twice by different code, and two more of the same class went with it: the
+> button reads Play rather than Start, and the F5 / F9 round trip needs a Play
+> back into the tutorial after the relaunch.
+>
+> **PRs #5 (`0f14c6e`) and #6 (`82c991d`) are the first two merges in this
+> repository to land 5 of 5.** Every earlier merge was 4 of 5, and PR #1's
+> `export` had actually failed on the artifact storage quota. `smoke-windows`
+> reported `success` with `0 skipped`, which is what section 6.2's CI fix was
+> for. **The gate itself is unproven:** both merged green, so it has never been
+> asked to refuse anything. See [[../daily-logs/2026-09-06]].
+
 ## 1. Summary
 
 - **Build case:** **FIRST working build**, for the ninth consecutive review, on
