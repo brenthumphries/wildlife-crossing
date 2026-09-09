@@ -519,11 +519,22 @@ review's work-item fields, so S1 fills a form rather than inventing a shape.
 
 ## 7. Decisions that are yours
 
-### 7.1 Who signs off on a machine-written commit — settled
+### 7.1 Who signs off on a machine-written commit — settled, then superseded
 
 **Decided 2026-09-05 and recorded in
 [ADR 0019](adr/0019-dco-sign-off-on-automated-commits.md).** Author and
 sign-off both Brent Humphries, `Co-Authored-By: Claude` alongside.
+
+**Superseded 2026-09-09 by
+[ADR 0020](adr/0020-review-authority-and-the-merge-gate.md).** D1 gives the
+pipeline its own machine account, so its commits are no longer authored by
+Brent Humphries, and D2 moves the sign-off to merge time. The reasoning below
+is still why, because ADR 0020 took the migration path this section already
+named. Two things changed with it. The migration cannot use the squash message,
+since ruleset `22403399` allows the merge method only, so the trailer goes in
+the merge commit body instead. And the `dco` job has to stop requiring a
+trailer on machine-authored branch commits, which needs a replacement check on
+the `main` push.
 
 The reasoning, in one paragraph, because it is the load-bearing part: the DCO
 certifies provenance and the right to submit, not authorship of every line and

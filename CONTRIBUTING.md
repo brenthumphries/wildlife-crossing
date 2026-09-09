@@ -86,6 +86,11 @@ rights that would need anyone else's permission. The reasoning is in
 [ADR 0019](docs/adr/0019-dco-sign-off-on-automated-commits.md), which builds on
 [ADR 0017](docs/adr/0017-licensing.md).
 
+Once the automation pipeline runs under its own machine account this changes:
+[ADR 0020](docs/adr/0020-review-authority-and-the-merge-gate.md) moves the
+sign-off to the merge commit, made by the copyright holder after reading the
+work. Commits carrying the trailer today were made under ADR 0019.
+
 This changes nothing for you. Sign off your own contributions as above.
 
 ### If you forgot
