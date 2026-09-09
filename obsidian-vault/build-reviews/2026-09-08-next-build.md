@@ -49,6 +49,149 @@ status: active
 > gave the shift as +57 when it is +60. Both are recorded in
 > [[../daily-logs/2026-09-09]].
 
+> [!failure] Amendment 2026-09-09b — **This note shipped without its Step 6 audits. They have now run, and they found sixteen defects.**
+> The harness's Step 6 is not optional and it did not happen: the review session
+> ended between writing the note and auditing it, and the note was committed in
+> `0b28974` in that gap. **Everything below was found after publication that
+> should have been found before it.** The body is left exactly as written —
+> amend, never correct, once a note is landed — so read §2, §3 and §4 through
+> this list.
+>
+> **The one that matters, because it is a regression against a documented fix.**
+> **V3's figures are wrong and the reasoning attached to them is backwards.**
+> This note reports §11 of `docs/test-plan.md` as *31 named / 23 missing / 74%*
+> and says the 09-01 note's *43 / 35 / 81%* "did not record its extraction" and
+> is "not comparable". Both halves are false.
+> [[2026-09-01-next-build]]`:792-795` states its method in the item itself, and
+> its §Verification at `:1118-1120` goes further: *"an earlier, sloppier version
+> of that script returned **31/23** by mis-slicing the section, and the figure
+> above is the one that reproduces 08-25's."* §11 names twelve tests in the form
+> `` `world_select_controller_test.gd::test_…` ``; an extraction anchored on a
+> backtick immediately before `test_` drops all twelve. **This note re-derived a
+> number the previous review had already diagnosed as a bug, published it as the
+> measurement, and labelled the correct figure unusable.** The right figures are
+> **43 / 35 / 81%**, unchanged, since `docs/test-plan.md` has not moved. The §4
+> test-plan row and the §Verification entry carry the same error.
+>
+> **Counts and citations, each re-read from the file at `16622ec`:**
+> - **§2 "6 of the 30 GDScript scripts have no named test file" — actually 8**:
+>   `main`, `title_screen`, `env_config`, the three constants files, **`debug`**
+>   and **`event_bus`**. The note's own next clause says "down from 9", and
+>   9 − 1 = 8. The two-with-no-grep-contact figure is right.
+> - **`game/project.godot` is 43 lines, not 44** (§3 C5, §Verification). The
+>   absent `[display]` section and the four section names are right.
+> - **The zero-tests guard is `ci.yml:116-130`, not `:118-131`** (V6, and twice
+>   in §4). `:116` is the `- name:`, `:130` the closing `fi`. The inner
+>   citations `:125` and `:128` are both correct, which is what makes the range
+>   the outlier — it was the one number in that item derived rather than read.
+> - **The `smoke-windows` hardcoded `.exe` path is `ci.yml:319`**, not
+>   `:293-298` (§3 B4). `:293-298` is the job header; the job runs to `:331`.
+> - **`roadmap.md`'s 2026-08-06 decision block is `:138-196`, not `:138-160`**
+>   (§2); and §4's correction "Implements list at `:94-108`" should read
+>   **`:94-106`**.
+> - **`export_presets.cfg:32-61` for `[preset.1]`**, not `:32-62` (V4).
+> - **C9's grep returns five hits, not four** — `roadmap.md:354` also matches
+>   `Decision logged`. The four Phase 1–2 blocks named are correct.
+> - **§4's `ci.yml:238` quote is not verbatim.** The elision *"so these land
+>   beside the bundle"* rewrites the actual clause, *"beside the **archive
+>   rather than inside the .app** bundle"*. C2 quotes the same line correctly.
+> - **§4 attributes one verbatim quote to two files.** The sentence quoted is in
+>   `signing-runbook.md` only; ADR 0018`:165` makes the same stale claim in
+>   different words. Calling it "the ADR copy" implies a copy.
+> - **§2 "the smallest files are the three constants tables at 18/18/46 LOC"** is
+>   false as stated — `debug.gd` (21) and `base_screen.gd` (23) sit between them.
+>   The "no empty stubs" conclusion survives; the sentence does not.
+> - **§5 and V5: ruleset `22403399` had admitted three pull requests at
+>   measurement, not two** — #5, #6 and #7, and `HEAD` *is* #7's merge commit,
+>   which the note states two lines earlier. The "two" was carried from
+>   [[../daily-logs/2026-09-06]], written before #7 existed.
+> - **Labelling:** §Verification claims "every line number cited in §2, §3 and
+>   §4" as Confirmed, which the guard-range defect falsifies; and it lists
+>   `origin/main..HEAD` under Confirmed while §5 records that `git fetch origin`
+>   failed, so that ref is stale-local and proves nothing about the remote.
+>
+> **§4 gains a row this note should have found, and C8 is wrong about why.**
+> C8 says `docs/pipeline-design.md` states the repository is public but "never
+> say **since when**". It does — `:397`, *"The repository went public on
+> **2026-09-05**"* — **and the date is wrong**, contradicting the 2026-08-29
+> that [[../daily-logs/2026-08-29]] establishes by `gh repo view`.
+> `ci.yml:260` repeats the same wrong date. **Two tracked files state the
+> project's licensing and threat-model premise and both state it incorrectly**,
+> which is a sharper version of exactly the defect C8 exists to fix, and this
+> note walked past it.
+>
+> **C8 is closeable now, and neither the amendment above nor the 09-09 log
+> carried it through.** This note predicted it — *"Landing B8 closes the second
+> half by itself"* — and B8 landed. `a2b867b` also rewrote the tense line, so
+> `docs/signing-runbook.md:196-197` now reads *"the repository has been public
+> since 2026-08-29"*: tracked, durable, both facts, correct date. Both of C8's
+> acceptance clauses are met; `README.md` was named as the natural home, not as
+> a requirement. **Close C8, and open the date-contradiction row above in its
+> place** rather than leaving a met item open to carry a different defect.
+>
+> **The completeness audit found four gaps in the work list**, and the first is
+> the largest thing this review missed:
+> - **Nothing names how the Windows and Linux binaries reach `builds/` on the
+>   release machine.** `signing-runbook.md:352-357` sweeps `builds/` to build
+>   `SHA256SUMS.txt`; only the `.dmg` is built locally (A6, `:245`); the other
+>   two exist solely inside the CI artifact, and `tools/fetch_build.py` downloads
+>   into a *run-scoped* directory by design. So the manifest silently covers one
+>   platform of three, and B7 has no Windows or Linux asset to launch. Both
+>   workarounds are closed off by the runbook itself — Part D.1 forbids moving
+>   signing into CI, Part D.3 forbids publishing a checksum for a binary no gate
+>   has checked. **This blocks B6 and B7 and it has a 14-day artifact clock on
+>   it.** B4's acceptance touches the `find` pattern but no item populates the
+>   directory.
+> - **No procedure exists for cutting the tag or creating the Release.**
+>   `gh release`, `git tag -a` and `action-gh-release` return **zero** hits
+>   across `docs/`, `tools/` and `.github/`. `push-runbook.md` ends at Step 5;
+>   `signing-runbook.md` Part D is titled *"Wiring it into the release"* and
+>   never creates one. Every other multi-step manual operation here has a
+>   runbook; the one the build case turns on has none.
+> - **`deploy-website.yml:57-65` will reject C6's copy.** It fails on any
+>   external `src`/`href` outside an allowlist at `:62`, and
+>   **`keys.openpgp.org` is not on it** — while `README.md:86-88` links exactly
+>   there. Worse, its `check` job is *not* one of the five required contexts, so
+>   it does not block the merge; it just silently stops the deploy, leaving the
+>   public site's download button pointing at an empty Releases page.
+> - **C1's scope is missing the change that turns signing on.** This note says
+>   C1 supplies "identity, team id and `notarization=1`".
+>   `signing-runbook.md:221-227` is explicit that `codesign/codesign=1` is
+>   *"Built-in (ad-hoc only), not real signing — Xcode codesign is `3`"*, and
+>   that notarytool is `2`, not `1`. Leaving `codesign=1` reproduces the
+>   `adhoc` signature the 09-02 walk recorded, which fails B7's *"no Gatekeeper
+>   warning at all"*.
+>
+> **On ADR 0020**, which landed after measurement and which this note could not
+> have seen: its follow-on work is event-keyed rather than dated and **none of it
+> gates `v0.1.0`**. Two smaller consequences do land, and neither is in the body.
+> `protect_main.json:33` sets `required_review_thread_resolution: true`, which
+> the note's "five green contexts and a merge click" does not account for — and
+> ADR 0020 §D3 now positively invites advisory reviews on self-authored pull
+> requests, so an unresolved thread on B4's or B6's PR is an unmergeable PR
+> rather than a red one, the same failure *shape* as the promoted job-name row.
+> And ADR 0020 is a third independent reason `protect_main.json` gets edited,
+> while **still no item owns that file.** One drift row also arrived with it:
+> `pipeline-design.md:370-377` (§6.1) still asserts the ADR 0019 rule that
+> ADR 0020 §D2 supersedes, one section above the pointer `6c6891c` added.
+>
+> **Finally, a structural point the completeness audit is right about.**
+> `docs/pre-build-checklist.md` has been flagged in eight consecutive reviews
+> and sits in §4, whose preamble is *"record only — docs are not edited during a
+> review"*. **There is no mechanism by which a §4 row ever closes.** It is
+> stranger-facing, `status: active`, and asserts there is no Godot project to
+> build. It needs to be a numbered item, not a table row.
+>
+> **What this amendment does not change:** the build case (still **first
+> build**), the suite figures (24 / 246 / 3,154 and 86, both re-run by the audit
+> and matching), the `ci.yml` job-level `if: ${{ !cancelled() }}` finding at
+> `:143` and `:298` — checked against the `667a847` diff at YAML indentation
+> level, so the risk this note retired was genuinely retired — the
+> character-for-character match of the five ruleset contexts, all fifteen
+> `export_presets.cfg` citations, every date arithmetic claim, and every
+> attribution to the previous review and to the daily logs. Those were audited
+> and hold.
+
 ## 1. Summary
 
 - **Build case:** **FIRST working build**, for the tenth consecutive review, on
