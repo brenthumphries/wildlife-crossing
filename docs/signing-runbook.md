@@ -49,6 +49,66 @@ Everything else costs nothing.
 
 Everything in Part A runs on Brent's Mac. No key material goes near GitHub.
 
+## Part A pre-flight
+
+Three checks before A1, and check 3 again before A5. None takes a minute. They
+sit here rather than in a security document nobody opens because of **A4**: it
+hands you a file Apple will not hand you a second time, at a moment you do not
+control. A leaked key is rotated, not recovered.
+
+**1. The credential ignore patterns are live.**
+
+```bash
+git check-ignore -v AuthKey_ABCD1234.p8 cert.p12 dev.cer key.pem private.key profile.mobileprovision .env
+```
+
+Seven lines of output, each naming `.gitignore` and the rule that matched. No
+output and exit status 1 means the patterns are gone — put them back before you
+download anything from Apple. `*.asc` is deliberately **not** among them: the
+GPG *public* key at `wildlife-crossing-signing-key.asc` is tracked on purpose.
+
+**2. Secret scanning and push protection are on.** Read the current state:
+
+```bash
+gh api repos/brenthumphries/wildlife-crossing --jq .security_and_analysis
+```
+
+Turn them on if they are not:
+
+```bash
+gh api --method PATCH repos/brenthumphries/wildlife-crossing -f "security_and_analysis[secret_scanning][status]=enabled" -f "security_and_analysis[secret_scanning_push_protection][status]=enabled"
+```
+
+Record what you found, and the date, in the day's log. **Do not treat push
+protection as the control that protects the `.p8`.** Its detectors are built
+around known provider token formats and an App Store Connect key is a generic
+PKCS#8 private key; whether the generic private-key detector catches it has
+never been tested here. Check 1 is the control that does not depend on this one.
+
+**3. `export_presets.cfg` is tracked, and untracking it breaks the merge gate.**
+
+`.gitignore:5-6` tells you to re-ignore `game/export_presets.cfg` if identities
+or keys are ever added to it. Two things that comment does not say:
+
+- An ignore rule does nothing to a file git already tracks. It would also need
+  `git rm --cached game/export_presets.cfg`.
+- **That would break CI.** The export job runs
+  `godot --headless --export-release "Linux x86_64"` and its two siblings, and
+  all three read `export_presets.cfg` from the runner's checkout. Untracked, it
+  is not in the checkout, all three exports fail, and *Export desktop builds* is
+  one of the five required status checks on `main` (ruleset `22403399`, no
+  bypass actor). Every pull request in the repository would be unmergeable until
+  the file came back.
+
+So untracking is not the answer at A5. Keeping credentials out of the file is,
+and A5's own callout — *"Do not type your API key into the export dialog"* — is
+the procedure: the `GODOT_MACOS_NOTARIZATION_*` environment variables, and
+`git diff game/export_presets.cfg` before every commit. If a value ever does
+have to live in the file, that is a decision with a CI consequence attached, not
+a tidy-up.
+
+---
+
 ## A1. Enrol in the Apple Developer Program
 
 <https://developer.apple.com/programs/>. **$99 USD/year.** Enrolment is not
@@ -133,8 +193,8 @@ needs to change:
 > ### Do not type your API key into the export dialog
 >
 > **`game/export_presets.cfg` is tracked in git.** Godot writes whatever you
-> type in the export UI straight into that file, and the repo is about to go
-> public. Pass the notarization credentials as environment variables instead —
+> type in the export UI straight into that file, and the repository has been
+> public since 2026-08-29. Pass the notarization credentials as environment variables instead —
 > Godot reads these and they override the preset:
 >
 > ```bash
