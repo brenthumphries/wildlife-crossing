@@ -165,7 +165,12 @@ class ContextCheckTestCase(unittest.TestCase):
         )
         code, output = self.run_check()
         self.assertEqual(code, 1, output)
-        self.assertEqual(output.count("::error::") + output.count("error:"), 2, output)
+        # Count the finding, not the annotation prefix. Under GitHub Actions the
+        # tool emits '::error::<message>' and locally 'error: <message>', and
+        # '::error::' contains 'error:' -- so counting prefixes double-counts in
+        # CI and passes locally, which is exactly how this test shipped broken.
+        self.assertEqual(output.count("matches no job name"), 2, output)
+        self.assertIn("4.6.3-stable headless", output)
 
     def test_a_job_that_gates_nothing_is_reported_but_not_fatal(self) -> None:
         self.write(
