@@ -3,7 +3,10 @@
 *.tmp
 *.translation
 # NOTE: export_presets.cfg is intentionally tracked (B7): our presets hold no
-# signing credentials. Re-ignore it if identities/keys are ever added.
+# signing credentials. If identities or keys are ever added, adding an ignore
+# rule here is NOT enough and is not the first thing to try — the file is
+# tracked, and CI's export job needs it. See the "Part A pre-flight" section of
+# docs/signing-runbook.md, which is where an operator doing A5 will read it.
 
 # Builds (use GitHub Releases instead)
 builds/
@@ -31,6 +34,27 @@ builds/
 # ignored rather than merely untracked: ship.py refuses to run when a changed
 # path is unaccounted for, and the plan file sitting in the repo would be one.
 /commit-plan*.json
+
+# Credentials. Never commit any of these.
+#
+# Placed after the /tools/ re-includes above deliberately: this file's own rule
+# is that later rules win, and nothing here should ever be re-included by an
+# earlier negation.
+#
+# The trigger is signing-runbook A4. Apple lets the App Store Connect .p8 be
+# downloaded exactly once, so a key that leaks is rotated, not recovered, and
+# the repository has been public since 2026-08-29. This is the control that
+# does not depend on any GitHub-side setting being on.
+#
+# *.asc is deliberately absent: the GPG *public* key is tracked at
+# wildlife-crossing-signing-key.asc and has to stay tracked.
+*.p8
+*.p12
+*.cer
+*.pem
+*.key
+*.mobileprovision
+.env
 
 # Python bytecode. Must come after the /tools/ re-includes above: re-including
 # /tools/tests/ exposes everything inside it, __pycache__ included, and later
