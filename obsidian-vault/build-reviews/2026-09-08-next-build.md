@@ -192,6 +192,40 @@ status: active
 > attribution to the previous review and to the daily logs. Those were audited
 > and hold.
 
+> [!success] Amendment 2026-09-09c — **Two of this note's own asks are built and gating, and a required check has refused a merge for the first time.**
+> PR #12, merged as `e388c7e`, five of five green.
+> **[§5](#5-risks--open-questions) asked for a `tools/` check with a test the
+> next time anyone was in either file.** `tools/check_required_contexts.py`
+> parses every job `name:` in `ci.yml` and every required context in
+> `protect_main.json` and fails on a mismatch. It runs in the *Tool tests* job,
+> which is itself one of the five required contexts, so the check that protects
+> the gate is gated. Its tests cover the version-bump case, where one
+> `GODOT_VERSION` change renames two contexts at once.
+> **The `testing-setup.md` suite-figures row in [§4](#4-doc-drift-to-fix) is
+> closed, and closed in a way that cannot reopen quietly.**
+> `tools/suite_figures.py` reads the JUnit XML the run already writes. Against
+> the committed file it reported `16 scripts / 134 tests / 2,779 asserts`
+> against a measured `24 / 246 / 3,154`. The file is corrected and the check
+> runs in the *GUT tests* job. This is the first §4 row to leave the table by
+> being fixed since 2026-08-18, and the note's own structural finding that §4
+> rows can never close is the reason it needed a tool rather than a reminder.
+> **[V5](#v5-exercise-the-dco-job-on-a-deliberately-unsigned-commit) advances,
+> and only on the half this note added.** Its own words: *"The same argument now
+> applies one level up"*, ruleset `22403399` had never refused anything. It has
+> now. The *Tool tests* context went red on PR #12 and the merge was refused
+> until the defect was fixed. **`dco` itself is unchanged**: still green on
+> every pull request, still never red, so V5's acceptance is not met.
+> **What refused it was a real defect, and it was in the new tests rather than
+> the new tool.** An assertion counted `"::error::"` plus `"error:"` to check
+> that two findings were reported. `::error::` contains `error:`, so under
+> GitHub Actions each finding counted twice. `GITHUB_ACTIONS` is unset locally,
+> where the plain form prints and the arithmetic came out right, so the test
+> passed on every machine it was written on.
+> **Also landed, from [pipeline-design](../../docs/pipeline-design.md)
+> prerequisite 6.6:** the weekly-build-review skill is installed at
+> `.claude/skills/` instead of `harness/`, where nothing could discover it.
+> See [[../daily-logs/2026-09-09]].
+
 ## 1. Summary
 
 - **Build case:** **FIRST working build**, for the tenth consecutive review, on
