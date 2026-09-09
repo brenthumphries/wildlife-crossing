@@ -50,6 +50,18 @@ jobs:
       - name: Run tool tests
         run: python3 -m unittest discover -s tools/tests -b
 
+      # The five required status check contexts in
+      # .github/rulesets/protect_main.json are the display names of the five
+      # jobs below, copied by hand; two of them carry GODOT_VERSION. With
+      # bypass_actors: [] a context that matches no job never reports, and a
+      # pull request that is missing a required context is *unmergeable*, not
+      # red — a state nobody can click past. This check makes that a red X here
+      # instead. It compares two files in this repo; whether the committed copy
+      # still matches the applied ruleset is tools/github_state.py's job, from a
+      # machine with credentials.
+      - name: Check required contexts match the CI job names
+        run: python3 tools/check_required_contexts.py
+
   # CONTRIBUTING.md requires a Signed-off-by trailer on every commit and, until
   # now, nothing enforced it. ADR 0017 is why it matters beyond bookkeeping:
   # with a DCO and no CLA, the first merged outside contribution is the point of
@@ -128,6 +140,13 @@ jobs:
             echo "::error::GUT collected zero tests — failing the build (V1 zero-tests guard)."
             exit 1
           fi
+
+      # docs/testing-setup.md stated the suite size by hand from 2026-07-30 and
+      # was stale at eight consecutive build reviews, corrected seven times. The
+      # figures are already in the XML above, so the document is now checked
+      # against them rather than maintained against memory.
+      - name: Check documented suite figures against the run
+        run: python3 tools/suite_figures.py --check docs/testing-setup.md
 
   export:
     # Version inlined: the `env` context is not available in job names.

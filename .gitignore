@@ -84,3 +84,13 @@ obsidian-vault/.obsidian/
 # app/appearance/core-plugins stay tracked so config is shared.
 .obsidian/workspace.json
 .obsidian/graph.json
+
+# GUT's JUnit output, written by every local suite run and by CI.
+# tools/suite_figures.py reads it; nothing should track it.
+game/gut_results.xml
+
+# Parking for files awaiting deletion. Sessions running against a
+# mounted copy of this repo cannot delete files (the bridge permits
+# rename but not unlink), so anything on its way out is moved here and
+# removed by hand later. tools/_to_delete/ has predated this entry.
+_to_delete/
