@@ -1,8 +1,16 @@
 ---
 title: "0019 — DCO Sign-off on Machine-Written Commits"
 date: 2026-09-05
-status: accepted
+status: superseded-by-0020
 ---
+
+> **Superseded in part by [ADR 0020](0020-review-authority-and-the-merge-gate.md),
+> accepted 2026-09-09.** ADR 0020 D1 gives the pipeline its own machine account,
+> which removes the human author this decision depends on, and D2 moves the
+> attestation to merge time. The Context and reasoning below stand: they are why
+> ADR 0020 took the migration path this ADR named for itself rather than
+> inventing one. Commits written before that machine account exists were made
+> under this ADR and remain valid.
 
 ## Context
 
