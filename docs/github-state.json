@@ -1,0 +1,188 @@
+{
+  "_comment": "Written by tools/github_state.py from a machine with gh credentials. Everything here is a GitHub-side fact that a cloud session cannot read: api.github.com answers those sessions 403 by egress policy. Downstream readers must quote read_at, never imply these are current.",
+  "read_at": "2026-09-10T19:06:22+00:00",
+  "repo": "brenthumphries/wildlife-crossing",
+  "reads": {
+    "ruleset": {
+      "description": "the applied ruleset, to diff against the committed copy",
+      "command": "gh api repos/brenthumphries/wildlife-crossing/rulesets/22403399",
+      "value": {
+        "id": 22403399,
+        "name": "Protect main",
+        "target": "branch",
+        "source_type": "Repository",
+        "source": "brenthumphries/wildlife-crossing",
+        "enforcement": "active",
+        "conditions": {
+          "ref_name": {
+            "exclude": [],
+            "include": [
+              "~DEFAULT_BRANCH"
+            ]
+          }
+        },
+        "rules": [
+          {
+            "type": "deletion"
+          },
+          {
+            "type": "non_fast_forward"
+          },
+          {
+            "type": "pull_request",
+            "parameters": {
+              "required_approving_review_count": 0,
+              "dismiss_stale_reviews_on_push": false,
+              "required_reviewers": [],
+              "require_code_owner_review": false,
+              "require_last_push_approval": false,
+              "required_review_thread_resolution": true,
+              "require_extra_approval_for_unattributed_changes": true,
+              "allowed_merge_methods": [
+                "merge"
+              ]
+            }
+          },
+          {
+            "type": "required_status_checks",
+            "parameters": {
+              "strict_required_status_checks_policy": true,
+              "do_not_enforce_on_create": false,
+              "required_status_checks": [
+                {
+                  "context": "Tool tests (Python, stdlib unittest)",
+                  "integration_id": 15368
+                },
+                {
+                  "context": "DCO sign-off (pull requests)",
+                  "integration_id": 15368
+                },
+                {
+                  "context": "GUT tests (Godot 4.6.3-stable headless)",
+                  "integration_id": 15368
+                },
+                {
+                  "context": "Export desktop builds (Godot 4.6.3-stable headless)",
+                  "integration_id": 15368
+                },
+                {
+                  "context": "Smoke-test the Windows binary (boots to Main.tscn)",
+                  "integration_id": 15368
+                }
+              ]
+            }
+          }
+        ],
+        "node_id": "RRS_lACqUmVwb3NpdG9yec5K1eRqzgFV2Uc",
+        "created_at": "2026-09-06T15:36:01.921-05:00",
+        "updated_at": "2026-09-06T15:36:02.002-05:00",
+        "bypass_actors": [],
+        "current_user_can_bypass": "never",
+        "_links": {
+          "self": {
+            "href": "https://api.github.com/repos/brenthumphries/wildlife-crossing/rulesets/22403399"
+          },
+          "html": {
+            "href": "https://github.com/brenthumphries/wildlife-crossing/rules/22403399"
+          }
+        }
+      }
+    },
+    "repository": {
+      "description": "visibility, auto-merge, and the security_and_analysis block",
+      "command": "gh api repos/brenthumphries/wildlife-crossing --jq '{visibility, allow_auto_merge, allow_squash_merge, allow_rebase_merge, delete_branch_on_merge, security_and_analysis}'",
+      "value": {
+        "allow_auto_merge": true,
+        "allow_rebase_merge": true,
+        "allow_squash_merge": true,
+        "delete_branch_on_merge": false,
+        "security_and_analysis": {
+          "dependabot_security_updates": {
+            "status": "disabled"
+          },
+          "secret_scanning": {
+            "status": "enabled"
+          },
+          "secret_scanning_non_provider_patterns": {
+            "status": "disabled"
+          },
+          "secret_scanning_push_protection": {
+            "status": "enabled"
+          },
+          "secret_scanning_validity_checks": {
+            "status": "disabled"
+          }
+        },
+        "visibility": "public"
+      }
+    },
+    "latest_main_run": {
+      "description": "the newest CI run on main and its conclusion",
+      "command": "gh api 'repos/brenthumphries/wildlife-crossing/actions/runs?branch=main&per_page=1' --jq '{id: .workflow_runs[0].id, name: .workflow_runs[0].name, status: .workflow_runs[0].status, conclusion: .workflow_runs[0].conclusion, created_at: .workflow_runs[0].created_at, head_sha: .workflow_runs[0].head_sha}'",
+      "value": {
+        "conclusion": "success",
+        "created_at": "2026-09-09T21:24:35Z",
+        "head_sha": "700cd74be4c15acc6b9c50c966cc77e3e39f8f24",
+        "id": 34406753259,
+        "name": "CI",
+        "status": "completed"
+      }
+    },
+    "artifacts": {
+      "description": "artifact names and expiry, for the download window",
+      "command": "gh api 'repos/brenthumphries/wildlife-crossing/actions/artifacts?per_page=5' --jq '[.artifacts[] | {name, expired, expires_at, workflow_run: .workflow_run.id}]'",
+      "value": [
+        {
+          "expired": false,
+          "expires_at": "2026-09-23T21:26:28Z",
+          "name": "wildlife-crossing-desktop-builds",
+          "workflow_run": 34406753259
+        },
+        {
+          "expired": false,
+          "expires_at": "2026-09-10T21:22:29Z",
+          "name": "wildlife-crossing-desktop-builds",
+          "workflow_run": 34406343458
+        },
+        {
+          "expired": false,
+          "expires_at": "2026-09-23T21:05:35Z",
+          "name": "wildlife-crossing-desktop-builds",
+          "workflow_run": 34404739034
+        },
+        {
+          "expired": false,
+          "expires_at": "2026-09-10T21:01:40Z",
+          "name": "wildlife-crossing-desktop-builds",
+          "workflow_run": 34404325739
+        },
+        {
+          "expired": false,
+          "expires_at": "2026-09-10T20:54:15Z",
+          "name": "wildlife-crossing-desktop-builds",
+          "workflow_run": 34403632054
+        }
+      ]
+    },
+    "open_issues": {
+      "description": "open issue count, excluding pull requests",
+      "command": "gh api 'search/issues?q=repo:brenthumphries/wildlife-crossing+type:issue+state:open' --jq '{total_count}'",
+      "value": {
+        "total_count": 0
+      }
+    },
+    "open_pulls": {
+      "description": "open pull request count",
+      "command": "gh api 'search/issues?q=repo:brenthumphries/wildlife-crossing+type:pr+state:open' --jq '{total_count}'",
+      "value": {
+        "total_count": 0
+      }
+    }
+  },
+  "ruleset_drift": {
+    "checked": true,
+    "in_sync": true,
+    "differences": [],
+    "committed_copy": "/Users/weatheredleathr/wildlife-crossing/.github/rulesets/protect_main.json"
+  }
+}
