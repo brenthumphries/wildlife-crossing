@@ -29,6 +29,10 @@ const CREDITS_KEY := KEY_F1
 ## instead of living only in the test suite.
 const QUICKSAVE_KEY := KEY_F5
 const QUICKLOAD_KEY := KEY_F9
+## Signal Chase, the radio-telemetry minigame (minigame-ideas Batch 2 item 2).
+## A keyboard shortcut for the same reason as the credits: v0.1.0 has no menu
+## to hang it from. F2 is free; F1/F5/F9/B/M/Enter/Escape are taken.
+const TELEMETRY_KEY := KEY_F2
 
 var sim: Simulation
 var _renderer: WorldRenderer
@@ -49,6 +53,7 @@ var _build_status_label: Label
 ## mirroring `_log()` so player feedback is visible in a windowed export.
 var _hud: Hud
 var _credits: CreditsScreen
+var _telemetry: TelemetryMinigame
 
 func _ready() -> void:
 	_debug = get_node_or_null("/root/Debug")
@@ -96,6 +101,14 @@ func _ready() -> void:
 	_credits = CreditsScreen.new()
 	credits_layer.add_child(_credits)
 
+	# Same arrangement as the credits: its own CanvasLayer above the HUD, and
+	# modal while open (see `_unhandled_input`).
+	var telemetry_layer := CanvasLayer.new()
+	telemetry_layer.layer = 3
+	add_child(telemetry_layer)
+	_telemetry = TelemetryMinigame.new()
+	telemetry_layer.add_child(_telemetry)
+
 	var bus := get_node_or_null("/root/EventBus")
 	if bus:
 		bus.animal_crossed.connect(_on_animal_crossed)
@@ -104,7 +117,7 @@ func _ready() -> void:
 	# leading this line.
 	_log("Tutorial loaded. Press B to build the Bow Valley overpass. " \
 			+ "Press M for the world map. Press F1 for credits. " \
-			+ "F5 saves, F9 loads.")
+			+ "F2 for Signal Chase. F5 saves, F9 loads.")
 
 func _registries() -> Dictionary:
 	var r := get_node_or_null("/root/SpeciesRegistry")
@@ -131,8 +144,18 @@ func _unhandled_input(event: InputEvent) -> void:
 			_credits.close()
 		get_viewport().set_input_as_handled()
 		return
+	# The minigame is modal in exactly the same way. It handles its own keys
+	# in its `_unhandled_input` (which runs before this node's); anything it
+	# did not claim is swallowed here rather than reaching build mode.
+	if _telemetry != null and _telemetry.is_open:
+		if event is InputEventKey and event.pressed and event.keycode == KEY_ESCAPE:
+			_telemetry.close()
+		get_viewport().set_input_as_handled()
+		return
 	if event is InputEventKey and event.pressed and event.keycode == CREDITS_KEY:
 		_credits.open()
+	elif event is InputEventKey and event.pressed and event.keycode == TELEMETRY_KEY:
+		_telemetry.start(randi())
 	elif event is InputEventKey and event.pressed and event.keycode == QUICKSAVE_KEY:
 		_quick_save()
 	elif event is InputEventKey and event.pressed and event.keycode == QUICKLOAD_KEY:
