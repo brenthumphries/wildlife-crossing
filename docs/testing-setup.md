@@ -67,7 +67,7 @@ godot --headless -s addons/gut/gut_cmdln.gd -gdir=res://tests -ginclude_subdirs 
 Substitute the path to your local binary for `godot` (e.g.
 `../tools/godot/Godot_v4.6.3-stable_linux.arm64`). A clean run ends with
 `---- All tests passed! ----` and a summary; the suite currently reports
-**24 scripts / 246 tests / 3,154 asserts** passing (measured 2026-09-09).
+**25 scripts / 269 tests / 4,172 asserts** passing (measured 2026-09-15).
 
 This figure is checked, not maintained. `tools/suite_figures.py` reads the
 JUnit XML the run writes and CI fails the `test` job when this line and the

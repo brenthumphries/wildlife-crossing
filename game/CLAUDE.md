@@ -25,6 +25,7 @@ game/
 │   ├── ui/                # HUD, menus, overlays — PascalCase.tscn
 │   └── world/             # World tiles, entities, habitat zones — PascalCase.tscn
 ├── scripts/
+│   ├── minigames/         # Pure-logic minigame models (no rendering, no autoloads); their overlays live in ui/
 │   ├── systems/           # Core simulation systems (one .gd per system)
 │   └── ui/                # UI controllers and screen managers
 └── tests/                 # GUT test files — <system_name>_test.gd
