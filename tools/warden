@@ -1,0 +1,4 @@
+#!/bin/sh
+# Thin launcher so `tools/warden sync` works without typing python3.
+# Everything lives in warden.py; this only finds it next to itself.
+exec python3 "$(dirname "$0")/warden.py" "$@"
