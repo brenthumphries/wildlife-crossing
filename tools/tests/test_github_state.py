@@ -133,5 +133,76 @@ class RulesetDriftTestCase(unittest.TestCase):
         self.assertNotIn("in_sync", result)
 
 
+class ReducerTestCase(unittest.TestCase):
+    """Every read is a bare REST path; the reduction happens in Python so gh
+    and curl produce the identical file. These pin the reduced shapes the daily
+    dispatch reads (tools/warden.py day), so a GitHub payload change or a
+    careless edit here fails a test rather than silently emptying a field."""
+
+    def test_every_read_is_a_bare_api_path(self) -> None:
+        for key, _description, argv in github_state.READS:
+            self.assertEqual(argv[0], "api", key)
+            self.assertEqual(len(argv), 2, f"{key}: no flags, the reducer does the work")
+            self.assertIn(key, github_state.REDUCERS, f"{key} has no reducer")
+
+    def test_open_pull_requests_keep_head_branch_and_number(self) -> None:
+        payload = [{
+            "number": 15, "title": "feat(c5): add [display]",
+            "head": {"ref": "feat/c5-display-section", "sha": "abc123"},
+            "draft": False, "updated_at": "2026-09-15T10:00:00Z",
+            "merged_at": None, "html_url": "https://github.com/x/y/pull/15",
+            "body": "irrelevant", "user": {"login": "someone"},
+        }]
+        value = github_state.reduce_value("open_pull_requests", payload)
+        self.assertEqual(value, [{
+            "number": 15, "title": "feat(c5): add [display]",
+            "head": "feat/c5-display-section", "head_sha": "abc123",
+            "draft": False, "updated_at": "2026-09-15T10:00:00Z",
+            "merged_at": None, "html_url": "https://github.com/x/y/pull/15",
+        }])
+
+    def test_recent_merged_pulls_drop_closed_unmerged_ones(self) -> None:
+        payload = [
+            {"number": 1, "title": "kept", "head": {"ref": "a"}, "merged_at": "2026-09-01T00:00:00Z"},
+            {"number": 2, "title": "dropped", "head": {"ref": "b"}, "merged_at": None},
+        ]
+        value = github_state.reduce_value("recent_merged_pulls", payload)
+        self.assertEqual([p["number"] for p in value], [1])
+
+    def test_latest_main_run_takes_the_first_workflow_run(self) -> None:
+        payload = {"workflow_runs": [
+            {"id": 9, "name": "CI", "status": "completed", "conclusion": "success",
+             "created_at": "t", "head_sha": "s", "event": "push", "extra": 1},
+            {"id": 8},
+        ]}
+        value = github_state.reduce_value("latest_main_run", payload)
+        self.assertEqual(value["id"], 9)
+        self.assertNotIn("extra", value)
+
+    def test_latest_main_run_with_no_runs_is_none_not_a_crash(self) -> None:
+        self.assertIsNone(github_state.reduce_value("latest_main_run", {"workflow_runs": []}))
+
+    def test_an_unexpected_shape_is_recorded_raw(self) -> None:
+        """A 403 body is a string. It must survive into the file, not vanish."""
+        self.assertEqual(github_state.reduce_value("branches", "Forbidden"), None)
+        self.assertEqual(github_state.reduce_value("ruleset", "Forbidden"), "Forbidden")
+
+    def test_counts_are_reduced_to_total_count(self) -> None:
+        value = github_state.reduce_value("open_pulls", {"total_count": 3, "items": [1, 2, 3]})
+        self.assertEqual(value, {"total_count": 3})
+
+    def test_curl_reader_reports_http_errors_as_github_state_errors(self) -> None:
+        import urllib.error
+        from unittest import mock
+
+        def boom(*_args, **_kwargs):
+            raise urllib.error.HTTPError("u", 403, "Forbidden", {}, None)
+
+        with mock.patch.object(github_state.urllib.request, "urlopen", boom):
+            with self.assertRaises(github_state.GithubStateError) as ctx:
+                github_state.read_via_curl(["api", "repos/x/y"])
+        self.assertIn("403", str(ctx.exception))
+
+
 if __name__ == "__main__":
     unittest.main()
