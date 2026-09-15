@@ -22,11 +22,22 @@ table is here to prevent.
 
 | Process | Where it runs | Reads | Writes | Cannot see |
 |---|---|---|---|---|
-| `weekly-build-review` skill | On demand, in a session with this repo mounted | The tree, the test suite, the previous review, recent daily logs | `obsidian-vault/build-reviews/YYYY-MM-DD-next-build.md` and its index | GitHub: no `gh` and no API. CI status, run history and repository settings are **Unverifiable** in a review unless read from `github-state.json` |
+| `weekly-plan` skill, via the Monday **routine** (cloud, Sonnet, repository attached) — or `tools/warden.py week` on the Mac | A fresh clone with GitHub access through the proxy | `docs/plan/facts.json` and `docs/plan/github-state.json`, which it regenerates first; the previous `docs/plan/week.json`; daily logs since; the roadmap's exit criteria | `docs/plan/week.json`, a short `obsidian-vault/build-reviews/YYYY-MM-DD-next-build.md`, the index line — as a pull request on `claude/plan-YYYY-MM-DD` | Your working tree. Whether an export launches |
+| `tools/warden.py day` (the daily dispatch) | The Mac, on demand; no model | `docs/plan/week.json`, the freshest github-state file | `docs/plan/queue/YYYY-MM-DD.{json,md}` (local) | Anything not synced — it says how old the GitHub state is |
+| `tools/warden.py run <id>` | The Mac, Claude Code headless in a worktree, model and mode from the plan | The item, `.claude/skills/code-task/SKILL.md`, the facts | A branch, signed-off commits, a pull request | Nothing it needs; CI is the test signal because Godot is not on the Mac |
+| `tools/warden.py sync` | The Mac (or `--curl` from the Cowork device VM) | `api.github.com` via `gh`, the tree | `docs/plan/github-state.json`, `docs/plan/facts.json` (both local) | — |
 | `next` skill | On demand | Recent logs and reviews, plus live `git status` | Nothing — read-only by constraint | Anything not yet written down |
 | `log` skill | On demand, at the end of a session | The conversation, the vault conventions | The daily log; amendments to reviews; the review index | Whether its own output ever gets committed |
-| Daily project-state refresh | Scheduled cloud session, 12:30 UTC | The public repo over git; formerly the GitHub API | The `Wildlife Crossing Project State` artifact | Your working tree, and the GitHub API (see below) |
+| ~~Daily project-state refresh~~ | ~~Scheduled cloud session, 12:30 UTC~~ | — | — | **Retired 2026-09-14.** It had no repository attached, so it could not read GitHub; `warden status` and `warden day` replace it. Disabled, not deleted. |
+| ~~`weekly-build-review` skill~~ | — | — | — | **Superseded 2026-09-14** by `weekly-plan`. A stub redirects. |
 | Morning brief | Scheduled cloud session, weekdays 13:00 UTC | Calendar, mail, memory | An artifact | This repository |
+
+**The rule of thumb, since 2026-09-14:** facts come from scripts
+(`tools/facts.py` for the tree, `tools/github_state.py` for GitHub), each
+pinned to a SHA or a `read_at`; models do routing and judgment only, on the
+cheapest model whose judgment suffices (`docs/plan/routing.md`); and the
+machine with the credentials — the Mac, or a routine with the repository
+attached — is the only one that reads GitHub. See [`warden.md`](warden.md).
 
 ## What the cloud can and cannot reach
 
@@ -50,6 +61,18 @@ device-linked session:
 Everything else is read on Brent's Mac by `tools/github_state.py` and committed
 to `docs/github-state.json` with the moment it was read. Downstream readers
 quote that timestamp. They never imply it is current.
+
+**Revised 2026-09-14 — the 403 has a switch.** The denial above is per
+session: a cloud session or routine with **this repository attached** goes
+through the GitHub proxy with real credentials, so `gh api` answers, and
+`git push` to a `claude/` branch works. The scheduled tasks that stalled had
+no repository attached. The weekly-plan routine does
+(`docs/routines/weekly-plan.md`); it regenerates the state files itself and
+never reads the committed snapshot. The Cowork **device VM** can also reach
+`api.github.com` unauthenticated (verified 2026-09-14, `200` on
+`branches/main`), which is what `github_state.py --curl` is for. Only the
+device-less cloud container is still blind, and nothing is scheduled there
+any more.
 
 ## Why `.git/index.lock` keeps coming back
 
@@ -138,10 +161,13 @@ directory (gitignored) and removed by hand, for the same reason.
 | `tools/suite_figures.py --check` (CI, `test` job) | `testing-setup.md`'s stated suite size matches the run | That the suite covers anything in particular |
 | `tools/check_citations.py` (by hand, advisory) | Where a note cites a line number | Whether the cited line says what the note claims |
 | `tools/check_dco.py` (CI, `dco` job) | Every commit a pull request adds is signed off | Anything about the 33 legacy commits it deliberately does not reach |
+| `tools/facts.py` (`warden sync`, the weekly plan) | What the tree contains at a SHA: scripts, tests, data validity, presets, CI job names, tags, vault dates | Anything about GitHub, and whether an export launches |
+| `tools/warden.py day` (`validate_plan`) | `docs/plan/week.json` has the shape the dispatch needs: unique ids, known lanes and models, dependencies that exist | That the plan is the right plan |
 
 ## Related
 
-- [`push-runbook.md`](push-runbook.md) — the day-to-day commit and ship process
+- [`warden.md`](warden.md) — the operator's tool: sync, day, run, cowork, land
+- [`push-runbook.md`](push-runbook.md) — the day-to-day commit and ship process, which `warden land` automates
 - [`pipeline-design.md`](pipeline-design.md) §6 prerequisites, §7 open decisions
 - [ADR 0019](adr/0019-dco-sign-off-on-automated-commits.md) and
   [ADR 0020](adr/0020-review-authority-and-the-merge-gate.md) — who signs and

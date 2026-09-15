@@ -17,7 +17,7 @@ and help species thrive across a living, breathing landscape.
 | `website/`        | Static site and user-facing documentation       |
 | `builds/`         | Exported binaries (see GitHub Releases)         |
 | `tools/`          | Build, test and release scripts, plus tests     |
-| `harness/`        | The skill that writes the weekly build reviews  |
+| `.claude/skills/` | The weekly-plan and code-task skills            |
 
 ## Development
 
