@@ -33,6 +33,9 @@ const QUICKLOAD_KEY := KEY_F9
 ## A keyboard shortcut for the same reason as the credits: v0.1.0 has no menu
 ## to hang it from. F2 is free; F1/F5/F9/B/M/Enter/Escape are taken.
 const TELEMETRY_KEY := KEY_F2
+## Snowpack Survey, the wolverine den-site minigame (minigame-ideas Batch 2
+## item 5). Same reasoning: a shortcut until there is a menu. F3 is free.
+const SNOWPACK_KEY := KEY_F3
 
 var sim: Simulation
 var _renderer: WorldRenderer
@@ -54,6 +57,7 @@ var _build_status_label: Label
 var _hud: Hud
 var _credits: CreditsScreen
 var _telemetry: TelemetryMinigame
+var _snowpack: SnowpackMinigame
 
 func _ready() -> void:
 	_debug = get_node_or_null("/root/Debug")
@@ -109,6 +113,12 @@ func _ready() -> void:
 	_telemetry = TelemetryMinigame.new()
 	telemetry_layer.add_child(_telemetry)
 
+	var snowpack_layer := CanvasLayer.new()
+	snowpack_layer.layer = 4
+	add_child(snowpack_layer)
+	_snowpack = SnowpackMinigame.new()
+	snowpack_layer.add_child(_snowpack)
+
 	var bus := get_node_or_null("/root/EventBus")
 	if bus:
 		bus.animal_crossed.connect(_on_animal_crossed)
@@ -117,7 +127,7 @@ func _ready() -> void:
 	# leading this line.
 	_log("Tutorial loaded. Press B to build the Bow Valley overpass. " \
 			+ "Press M for the world map. Press F1 for credits. " \
-			+ "F2 for Signal Chase. F5 saves, F9 loads.")
+			+ "F2 for Signal Chase, F3 for Snowpack Survey. F5 saves, F9 loads.")
 
 func _registries() -> Dictionary:
 	var r := get_node_or_null("/root/SpeciesRegistry")
@@ -152,10 +162,17 @@ func _unhandled_input(event: InputEvent) -> void:
 			_telemetry.close()
 		get_viewport().set_input_as_handled()
 		return
+	if _snowpack != null and _snowpack.is_open:
+		if event is InputEventKey and event.pressed and event.keycode == KEY_ESCAPE:
+			_snowpack.close()
+		get_viewport().set_input_as_handled()
+		return
 	if event is InputEventKey and event.pressed and event.keycode == CREDITS_KEY:
 		_credits.open()
 	elif event is InputEventKey and event.pressed and event.keycode == TELEMETRY_KEY:
 		_telemetry.start(randi())
+	elif event is InputEventKey and event.pressed and event.keycode == SNOWPACK_KEY:
+		_snowpack.start(randi())
 	elif event is InputEventKey and event.pressed and event.keycode == QUICKSAVE_KEY:
 		_quick_save()
 	elif event is InputEventKey and event.pressed and event.keycode == QUICKLOAD_KEY:
