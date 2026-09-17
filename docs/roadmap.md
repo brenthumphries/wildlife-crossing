@@ -195,6 +195,20 @@ zoom threshold measured flat-to-flat).
 > scope next to the Bow-Valley-only scope above — the world map is a look-only
 > screen this release, and crossings are placed from the tutorial via `B`.
 
+> **Decision logged (2026-09-15): the Bow Valley card gets real map art; the
+> rest of the 2026-08-06 look-only decision stands.** `sub_areas.json` gains an
+> optional `card_image` field ([`data-schemas` §4](data-schemas.md)); sub-area 7
+> is the first to set it, to `res://assets/sprites/world_map_bow_valley.png`.
+> `world_select_controller.gd`'s `_draw_sub_area_card` draws that texture in
+> place of the flat color fill, tinted by lock state exactly as the placeholder
+> cards already are, with a label scrim for legibility. The other eleven
+> sub-areas keep `card_image: null` and the placeholder fill until art exists
+> for them. **This does not reopen C1 (in-map segment renderer) or C2 (hover
+> highlight)** — the screen is still `MOUSE_FILTER_STOP`, still non-interactive,
+> and still draws a flat card grid, not a zoomable rendered map; only the card
+> background changed from a solid color to a texture. Both remain deferred to
+> Phase 2 completion, post-v0.1.0, per the block above.
+
 ---
 
 ## Phase 3 — Economy + information

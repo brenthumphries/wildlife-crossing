@@ -8,9 +8,10 @@ const ACTIVATE_PX := float(SimulationConstants.SEGMENT_ZOOM_ACTIVATE_PX)
 const DEACTIVATE_PX := float(SimulationConstants.SEGMENT_ZOOM_DEACTIVATE_PX)
 
 const SUB_AREAS := {
-	7: { "id": 7, "name": "Central Canadian Rockies", "starts_unlocked": true },
+	7: { "id": 7, "name": "Central Canadian Rockies", "starts_unlocked": true,
+		"card_image": "res://assets/sprites/world_map_bow_valley.png" },
 	8: { "id": 8, "name": "Peace River Break", "starts_unlocked": false },
-	9: { "id": 9, "name": "Muskwa–Kechika", "starts_unlocked": false },
+	9: { "id": 9, "name": "Muskwa–Kechika", "starts_unlocked": false, "card_image": null },
 }
 
 var _c: WorldSelectController
@@ -81,6 +82,21 @@ func test_setup_derives_lock_state_from_starts_unlocked() -> void:
 func test_default_focus_is_first_unlocked_sub_area() -> void:
 	assert_eq(_c.focused_sub_area_id, 7)
 
+# --- card art (roadmap decision logged 2026-09-15, data-schemas.md §4) ---
+
+func test_card_image_path_returns_the_configured_resource_path() -> void:
+	assert_eq(_c.card_image_path(7), "res://assets/sprites/world_map_bow_valley.png")
+
+func test_card_image_path_is_empty_for_explicit_json_null() -> void:
+	assert_eq(_c.card_image_path(9), "", "JSON null must not stringify to \"<null>\"")
+
+func test_card_image_path_is_empty_for_unknown_sub_area() -> void:
+	assert_eq(_c.card_image_path(99), "")
+
+func test_bow_valley_card_art_resolves_to_a_loadable_texture() -> void:
+	var texture: Texture2D = load(_c.card_image_path(7))
+	assert_not_null(texture, "world_map_bow_valley.png must be importable at its data path")
+
 # --- lock state from registry-parsed data (regression, 2026-09-02) ---
 #
 # SUB_AREAS above is hand-built with int keys. Production data arrives through
@@ -111,6 +127,12 @@ func test_registry_data_leaves_the_other_sub_areas_locked() -> void:
 	var c := _controller_from_real_data()
 	assert_false(c.is_sub_area_unlocked(1), "sub-area 1 stays locked")
 	assert_false(c.is_sub_area_unlocked(12), "sub-area 12 stays locked")
+	c.free()
+
+func test_registry_data_gives_bow_valley_its_card_art() -> void:
+	var c := _controller_from_real_data()
+	assert_eq(c.card_image_path(7), "res://assets/sprites/world_map_bow_valley.png")
+	assert_eq(c.card_image_path(1), "", "sub-areas without art still stringify JSON null to \"\"")
 	c.free()
 
 # --- zoom hysteresis (PRD resolved threshold: activate ≥16 px, deactivate <12 px) ---

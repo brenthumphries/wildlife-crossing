@@ -25,7 +25,9 @@ const ZOOM_STEP := 1.25                    # multiplicative scroll-wheel step
 ## is unreachable inside it (PRD rule 5).
 const LOCKED_MAX_TILE_PX := float(SimulationConstants.SEGMENT_ZOOM_DEACTIVATE_PX)
 
-# --- placeholder world-map card layout (until real map art lands, B4) ---
+# --- world-map card layout: color-fill placeholder, or real art where a
+# sub-area's `card_image` is set (roadmap decision logged 2026-09-15 — see
+# roadmap.md; still look-only, no in-map segment renderer) ---
 const CARD_SIZE := Vector2(170.0, 84.0)
 const CARD_GAP := 12.0
 const GRID_COLS := 3
@@ -36,6 +38,7 @@ const COLOR_LOCKED := Color(0.42, 0.42, 0.42)     # desaturated treatment
 const COLOR_LOCK_GLYPH := Color(0.15, 0.15, 0.15)
 const COLOR_TEXT := Color(0.92, 0.92, 0.88)
 const COLOR_TEXT_DIM := Color(0.70, 0.70, 0.70)
+const COLOR_LABEL_SCRIM := Color(0.0, 0.0, 0.0, 0.45)   # legibility backing over card art
 const LABEL_FONT_SIZE := 12
 
 var mode := Mode.INACTIVE
@@ -136,6 +139,15 @@ func set_focused_sub_area(sub_area_id: int) -> void:
 func is_sub_area_unlocked(sub_area_id: int) -> bool:
 	return bool(_unlocked.get(sub_area_id, false))
 
+## The sub-area's `res://` card-art path, or "" when it still uses the
+## placeholder color fill (schema: `data-schemas.md` §4 `card_image`). The
+## field is JSON `null` for every sub-area without art yet, not absent, so
+## the null case is handled explicitly rather than relying on `Dictionary.get`'s
+## missing-key default.
+func card_image_path(sub_area_id: int) -> String:
+	var value = _sub_areas.get(sub_area_id, {}).get("card_image")
+	return "" if value == null else String(value)
+
 ## Mark a sub-area unlocked. Lock state is *driven* by the permissions system
 ## (Phase 5); this controller only reflects it (PRD non-goal).
 func unlock_sub_area(sub_area_id: int) -> void:
@@ -226,10 +238,21 @@ func _draw() -> void:
 
 func _draw_sub_area_card(font: Font, rect: Rect2, sub_area_id: int) -> void:
 	var unlocked := is_sub_area_unlocked(sub_area_id)
-	draw_rect(rect, COLOR_UNLOCKED if unlocked else COLOR_LOCKED)
+	var image_path := card_image_path(sub_area_id)
+	var has_art := not image_path.is_empty()
+	if has_art:
+		# Reuse the existing locked/unlocked colors as a tint rather than a fill —
+		# COLOR_LOCKED darkens the art to the same desaturated-lock treatment the
+		# placeholder cards use (PRD rule 5), with no shader needed.
+		draw_texture_rect(load(image_path), rect, false,
+				Color.WHITE if unlocked else COLOR_LOCKED)
+	else:
+		draw_rect(rect, COLOR_UNLOCKED if unlocked else COLOR_LOCKED)
 	if sub_area_id == focused_sub_area_id:
 		draw_rect(rect, Color.WHITE, false, 2.0)
 	var label := String(_sub_areas[sub_area_id].get("name", str(sub_area_id)))
+	if has_art:
+		draw_rect(Rect2(rect.position, Vector2(rect.size.x, 28.0)), COLOR_LABEL_SCRIM)
 	draw_string(font, rect.position + Vector2(8.0, 22.0), label,
 			HORIZONTAL_ALIGNMENT_LEFT, rect.size.x - 16.0, LABEL_FONT_SIZE,
 			COLOR_TEXT if unlocked else COLOR_TEXT_DIM)
