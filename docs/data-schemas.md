@@ -149,6 +149,7 @@ Fields are exactly those named in
 | `trust_threshold` | int | yes | trust needed to unlock (default 100; lower for early unlocks) |
 | `starts_unlocked` | bool | yes | true only for sub-area 7 |
 | `indigenous_name_note` | string\|null | no | acknowledgment text when the name is of Indigenous origin |
+| `card_image` | string\|null | no | `res://` path to real map art for the world-select card; `null` falls back to the placeholder color fill (`world_select_controller.gd:_draw_sub_area_card`) |
 
 ```json
 {
@@ -159,7 +160,8 @@ Fields are exactly those named in
       "jurisdiction_real": "AB/BC", "controlling_entity_id": "ca_federal_parks",
       "boundary_basis": "Continental Divide and Bow/Athabasca watersheds",
       "playable_tile_count": 4000, "size_deviation_note": null,
-      "trust_threshold": 0, "starts_unlocked": true, "indigenous_name_note": null }
+      "trust_threshold": 0, "starts_unlocked": true, "indigenous_name_note": null,
+      "card_image": "res://assets/sprites/world_map_bow_valley.png" }
   ]
 }
 ```

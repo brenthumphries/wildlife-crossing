@@ -202,3 +202,50 @@ Keep these principles in mind whenever making design or implementation decisions
 | `website/CLAUDE.md`             | Website copy, user guide, encyclopedia     |
 
 Always load the relevant scoped file before working in that area.
+
+---
+
+## brent-ops
+
+Process conventions read by the brent-ops plugin (`/next`, `/route`, `/daily`,
+`/log`, `/verify`, `/weekly`). The skills read this block and the files it
+names, nothing else, for where logs, reviews, plans and commit plans live.
+Change the process here, not in the skills.
+
+```yaml
+brent-ops:
+  project: wildlife-crossing
+  logs:
+    dir: obsidian-vault/daily-logs
+    file: YYYY-MM-DD.md
+    template: obsidian-vault/CLAUDE.md#Daily logs
+    sections: [What I worked on, What got done, Decisions made, Open questions / blockers, Next session, Related]
+  reviews:
+    mode: "on"
+    dir: obsidian-vault/build-reviews
+    file: YYYY-MM-DD-next-build.md
+    index: obsidian-vault/build-reviews/README.md
+    amend: callout
+  plan:
+    file: docs/plan/week.json
+    schema: docs/plan/README.md
+    routing: docs/plan/routing.md
+    queue_log: docs/plan/queue/log.jsonl
+    ids: "B blockers, C core build, V verification, D doc drift, Q decisions; number stable across weeks"
+    sizes: S M L
+    edit_midweek: never
+  commit:
+    tool: python3 tools/ship.py <plan.json>
+    plan_file: commit-plan-YYYY-MM-DD.json at the repo root; shape per tools/ship.py --help and any existing commit-plan-*.json
+    land: tools/warden land <plan.json>
+    branch: "<type>/<short-description>"
+    git_over_mount: never
+  dispatch:
+    tool: python3 tools/warden.py
+    safe_over_mount: [sync --curl, status, day, cowork]
+    mac_only: [run, land, merge, locks, clean, week]
+  weekly:
+    skill: .claude/skills/weekly-plan/SKILL.md
+  verify:
+    tests: "python3 -m unittest discover -s tools/tests -b for tools/; GUT runs in CI for game/"
+```
