@@ -1,0 +1,22 @@
+#!/bin/sh
+# Auto-append a DCO Signed-off-by trailer matching the commit author, unless
+# one is already present. `git config format.signOff true` looks like it
+# should do this but only affects `git format-patch`, not `git commit` — this
+# hook is the actual mechanism. See CONTRIBUTING.md's DCO section.
+#
+# Enable once per clone/worktree with:
+#   git config core.hooksPath .githooks
+
+COMMIT_MSG_FILE="$1"
+COMMIT_SOURCE="$2"
+
+# GitHub generates merge commits; nothing to attest and check_dco.py skips them.
+if [ "$COMMIT_SOURCE" = "merge" ]; then
+    exit 0
+fi
+
+SOB="Signed-off-by: $(git var GIT_AUTHOR_IDENT | sed -n 's/^\(.*>\).*/\1/p')"
+
+if ! grep -qsF "$SOB" "$COMMIT_MSG_FILE"; then
+    printf '\n%s\n' "$SOB" >> "$COMMIT_MSG_FILE"
+fi
