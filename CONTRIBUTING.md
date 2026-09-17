@@ -59,11 +59,17 @@ The name and email must be your real ones and must match your git author
 identity. Anonymous and pseudonymous contributions can't be accepted, because
 the certificate is meaningless without an identifiable person behind it.
 
-To sign off automatically for this repository:
+To sign off automatically for this repository, enable the tracked
+`prepare-commit-msg` hook instead of trying to remember `-s`:
 
 ```bash
-git config format.signOff true
+git config core.hooksPath .githooks
 ```
+
+(`git config format.signOff true` looks like it should do this, but it only
+affects `git format-patch`, not `git commit` — it silently does nothing here.
+Run once per clone or worktree, since `core.hooksPath` lives in `.git/config`
+and doesn't travel with the repo.)
 
 ### How this is checked
 

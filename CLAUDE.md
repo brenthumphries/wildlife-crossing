@@ -150,6 +150,16 @@ Rules to apply without being asked:
 
 - **Branch strategy**: Feature branches off `main`. Branch name format:
   `feat/`, `fix/`, `docs/`, `chore/`, `test/`.
+- **DCO sign-off (required)**: Every commit needs a `Signed-off-by` trailer —
+  CI's `tools/check_dco.py` fails the PR otherwise (see `CONTRIBUTING.md`).
+  Run `git config core.hooksPath .githooks` once per clone so the tracked
+  `prepare-commit-msg` hook appends it automatically; that config lives in
+  `.git/config` and does not travel with the repo, so re-run it in any new
+  clone or worktree rather than assuming it's already set. (`git config
+  format.signOff true` looks like the fix but does nothing for `git commit` —
+  it only affects `git format-patch`.) A commit missing the trailer is fixed
+  with `git commit --amend -s --no-edit` (or `git rebase --signoff main` for
+  several), then a force-push — not a second PR.
 - **Commits**: Use Conventional Commits format.
   - `feat:` new feature
   - `fix:` bug fix
