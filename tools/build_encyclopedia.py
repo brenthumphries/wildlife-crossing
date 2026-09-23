@@ -2,9 +2,11 @@
 """Generate the website encyclopedia from the Obsidian wiki.
 
 Reads every note in ``obsidian-vault/wiki/`` and writes a static HTML page per
-subject into ``website/encyclopedia/``, plus an index page. The generated HTML
-is committed to the repo, so GitHub Pages still serves plain static files and
-the site keeps its no-build-step guarantee (website/CLAUDE.md).
+subject into ``website/encyclopedia/``, plus an index page. Any generated page
+whose wiki note has been deleted or renamed is removed in the same run, so a
+gone note doesn't leave an orphan on the public site. The generated HTML is
+committed to the repo, so GitHub Pages still serves plain static files and the
+site keeps its no-build-step guarantee (website/CLAUDE.md).
 
 Re-run this whenever the wiki changes:
 
@@ -666,6 +668,7 @@ def main() -> int:
     by_slug = {e.slug: e for e in entries}
 
     OUT_DIR.mkdir(parents=True, exist_ok=True)
+    existing_pages = {p.name for p in OUT_DIR.glob("*.html")}
 
     for entry in entries:
         (OUT_DIR / f"{entry.slug}.html").write_text(
@@ -674,11 +677,18 @@ def main() -> int:
 
     (OUT_DIR / "index.html").write_text(render_index(entries), encoding="utf-8")
 
+    current_pages = {f"{entry.slug}.html" for entry in entries} | {"index.html"}
+    orphans = sorted(existing_pages - current_pages)
+    for name in orphans:
+        (OUT_DIR / name).unlink()
+
     counts: dict[str, int] = {}
     for entry in entries:
         counts[entry.kind] = counts.get(entry.kind, 0) + 1
     summary = ", ".join(f"{n} {KIND_LABELS[k].lower()}" for k, n in sorted(counts.items()))
     print(f"wrote {len(entries)} entries + index to {OUT_DIR} ({summary})")
+    if orphans:
+        print(f"removed {len(orphans)} orphaned page(s): {', '.join(orphans)}")
     return 0
 
 
