@@ -394,7 +394,7 @@ a bot signing as itself, which is why ADR 0019 exists.
 
 ### 6.2 Decouple the artifact upload from the merge gate
 
-**The quota constraint is gone.** The repository went public on 2026-09-05, and
+**The quota constraint is gone.** The repository went public on 2026-08-29, and
 GitHub's per-account free quotas for minutes, artifact storage and cache storage
 apply to private repositories only; standard runners are free in public
 repositories. The ~412 MB export set (linux 70 MB, macos 240 MB, windows 102 MB)
