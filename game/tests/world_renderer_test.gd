@@ -44,3 +44,33 @@ func test_camera_focus_projection_differs_from_naive_multiplication() -> void:
 	assert_gt(
 			projected.distance_to(naive), 1.0,
 			"naive multiplication is NOT the projection — do not use it for framing")
+
+## Regression guard for build item C10: project.godot now sets
+## `window/stretch/mode = "canvas_items"`, which the 2026-09-02 log flagged as
+## also changing screen-to-world mapping — the area `cb9f9b8` fixed for the
+## world-select blind-click bug (two code paths disagreeing on which frame a
+## click was in). Godot rescales real screen pixels to the configured
+## viewport before a script ever sees them, with "keep" aspect (the project
+## default) adding a uniform scale plus a letterbox offset on the wider axis.
+## Models that rescale-then-descale explicitly so a future descale that drops
+## the letterbox offset, or scales the wrong axis, fails a known tile here
+## instead of silently mis-picking one on screen.
+func test_coord_at_px_round_trips_through_a_stretched_screen() -> void:
+	var stretch_mode: Variant = ProjectSettings.get_setting("display/window/stretch/mode")
+	assert_eq(stretch_mode, "canvas_items", "this guard only matters while stretch is enabled")
+
+	var width: Variant = ProjectSettings.get_setting("display/window/size/viewport_width")
+	var height: Variant = ProjectSettings.get_setting("display/window/size/viewport_height")
+	var content_size := Vector2(float(width), float(height))
+	var window_size := Vector2(1920.0, 1080.0)   # a wider-than-content monitor
+	var scale_x := window_size.x / content_size.x
+	var scale_y := window_size.y / content_size.y
+	var scale := scale_x if scale_x < scale_y else scale_y   # "keep" aspect: the smaller axis wins
+	var letterbox := (window_size - content_size * scale) * 0.5
+
+	var c := Vector2i(12, 5)
+	var screen := WorldRenderer.px_at_coord(c) * scale + letterbox
+	var recovered := (screen - letterbox) / scale
+	assert_eq(
+			_r.coord_at_px(recovered), c,
+			"round-trips through a stretched, letterboxed screen")
