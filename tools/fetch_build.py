@@ -56,13 +56,17 @@ class Artifacts:
     root: pathlib.Path
     bundles: list[pathlib.Path] = field(default_factory=list)
     zips: list[pathlib.Path] = field(default_factory=list)
+    dmgs: list[pathlib.Path] = field(default_factory=list)
     packs: list[pathlib.Path] = field(default_factory=list)
     windows: list[pathlib.Path] = field(default_factory=list)
     linux: list[pathlib.Path] = field(default_factory=list)
 
     @property
     def is_empty(self) -> bool:
-        return not (self.bundles or self.zips or self.packs or self.windows or self.linux)
+        return not (
+            self.bundles or self.zips or self.dmgs or self.packs
+            or self.windows or self.linux
+        )
 
     def bundle_executable(self) -> pathlib.Path | None:
         """The binary inside the first .app bundle, or None."""
@@ -147,6 +151,8 @@ def locate(root: pathlib.Path) -> Artifacts:
             continue
         if name.endswith(".zip"):
             found.zips.append(path)
+        elif name.endswith(".dmg"):
+            found.dmgs.append(path)
         elif name.endswith(".pck"):
             found.packs.append(path)
         elif name.endswith(".exe"):
@@ -166,6 +172,7 @@ def report(found: Artifacts) -> list[str]:
     for label, paths in (
         ("macOS bundle", found.bundles),
         ("macOS zip", found.zips),
+        ("macOS dmg", found.dmgs),
         ("pack", found.packs),
         ("Windows binary", found.windows),
         ("Linux binary", found.linux),
@@ -210,9 +217,12 @@ def check_packs(found: Artifacts, data_dir: pathlib.Path, checker: pathlib.Path)
     """Run the pack gate over every pack, the way CI does. Returns a exit code.
 
     Every target is checked even after one fails, for the reason ci.yml gives:
-    three platforms diverging three ways is one report worth reading.
+    three platforms diverging three ways is one report worth reading. A dmg is
+    preferred over a bare pack or bundle when present — it is the artifact
+    that actually ships (build-review C2, ADR 0018), and check_pck_contents.py
+    reads it directly, mounting and unmounting it itself.
     """
-    targets = found.packs or found.bundles
+    targets = found.dmgs or found.packs or found.bundles
     if not targets:
         print("no packs or bundles to check", file=sys.stderr)
         return 1

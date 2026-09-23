@@ -22,6 +22,13 @@ Two things are covered:
    Exercising it needs a minimal but real pack directory, built below with
    ``build_pck`` against the format ``inspect_pck.read_pck_paths`` parses.
 
+3. ``resolve_pck`` on a ``.dmg`` — added for C11 (build-review C2, ADR 0018):
+   the release image is what actually ships, and before this it was the one
+   input shape the gate could not read at all. Mounting needs real
+   ``hdiutil``, so most of ``TestMacosDmg`` skips where it is absent (CI's
+   Tool-tests job runs on Linux); the "hdiutil is absent" error path itself
+   is tested everywhere by mocking ``shutil.which``.
+
 Run:
     python3 -m unittest discover -s tools/tests -v
 """
@@ -31,7 +38,9 @@ from __future__ import annotations
 import contextlib
 import io
 import pathlib
+import shutil
 import struct
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -76,7 +85,9 @@ class ResolveTestCase(unittest.TestCase):
         self._tmp.cleanup()
 
     def make_bundle(self, app: str, pck: str) -> pathlib.Path:
-        bundle = self.tmp / app
+        return self.make_bundle_at(self.tmp / app, pck)
+
+    def make_bundle_at(self, bundle: pathlib.Path, pck: str) -> pathlib.Path:
         resources = bundle / "Contents" / "Resources"
         resources.mkdir(parents=True)
         (resources / pck).write_bytes(PCK_BYTES)
@@ -186,6 +197,75 @@ class TestMacosZip(ResolveTestCase):
             with gate.resolve_pck(path):
                 pass
         self.assertIn("could not open", str(caught.exception))
+
+
+HDIUTIL_AVAILABLE = shutil.which("hdiutil") is not None
+
+
+class TestMacosDmg(ResolveTestCase):
+    """Covers C11: the release ``.dmg`` (ADR 0018, build-review C2).
+
+    The tests that actually create and mount a disk image need real
+    ``hdiutil`` and skip cleanly where it is absent — CI's Tool-tests job
+    runs on Linux, which has none. The absent-``hdiutil`` error path is
+    tested separately by mocking ``shutil.which``, so that one test runs on
+    any host regardless of whether it actually has hdiutil.
+    """
+
+    def make_dmg(self, name: str, src: pathlib.Path) -> pathlib.Path:
+        dmg = self.tmp / name
+        proc = subprocess.run(
+            [
+                "hdiutil", "create", "-volname", "TestVolume",
+                "-srcfolder", str(src), "-ov", "-format", "UDZO", str(dmg),
+            ],
+            capture_output=True,
+            text=True,
+        )
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        return dmg
+
+    def test_hdiutil_absent_is_a_clear_locate_error(self) -> None:
+        """Linux, or a Mac with a broken PATH — same failure either way."""
+        with mock.patch("shutil.which", return_value=None):
+            with self.assertRaises(gate.LocateError) as caught:
+                with gate.resolve_pck(self.tmp / "wildlife-crossing.dmg"):
+                    pass
+        self.assertIn("hdiutil", str(caught.exception))
+        self.assertIn("macOS", str(caught.exception))
+
+    @unittest.skipUnless(HDIUTIL_AVAILABLE, "hdiutil not available on this host")
+    def test_the_pack_is_found_inside_a_mounted_dmg(self) -> None:
+        src = self.tmp / "src"
+        self.make_bundle_at(src / "Wildlife Crossing.app", "Wildlife Crossing.pck")
+        dmg = self.make_dmg("wildlife-crossing.dmg", src)
+        with gate.resolve_pck(dmg) as resolved:
+            self.assertEqual(resolved.name, "Wildlife Crossing.pck")
+            self.assertEqual(resolved.read_bytes(), PCK_BYTES)
+            mount_point = resolved.parent.parent.parent.parent
+        self.assertFalse(mount_point.exists(), "the mount must be detached and cleaned up")
+
+    @unittest.skipUnless(HDIUTIL_AVAILABLE, "hdiutil not available on this host")
+    def test_a_dmg_without_an_app_is_a_locate_error(self) -> None:
+        src = self.tmp / "src-empty"
+        src.mkdir()
+        (src / "README.txt").write_text("nothing here")
+        dmg = self.make_dmg("empty.dmg", src)
+        with self.assertRaises(gate.LocateError) as caught:
+            with gate.resolve_pck(dmg):
+                pass
+        self.assertIn("not a Godot macOS disk image", str(caught.exception))
+
+    @unittest.skipUnless(HDIUTIL_AVAILABLE, "hdiutil not available on this host")
+    def test_two_apps_in_a_dmg_is_a_locate_error(self) -> None:
+        src = self.tmp / "src-ambiguous"
+        self.make_bundle_at(src / "One.app", "one.pck")
+        self.make_bundle_at(src / "Two.app", "two.pck")
+        dmg = self.make_dmg("ambiguous.dmg", src)
+        with self.assertRaises(gate.LocateError) as caught:
+            with gate.resolve_pck(dmg):
+                pass
+        self.assertIn("expected one", str(caught.exception))
 
 
 class TestCriticalAssets(ResolveTestCase):
