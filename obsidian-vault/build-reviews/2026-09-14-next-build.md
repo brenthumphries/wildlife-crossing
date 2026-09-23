@@ -24,6 +24,18 @@ status: active
 > Ruleset `22403399` matches its committed copy. Previous plan:
 > [[2026-09-08-next-build]] and its three amendments.
 
+> [!success] Amendment 2026-09-23 — **B4's decision is made: one archive per platform.**
+> Brent's call, recorded in [[../daily-logs/2026-09-23]]. Windows ships as
+> `.zip`, Linux x86_64 as `.tar.gz`, each carrying the binary, its `.pck`,
+> `LICENSE` and `THIRD-PARTY-NOTICES.md`; `embed_pck` stays `false`. CI builds
+> the archives and the Mac fetches them into `builds/` for the signed manifest.
+> This satisfies the first half of B4's acceptance. **B4 stays open as a
+> blocker** until the implementation lands as one supervised pull request with
+> the `smoke-windows` path, pack-gate and `inspect_pck.py` updates, the
+> signing-runbook B3 `find` pattern, and C6's copy. That item needs a plan for
+> the week of 2026-09-21, which does not yet exist. Nothing else in this note
+> has moved: `warden day` on 2026-09-23 reports 0 of 26 items done.
+
 ## 1. Readiness
 
 **Build case: first.** `facts.build_case` finds no tag, no release note and
