@@ -4,7 +4,10 @@
 Reads every note in ``obsidian-vault/wiki/`` and writes a static HTML page per
 subject into ``website/encyclopedia/``, plus an index page. Any generated page
 whose wiki note has been deleted or renamed is removed in the same run, so a
-gone note doesn't leave an orphan on the public site. The generated HTML is
+gone note doesn't leave an orphan on the public site. Only pages carrying
+``GENERATED_MARKER`` are ever deleted, so a hand-written file in the output
+directory survives, and a wiki with no notes at all is an error rather than an
+instruction to delete every page. The generated HTML is
 committed to the repo, so GitHub Pages still serves plain static files and the
 site keeps its no-build-step guarantee (website/CLAUDE.md).
 
@@ -42,6 +45,9 @@ OUT_DIR = ROOT / "website" / "encyclopedia"
 PORTRAIT_DIR = ROOT / "website" / "assets" / "img" / "species"
 
 GITHUB_URL = "https://github.com/brenthumphries/wildlife-crossing"
+
+# Written into every entry page. Deletion only touches pages that carry it.
+GENERATED_MARKER = "This entry is generated from the project wiki"
 
 KIND_LABELS = {
     "species": "Species",
@@ -546,7 +552,7 @@ def render_entry(entry: Entry, by_slug: dict[str, Entry]) -> str:
 {render_blocks(entry.blocks)}
 
 {related}{references}      <p class="entry-meta">
-        This entry is generated from the project wiki
+        {GENERATED_MARKER}
         (<code>obsidian-vault/wiki/{entry.slug}.md</code>), last revised
         {html.escape(entry.date)}.
         <a href="index.html">Back to the encyclopedia</a>.
@@ -661,6 +667,11 @@ def main() -> int:
         return 1
 
     paths = sorted(WIKI_DIR.glob("*.md"))
+    if not paths:
+        # A partial checkout or a moved vault, never a real edit. Deleting
+        # every page here would publish an empty encyclopedia on the next push.
+        print(f"error: no wiki notes in {WIKI_DIR}; nothing written or removed", file=sys.stderr)
+        return 1
     known_slugs = {p.stem for p in paths}
 
     entries = [load_entry(p, known_slugs) for p in paths]
@@ -678,7 +689,11 @@ def main() -> int:
     (OUT_DIR / "index.html").write_text(render_index(entries), encoding="utf-8")
 
     current_pages = {f"{entry.slug}.html" for entry in entries} | {"index.html"}
-    orphans = sorted(existing_pages - current_pages)
+    orphans = sorted(
+        name
+        for name in existing_pages - current_pages
+        if GENERATED_MARKER in (OUT_DIR / name).read_text(encoding="utf-8")
+    )
     for name in orphans:
         (OUT_DIR / name).unlink()
 

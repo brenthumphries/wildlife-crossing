@@ -211,6 +211,27 @@ class BuildEncyclopediaTestCase(unittest.TestCase):
 
         self.assertTrue(keepsake.exists())
 
+    def test_deletion_leaves_a_hand_written_page_alone(self) -> None:
+        self.write_note("test-species.md", SPECIES_NOTE)
+        self.assertEqual(be.main(), 0)
+        hand_written = self.out_dir / "about.html"
+        hand_written.write_text("<p>written by hand</p>", encoding="utf-8")
+
+        self.assertEqual(be.main(), 0)
+
+        self.assertTrue(hand_written.exists())
+
+    def test_empty_wiki_is_an_error_and_deletes_nothing(self) -> None:
+        self.write_note("test-species.md", SPECIES_NOTE)
+        self.assertEqual(be.main(), 0)
+        before = {p.name: p.read_bytes() for p in self.out_dir.glob("*.html")}
+        (self.wiki_dir / "test-species.md").unlink()
+
+        self.assertEqual(be.main(), 1)
+
+        after = {p.name: p.read_bytes() for p in self.out_dir.glob("*.html")}
+        self.assertEqual(before, after)
+
     # -- external-asset check -------------------------------------------------
 
     def test_no_disallowed_external_references_for_allowlisted_content(self) -> None:
