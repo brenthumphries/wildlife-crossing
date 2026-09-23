@@ -21,6 +21,7 @@ import shlex
 import sys
 import tempfile
 import unittest
+from unittest import mock
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
 
@@ -134,6 +135,16 @@ class FetchBuildTestCase(unittest.TestCase):
         found = fetch_build.locate(self.make_artifact_tree())
         self.assertTrue(found.bundles[0].is_dir())
 
+    def test_finds_a_dmg(self) -> None:
+        """C11: a macOS export is now a .dmg, per ADR 0018 / build-review C2."""
+        base = self.root / "wc-dmg"
+        macos = base / "wildlife-crossing-macos"
+        macos.mkdir(parents=True)
+        (macos / "wildlife-crossing.dmg").write_bytes(b"koly")
+        found = fetch_build.locate(base)
+        self.assertEqual([p.name for p in found.dmgs], ["wildlife-crossing.dmg"])
+        self.assertFalse(found.is_empty)
+
     def test_an_empty_tree_reports_empty_rather_than_crashing(self) -> None:
         empty = self.root / "wc-empty"
         empty.mkdir()
@@ -188,6 +199,29 @@ class FetchBuildTestCase(unittest.TestCase):
         (linux_only / "builds" / "wildlife-crossing.x86_64").write_bytes(b"\x7fELF")
         found = fetch_build.locate(linux_only)
         self.assertEqual(fetch_build.next_steps(found), [])
+
+    # -- gating prefers the artifact that actually ships ------------------
+
+    def test_check_packs_prefers_a_dmg_over_a_pack_or_bundle(self) -> None:
+        """The dmg is what ships (ADR 0018); gate that, not a loose pack.
+
+        `subprocess.run` is mocked so this stays hermetic and fast —
+        `check_pck_contents.py`'s own dmg-mounting behavior has its own
+        coverage in test_check_pck_contents.py.
+        """
+        found = fetch_build.locate(self.make_artifact_tree())
+        self.assertTrue(found.packs and found.bundles, "fixture must have both")
+        dmg = self.root / "wildlife-crossing.dmg"
+        dmg.write_bytes(b"koly")
+        found.dmgs = [dmg]
+
+        with mock.patch.object(fetch_build.subprocess, "run") as run:
+            run.return_value.returncode = 0
+            code = fetch_build.check_packs(found, self.root, pathlib.Path("checker.py"))
+
+        self.assertEqual(code, 0)
+        targets = [call.args[0][2] for call in run.call_args_list]
+        self.assertEqual(targets, [str(dmg)])
 
 
 if __name__ == "__main__":

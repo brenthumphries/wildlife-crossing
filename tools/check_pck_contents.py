@@ -34,8 +34,18 @@ An imported asset never ships under its own name. Godot packs the
 original `.wav` or `.png` is not in the pack at all. Both halves are required:
 the remap without its payload loads nothing.
 
+Since 2026-09-23 this also accepts a macOS `.dmg` (build-review C2, ADR 0018).
+The release `.dmg` — signed and notarized on the product owner's Mac, per
+`signing-runbook.md` A5-A6 — is the artifact that actually ships; before this
+it was the one shape `resolve_pck` could not read, so the thing players
+download was gated by nothing. Reading it means mounting it: `hdiutil attach`
+the image, glob for the `.app` inside exactly as an already-mounted bundle,
+then `hdiutil detach` on the way out. `hdiutil` only exists on macOS, so this
+fails with a clear message rather than a stack trace where it is absent
+(Linux — the CI runner this gate also runs on).
+
 Usage:
-    check_pck_contents.py <file.pck|bundle.app|macos.zip> --data-dir game/data
+    check_pck_contents.py <file.pck|bundle.app|macos.zip|macos.dmg> --data-dir game/data
 """
 
 from __future__ import annotations
@@ -44,6 +54,7 @@ import argparse
 import contextlib
 import pathlib
 import shutil
+import subprocess
 import sys
 import tempfile
 import zipfile
@@ -83,9 +94,62 @@ class LocateError(Exception):
     """The pack could not be found — as distinct from failing its contents."""
 
 
+def _find_pck_in_bundle(bundle: pathlib.Path) -> pathlib.Path:
+    """Return the one ``.pck`` inside an ``.app`` bundle, or raise."""
+    found = sorted(bundle.glob(BUNDLE_PCK_GLOB))
+    if not found:
+        raise LocateError(
+            f"no {BUNDLE_PCK_GLOB} inside {bundle} — not a Godot macOS bundle?"
+        )
+    if len(found) > 1:
+        raise LocateError(f"{len(found)} packs inside {bundle}; expected one")
+    return found[0]
+
+
+@contextlib.contextmanager
+def _mounted_dmg(target: pathlib.Path) -> Iterator[pathlib.Path]:
+    """Mount ``target`` read-only with ``hdiutil`` and yield the mount point.
+
+    ``hdiutil`` exists only on macOS. Checking for it with ``shutil.which``,
+    rather than branching on ``sys.platform``, gives the same clear failure on
+    Linux (where it is genuinely absent) as on a Mac with a broken ``PATH``,
+    and lets a test simulate the absence without needing a Linux runner.
+    """
+    hdiutil = shutil.which("hdiutil")
+    if hdiutil is None:
+        raise LocateError(
+            f"{target} is a .dmg, but hdiutil is not on PATH — .dmg images can "
+            "only be mounted on macOS. Run this on the Mac that built the "
+            "release, or mount it there and pass the .app instead."
+        )
+
+    mount_point = pathlib.Path(tempfile.mkdtemp(prefix="pck-gate-dmg-"))
+    proc = subprocess.run(
+        [
+            hdiutil, "attach", "-nobrowse", "-readonly",
+            "-mountpoint", str(mount_point), str(target),
+        ],
+        capture_output=True,
+        text=True,
+    )
+    if proc.returncode != 0:
+        shutil.rmtree(mount_point, ignore_errors=True)
+        detail = proc.stderr.strip() or proc.stdout.strip()
+        raise LocateError(f"could not mount {target}: {detail}")
+    try:
+        yield mount_point
+    finally:
+        subprocess.run(
+            [hdiutil, "detach", str(mount_point), "-quiet"],
+            capture_output=True,
+            text=True,
+        )
+        shutil.rmtree(mount_point, ignore_errors=True)
+
+
 @contextlib.contextmanager
 def resolve_pck(target: pathlib.Path) -> Iterator[pathlib.Path]:
-    """Yield a readable ``.pck`` for a pck, a ``.app`` bundle, or a macOS zip.
+    """Yield a readable ``.pck`` for a pck, a ``.app`` bundle, a macOS zip or dmg.
 
     **The pack inside a macOS bundle is named from the project's
     ``config/name``, not from the export path.** This project exports to
@@ -96,17 +160,23 @@ def resolve_pck(target: pathlib.Path) -> Iterator[pathlib.Path]:
     good build, which is the same class of false failure as the ``head -20``
     defect this project already paid for once.
 
-    A zip is extracted to a temporary directory that is removed on exit.
+    A zip is extracted to a temporary directory that is removed on exit; a dmg
+    is mounted and detached the same way.
     """
     if target.is_dir() and target.suffix == ".app":
-        found = sorted(target.glob(BUNDLE_PCK_GLOB))
-        if not found:
-            raise LocateError(
-                f"no {BUNDLE_PCK_GLOB} inside {target} — not a Godot macOS bundle?"
-            )
-        if len(found) > 1:
-            raise LocateError(f"{len(found)} packs inside {target}; expected one")
-        yield found[0]
+        yield _find_pck_in_bundle(target)
+        return
+
+    if target.suffix == ".dmg":
+        with _mounted_dmg(target) as mount_point:
+            apps = sorted(mount_point.glob("*.app"))
+            if not apps:
+                raise LocateError(
+                    f"no *.app inside {target} — not a Godot macOS disk image?"
+                )
+            if len(apps) > 1:
+                raise LocateError(f"{len(apps)} apps inside {target}; expected one")
+            yield _find_pck_in_bundle(apps[0])
         return
 
     if target.suffix == ".zip":
@@ -145,7 +215,7 @@ def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument(
         "pck",
-        help="a .pck, a macOS .app bundle, or the macOS export .zip",
+        help="a .pck, a macOS .app bundle, or the macOS export .zip or .dmg",
     )
     ap.add_argument(
         "--data-dir",
