@@ -28,6 +28,12 @@ than derived: nothing in the asset tree marks a file as being on the
 preload/critical path, so scanning `game/assets/` would either flag harmless
 unpacked assets or require a manifest that does not exist.
 
+An imported asset never ships under its own name. Godot packs the
+`<path>.import` remap and the converted file under `res://.godot/imported/`
+(`crossing_chime.wav-<hash>.sample`, `crossing_cue.png-<hash>.ctex`), and the
+original `.wav` or `.png` is not in the pack at all. Both halves are required:
+the remap without its payload loads nothing.
+
 Usage:
     check_pck_contents.py <file.pck|bundle.app|macos.zip> --data-dir game/data
 """
@@ -58,8 +64,19 @@ CRITICAL_ASSETS = (
     "res://assets/sprites/crossing_cue.png",
 )
 
+# Where Godot packs the converted form of an imported asset.
+IMPORTED_PREFIX = "res://.godot/imported/"
+
 # Where a macOS export keeps its pack, inside the .app bundle.
 BUNDLE_PCK_GLOB = "Contents/Resources/*.pck"
+
+
+def asset_packed(path: str, present: set[str]) -> bool:
+    """True if ``path`` shipped, either as itself or in its imported form."""
+    if path in present:
+        return True
+    imported = f"{IMPORTED_PREFIX}{path.rsplit('/', 1)[-1]}-"
+    return f"{path}.import" in present and any(p.startswith(imported) for p in present)
 
 
 class LocateError(Exception):
@@ -180,7 +197,7 @@ def main() -> int:
         for p in missing:
             print(f"    {p}")
 
-    missing_assets = [p for p in CRITICAL_ASSETS if p not in present]
+    missing_assets = [p for p in CRITICAL_ASSETS if not asset_packed(p, present)]
     if missing_assets:
         failed = True
         print(

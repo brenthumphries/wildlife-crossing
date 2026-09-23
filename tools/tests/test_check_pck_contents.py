@@ -189,11 +189,24 @@ class TestMacosZip(ResolveTestCase):
 
 
 class TestCriticalAssets(ResolveTestCase):
-    """Covers the build-review V8 check in ``main``."""
+    """Covers the build-review V8 check in ``main``.
+
+    The imported-form paths are the ones a real 4.6.3 export packs, read with
+    inspect_pck.py from CI run 35916017446 on 2026-09-23. The original
+    ``.wav`` and ``.png`` paths do not appear in that pack at all.
+    """
 
     DATA_PATH = "res://data/species_stats.json"
     CHIME = "res://assets/audio/crossing_chime.wav"
     CUE = "res://assets/sprites/crossing_cue.png"
+    CHIME_PACKED = [
+        "res://assets/audio/crossing_chime.wav.import",
+        "res://.godot/imported/crossing_chime.wav-d219d4c35414cb82104e0bb87a5155f7.sample",
+    ]
+    CUE_PACKED = [
+        "res://assets/sprites/crossing_cue.png.import",
+        "res://.godot/imported/crossing_cue.png-00899eee329faa48c03db87451178be5.ctex",
+    ]
 
     def setUp(self) -> None:
         super().setUp()
@@ -201,7 +214,9 @@ class TestCriticalAssets(ResolveTestCase):
         self.data_dir.mkdir()
         (self.data_dir / "species_stats.json").write_text("{}")
 
-    def run_gate(self, pck: pathlib.Path) -> tuple[int, str]:
+    def run_gate(self, paths: list[str]) -> tuple[int, str]:
+        pck = self.tmp / "wildlife-crossing.pck"
+        pck.write_bytes(build_pck([self.DATA_PATH, *paths]))
         argv = [
             "check_pck_contents.py",
             str(pck),
@@ -214,29 +229,32 @@ class TestCriticalAssets(ResolveTestCase):
                 code = gate.main()
         return code, out.getvalue()
 
+    def test_a_pack_with_both_assets_in_imported_form_passes(self) -> None:
+        code, out = self.run_gate(self.CHIME_PACKED + self.CUE_PACKED)
+        self.assertEqual(code, 0)
+        self.assertIn("OK", out)
+        self.assertNotIn("error:", out)
+
     def test_a_pack_missing_exactly_the_chime_is_reported_by_name(self) -> None:
-        pck = self.tmp / "wildlife-crossing.pck"
-        pck.write_bytes(build_pck([self.DATA_PATH, self.CUE]))
-        code, out = self.run_gate(pck)
+        code, out = self.run_gate(self.CUE_PACKED)
         self.assertEqual(code, 1)
         self.assertIn(self.CHIME, out)
         self.assertNotIn(self.CUE, out)
 
     def test_a_pack_missing_exactly_the_cue_is_reported_by_name(self) -> None:
-        pck = self.tmp / "wildlife-crossing.pck"
-        pck.write_bytes(build_pck([self.DATA_PATH, self.CHIME]))
-        code, out = self.run_gate(pck)
+        code, out = self.run_gate(self.CHIME_PACKED)
         self.assertEqual(code, 1)
         self.assertIn(self.CUE, out)
         self.assertNotIn(self.CHIME, out)
 
-    def test_a_pack_with_both_assets_passes(self) -> None:
-        pck = self.tmp / "wildlife-crossing.pck"
-        pck.write_bytes(build_pck([self.DATA_PATH, self.CHIME, self.CUE]))
-        code, out = self.run_gate(pck)
+    def test_a_remap_without_its_imported_payload_is_missing(self) -> None:
+        code, out = self.run_gate([self.CHIME_PACKED[0]] + self.CUE_PACKED)
+        self.assertEqual(code, 1)
+        self.assertIn(self.CHIME, out)
+
+    def test_an_asset_packed_under_its_own_name_passes(self) -> None:
+        code, _ = self.run_gate([self.CHIME, self.CUE])
         self.assertEqual(code, 0)
-        self.assertIn("OK", out)
-        self.assertNotIn("error:", out)
 
 
 if __name__ == "__main__":  # pragma: no cover
