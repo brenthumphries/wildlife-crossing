@@ -30,6 +30,20 @@ EventBus="*res://scripts/systems/event_bus.gd"
 Debug="*res://scripts/systems/debug.gd"
 SpeciesRegistry="*res://scripts/systems/species_registry.gd"
 
+[display]
+
+; C10: the 09-02 QA walk failed the credits-screen and HUD-message legibility
+; clauses because this section did not exist, so exports ran at Godot's
+; 1152x648 default with stretch disabled. 1280x720 is the smallest size that
+; clears the failure without inventing a resolution no one asked for.
+; canvas_items was the 09-02 decision's chosen mode (scales every Control
+; together instead of patching individual font sizes per screen) — see
+; game/tests/world_renderer_test.gd for the regression guard on the
+; screen-to-world mapping it also affects, the area cb9f9b8 fixed.
+window/size/viewport_width=1280
+window/size/viewport_height=720
+window/stretch/mode="canvas_items"
+
 [editor_plugins]
 
 enabled=PackedStringArray("res://addons/gut/plugin.cfg")
