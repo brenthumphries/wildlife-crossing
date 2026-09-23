@@ -17,6 +17,17 @@ pack is not even byte-identical to it — verified in the 2026-08-04 review,
 `md5 a2dbbbee…` against `934e8b12…` — so "the Linux pack is fine" was never
 evidence about the other two.
 
+Since 2026-09-23 this also asserts two runtime assets are present:
+`res://assets/audio/crossing_chime.wav` and
+`res://assets/sprites/crossing_cue.png`, both `preload`ed
+(`game/scripts/main.gd:21`, `game/scripts/ui/hud.gd:14`). A missing one fails
+the smoke boot too — a failed `preload` is a compile failure — but that gate
+only reports "the binary did not boot", never which asset is gone
+(build-review V8). Unlike the data-file list, this pair is hardcoded rather
+than derived: nothing in the asset tree marks a file as being on the
+preload/critical path, so scanning `game/assets/` would either flag harmless
+unpacked assets or require a manifest that does not exist.
+
 Usage:
     check_pck_contents.py <file.pck|bundle.app|macos.zip> --data-dir game/data
 """
@@ -38,6 +49,14 @@ from inspect_pck import PckError, read_pck_paths
 # development-only; shipping them bloats the pack and hands players the test
 # framework. Enforced by `exclude_filter` in game/export_presets.cfg.
 FORBIDDEN_PREFIXES = ("res://addons/gut/", "res://tests/")
+
+# Runtime assets that are `preload`ed and so must survive export, or the game
+# fails to boot. See the module docstring for why this list is hardcoded
+# rather than derived.
+CRITICAL_ASSETS = (
+    "res://assets/audio/crossing_chime.wav",
+    "res://assets/sprites/crossing_cue.png",
+)
 
 # Where a macOS export keeps its pack, inside the .app bundle.
 BUNDLE_PCK_GLOB = "Contents/Resources/*.pck"
@@ -161,6 +180,17 @@ def main() -> int:
         for p in missing:
             print(f"    {p}")
 
+    missing_assets = [p for p in CRITICAL_ASSETS if p not in present]
+    if missing_assets:
+        failed = True
+        print(
+            f"{err}exported pack is missing {len(missing_assets)} of "
+            f"{len(CRITICAL_ASSETS)} runtime asset(s) the game preloads at "
+            f"startup:"
+        )
+        for p in missing_assets:
+            print(f"    {p}")
+
     forbidden = sorted(p for p in packed if p.startswith(FORBIDDEN_PREFIXES))
     if forbidden:
         failed = True
@@ -179,8 +209,8 @@ def main() -> int:
     )
     if not failed:
         print(
-            f"OK — all {len(expected)} data file(s) present, "
-            f"no addons/gut or tests paths shipped."
+            f"OK — all {len(expected)} data file(s) and {len(CRITICAL_ASSETS)} "
+            f"runtime asset(s) present, no addons/gut or tests paths shipped."
         )
     return 1 if failed else 0
 

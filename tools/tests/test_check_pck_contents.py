@@ -1,18 +1,26 @@
 #!/usr/bin/env python3
-"""Tests for the pack-locating half of tools/check_pck_contents.py.
+"""Tests for tools/check_pck_contents.py.
 
-Scope: ``resolve_pck`` only. The contents assertions it feeds are already
-exercised every CI run against a real exported pack, and building a valid Godot
-pack byte-by-byte in a fixture would test this suite's understanding of the
-format rather than the gate. What was genuinely untested — and what build-review
-V2 needed — is *finding* the pack for the two platforms whose packs were never
-checked.
+Two things are covered:
 
-The case that motivates the whole thing: a macOS bundle names its pack from the
-project's ``config/name``, not from the export path. This project exports
-``wildlife-crossing.zip`` and the pack inside is ``Wildlife Crossing.pck`` —
-different capitalisation, and a space. Every assertion below uses a pack name
-that differs from its container's, so a reconstructed filename cannot pass.
+1. ``resolve_pck`` — *finding* the pack for the two platforms whose packs
+   were never checked before build-review V2. The contents assertions it
+   feeds were, at the time this suite was written, already exercised every
+   CI run against a real exported pack, so building a valid Godot pack
+   byte-by-byte in a fixture would test this suite's understanding of the
+   format rather than the gate. The case that motivates the whole thing: a
+   macOS bundle names its pack from the project's ``config/name``, not from
+   the export path. This project exports ``wildlife-crossing.zip`` and the
+   pack inside is ``Wildlife Crossing.pck`` — different capitalisation, and a
+   space. Every assertion in that section uses a pack name that differs from
+   its container's, so a reconstructed filename cannot pass.
+
+2. ``main`` — the critical-asset check added for build-review V8. That check
+   is genuinely untested by the CI smoke boot: a missing preloaded asset
+   fails the smoke boot too, but only reports "the binary did not boot", not
+   which asset is gone (see the module docstring of check_pck_contents.py).
+   Exercising it needs a minimal but real pack directory, built below with
+   ``build_pck`` against the format ``inspect_pck.read_pck_paths`` parses.
 
 Run:
     python3 -m unittest discover -s tools/tests -v
@@ -20,15 +28,41 @@ Run:
 
 from __future__ import annotations
 
+import contextlib
+import io
 import pathlib
+import struct
 import sys
 import tempfile
 import unittest
 import zipfile
+from unittest import mock
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
 
 import check_pck_contents as gate  # noqa: E402
+
+PACK_MAGIC = 0x43504447  # "GDPC" — see tools/inspect_pck.py
+
+
+def build_pck(paths: list[str]) -> bytes:
+    """Build a minimal but real Godot pack directory (format version 1).
+
+    Only the directory is written — ``read_pck_paths`` never dereferences the
+    per-file offset/size, so no file payload is needed to exercise the gate.
+    """
+    blob = bytearray()
+    blob += struct.pack("<I", PACK_MAGIC)
+    blob += struct.pack("<4I", 1, 4, 0, 0)  # version 1, "Godot 4.0.0"
+    blob += b"\x00" * 64  # reserved (format <=2 keeps the directory inline)
+    blob += struct.pack("<I", len(paths))
+    for path in paths:
+        raw = path.encode("utf-8")
+        blob += struct.pack("<I", len(raw))
+        blob += raw
+        blob += struct.pack("<QQ", 0, 0)  # offset, size
+        blob += b"\x00" * 16  # md5
+    return bytes(blob)
 
 PCK_BYTES = b"GDPC-not-really-but-resolve_pck-never-parses-it"
 
@@ -152,6 +186,57 @@ class TestMacosZip(ResolveTestCase):
             with gate.resolve_pck(path):
                 pass
         self.assertIn("could not open", str(caught.exception))
+
+
+class TestCriticalAssets(ResolveTestCase):
+    """Covers the build-review V8 check in ``main``."""
+
+    DATA_PATH = "res://data/species_stats.json"
+    CHIME = "res://assets/audio/crossing_chime.wav"
+    CUE = "res://assets/sprites/crossing_cue.png"
+
+    def setUp(self) -> None:
+        super().setUp()
+        self.data_dir = self.tmp / "data"
+        self.data_dir.mkdir()
+        (self.data_dir / "species_stats.json").write_text("{}")
+
+    def run_gate(self, pck: pathlib.Path) -> tuple[int, str]:
+        argv = [
+            "check_pck_contents.py",
+            str(pck),
+            "--data-dir",
+            str(self.data_dir),
+        ]
+        out = io.StringIO()
+        with mock.patch.object(sys, "argv", argv):
+            with contextlib.redirect_stdout(out):
+                code = gate.main()
+        return code, out.getvalue()
+
+    def test_a_pack_missing_exactly_the_chime_is_reported_by_name(self) -> None:
+        pck = self.tmp / "wildlife-crossing.pck"
+        pck.write_bytes(build_pck([self.DATA_PATH, self.CUE]))
+        code, out = self.run_gate(pck)
+        self.assertEqual(code, 1)
+        self.assertIn(self.CHIME, out)
+        self.assertNotIn(self.CUE, out)
+
+    def test_a_pack_missing_exactly_the_cue_is_reported_by_name(self) -> None:
+        pck = self.tmp / "wildlife-crossing.pck"
+        pck.write_bytes(build_pck([self.DATA_PATH, self.CHIME]))
+        code, out = self.run_gate(pck)
+        self.assertEqual(code, 1)
+        self.assertIn(self.CUE, out)
+        self.assertNotIn(self.CHIME, out)
+
+    def test_a_pack_with_both_assets_passes(self) -> None:
+        pck = self.tmp / "wildlife-crossing.pck"
+        pck.write_bytes(build_pck([self.DATA_PATH, self.CHIME, self.CUE]))
+        code, out = self.run_gate(pck)
+        self.assertEqual(code, 0)
+        self.assertIn("OK", out)
+        self.assertNotIn("error:", out)
 
 
 if __name__ == "__main__":  # pragma: no cover
