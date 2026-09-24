@@ -209,6 +209,49 @@ zoom threshold measured flat-to-flat).
 > background changed from a solid color to a texture. Both remain deferred to
 > Phase 2 completion, post-v0.1.0, per the block above.
 
+> **Decision logged (2026-09-23): the fourth exit criterion is met in tests
+> and not reachable in the v0.1.0 artifact; the three remaining Implements
+> items are dispositioned.** Resolves build-review C9, open since
+> [[2026-09-01-next-build]]. Brent's call.
+>
+> **The criterion.** *"Confirm passes the correct `(segment, sub_area)` into
+> the construction step; click-outside and Escape behave per spec"* is met by
+> `confirm_panel_test.gd` (`test_confirm_passes_exact_segment_and_sub_area`,
+> `test_click_outside_the_panel_box_cancels`,
+> `test_escape_exit_closes_panel_silently`), and `main.gd`
+> `_on_confirm_panel_confirmed` hands the pair to `_enter_build_mode`. It is
+> **not reachable in the artifact a stranger runs**: the 2026-08-06 block made
+> the world map look-only and `WorldSelectMap.tscn` stops mouse events, so
+> `_try_select_segment()` never opens the panel. v0.1.0 reaches the same
+> construction step through `B`. The path becomes reachable when C1, the
+> in-map segment renderer, lands. Rejected: deferring the criterion outright,
+> which is equally honest but disowns logic that is built and covered. What
+> this block does not allow is the bare word "met": every build review,
+> release note or log that states Phase 2's exit criteria says *met in tests,
+> not reachable in the shipped build*.
+>
+> **The three Implements items no earlier block covered:**
+>
+> - **Toolbar tool ("Add crossing") → Phase 2 completion, with C1.** A toolbar
+>   button needs an interactive map to open into. For v0.1.0, `M`
+>   (`_open_world_select`, documented as the placeholder trigger for this
+>   action) and `B` stand in.
+> - **P1 group: the segment label ships; the rest → Phase 2 completion, with
+>   C2.** `ConfirmPanel` shows the human-readable segment label, asserted in
+>   `confirm_panel_test.gd` as P1. Hover score, crossing-count note and
+>   sub-area summary on hover all need the hover highlight, deferred on
+>   2026-08-06.
+> - **Controlling-entity mapping → met as data.** Every sub-area in
+>   `game/data/sub_areas.json` carries a `controlling_entity_id`, and
+>   `data_validation_test.gd` asserts each resolves to an entity in
+>   `entities.json`. Nothing reads it at runtime yet; gameplay consumption is
+>   Phase 5 (permissions).
+>
+> **Consequence for the release note (build-review B6):** `v0.1.0` states
+> Phase 2 as *exit criteria met in tests; segment selection from the world map
+> is not reachable in this build*, next to the look-only and Bow-Valley-only
+> scope already recorded above.
+
 ---
 
 ## Phase 3 — Economy + information
