@@ -50,6 +50,16 @@ jobs:
       - name: Run tool tests
         run: python3 -m unittest discover -s tools/tests -b
 
+      # V11: the same suite again with GITHUB_ACTIONS unset, the way it runs on
+      # a laptop. Tools print ::error:: annotations only under Actions, and on
+      # 2026-09-09 a test that counted both forms passed on every machine it was
+      # written on and failed only here. Running both modes on every pull
+      # request catches that in either direction. !cancelled() so a failure in
+      # the first pass still reports the second.
+      - name: Run tool tests (GITHUB_ACTIONS unset)
+        if: ${{ !cancelled() }}
+        run: env -u GITHUB_ACTIONS python3 -m unittest discover -s tools/tests -b
+
       # The five required status check contexts in
       # .github/rulesets/protect_main.json are the display names of the five
       # jobs below, copied by hand; two of them carry GODOT_VERSION. With
