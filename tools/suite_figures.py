@@ -35,6 +35,15 @@ Usage:
 
 Exit status is 0 on success or a matching document, 1 on a mismatch, 2 when the
 XML is missing, malformed, or reports an empty suite.
+
+**A run with fewer scripts than the document states is a dropped suite, not a
+stale document** (build-review V6). The failure this guard was first written
+for, on 2026-07-19, was a partial drop, and the generic mismatch message told
+the reader to update the document, which would have lowered the stated figure
+to match the loss. That case now says so and says not to. Every error is
+printed as a GitHub ``::error::`` annotation under Actions and as ``error:`` on
+stderr elsewhere, so ``ci.yml``'s empty-suite guard can call this script
+instead of a shell pipeline that exited before its own message.
 """
 
 from __future__ import annotations
@@ -61,6 +70,16 @@ FIGURE_PATTERN = re.compile(
 
 class SuiteFiguresError(Exception):
     """The XML could not be read, or describes a suite that did not run."""
+
+
+def report_error(message: str, *, path: pathlib.Path | None = None,
+                 line: int | None = None) -> None:
+    """An annotation under GitHub Actions, a plain stderr line everywhere else."""
+    if os.environ.get("GITHUB_ACTIONS") == "true":
+        where = f" file={path},line={line}" if path is not None and line is not None else ""
+        print(f"::error{where}::{message}")
+    else:
+        print(f"error: {message}", file=sys.stderr)
 
 
 @dataclass(frozen=True)
@@ -138,18 +157,25 @@ def check_document(path: pathlib.Path, figures: Figures) -> int:
         found = tuple(int(g.replace(",", "")) for g in match.groups())
         if found != (figures.scripts, figures.tests, figures.asserts):
             line_no = text.count("\n", 0, match.start()) + 1
-            stale.append((line_no, match.group(0)))
+            stale.append((line_no, match.group(0), found[0]))
 
-    for line_no, found in stale:
-        message = (
-            f"{path}:{line_no} states {found!r}; the suite measures "
-            f"{figures.line()!r}. Update the document, or regenerate it with "
-            "suite_figures.py --print."
-        )
-        if os.environ.get("GITHUB_ACTIONS") == "true":
-            print(f"::error file={path},line={line_no}::{message}")
+    for line_no, found, stated_scripts in stale:
+        if figures.scripts < stated_scripts:
+            message = (
+                f"the run collected {figures.scripts} test script(s) but "
+                f"{path}:{line_no} states {stated_scripts} ({found!r}): "
+                f"{stated_scripts - figures.scripts} script(s) were not "
+                f"collected (the run measures {figures.line()!r}). This is a "
+                "dropped suite, not a stale document. Do not lower the stated "
+                "figure until you know why they are missing."
+            )
         else:
-            print(f"error: {message}", file=sys.stderr)
+            message = (
+                f"{path}:{line_no} states {found!r}; the suite measures "
+                f"{figures.line()!r}. Update the document, or regenerate it with "
+                "suite_figures.py --print."
+            )
+        report_error(message, path=path, line=line_no)
 
     if stale:
         return 1
@@ -171,7 +197,7 @@ def main(argv: list[str] | None = None) -> int:
     try:
         figures = parse(pathlib.Path(args.xml))
     except SuiteFiguresError as exc:
-        print(f"error: {exc}", file=sys.stderr)
+        report_error(str(exc))
         return 2
 
     if args.json:
@@ -184,7 +210,7 @@ def main(argv: list[str] | None = None) -> int:
         try:
             status |= check_document(pathlib.Path(target), figures)
         except SuiteFiguresError as exc:
-            print(f"error: {exc}", file=sys.stderr)
+            report_error(str(exc))
             return 2
     return status
 

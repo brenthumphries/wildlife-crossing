@@ -17,15 +17,19 @@ Run:
 from __future__ import annotations
 
 import io
+import os
 import pathlib
 import sys
 import tempfile
 import unittest
 from contextlib import redirect_stdout, redirect_stderr
+from unittest import mock
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
 
 import suite_figures  # noqa: E402
+
+CI_YML = pathlib.Path(__file__).resolve().parents[2] / ".github" / "workflows" / "ci.yml"
 
 
 def xml(suites: list[tuple[str, list[int]]], failures: int = 0) -> str:
@@ -148,6 +152,63 @@ class SuiteFiguresTestCase(unittest.TestCase):
         self.assertEqual(code, 1, output)
         self.assertIn(":3", output)
 
+
+    # -- V6: why it failed -------------------------------------------------
+    # Each case pins GITHUB_ACTIONS explicitly, because the output form depends
+    # on it and a test that passes only on the machine it was written on is the
+    # failure V11 records.
+
+    def run_in(self, actions: bool, *argv: str) -> tuple[int, str]:
+        env = {k: v for k, v in os.environ.items() if k != "GITHUB_ACTIONS"}
+        if actions:
+            env["GITHUB_ACTIONS"] = "true"
+        with mock.patch.dict(os.environ, env, clear=True):
+            return self.run_tool(*argv)
+
+    def test_fewer_scripts_than_stated_is_reported_as_a_dropped_suite(self) -> None:
+        """The 2026-07-19 failure: most of the suite silently not collected."""
+        self.xml_path.write_text(xml([("a.gd", [3])]), encoding="utf-8")
+        doc = self.root / "doc.md"
+        doc.write_text("24 scripts / 246 tests / 3,154 asserts\n", encoding="utf-8")
+        for actions in (False, True):
+            with self.subTest(actions=actions):
+                code, output = self.run_in(actions, "--check", str(doc))
+                self.assertEqual(code, 1, output)
+                self.assertIn("23 script(s) were not collected", output)
+                self.assertIn("dropped suite", output)
+                self.assertNotIn("Update the document", output)
+
+    def test_more_scripts_than_stated_is_a_stale_document(self) -> None:
+        self.xml_path.write_text(xml([("a.gd", [1]), ("b.gd", [1])]), encoding="utf-8")
+        doc = self.root / "doc.md"
+        doc.write_text("1 scripts / 1 tests / 1 asserts\n", encoding="utf-8")
+        code, output = self.run_in(False, "--check", str(doc))
+        self.assertEqual(code, 1, output)
+        self.assertIn("Update the document", output)
+        self.assertNotIn("dropped suite", output)
+
+    def test_an_empty_suite_is_annotated_under_github_actions(self) -> None:
+        self.xml_path.write_text(xml([]), encoding="utf-8")
+        code, output = self.run_in(True, "--print")
+        self.assertEqual(code, 2, output)
+        self.assertTrue(output.startswith("::error::"), output)
+        self.assertIn("0 tests", output)
+
+    def test_an_empty_suite_is_a_plain_error_outside_actions(self) -> None:
+        self.xml_path.write_text(xml([]), encoding="utf-8")
+        code, output = self.run_in(False, "--print")
+        self.assertEqual(code, 2, output)
+        self.assertIn("error:", output)
+        self.assertNotIn("::error", output)
+
+    def test_ci_guard_step_calls_this_script_not_a_shell_pipeline(self) -> None:
+        """The guard that printed nothing was `grep | wc` under pipefail."""
+        text = CI_YML.read_text(encoding="utf-8")
+        start = text.index("- name: Guard against a silently-empty suite")
+        step = text[start:text.index("- name:", start + 1)]
+        self.assertIn("python3 tools/suite_figures.py", step)
+        self.assertIn("--xml game/gut_results.xml", step)
+        self.assertNotIn("grep", step.split("run:", 1)[1])
 
 if __name__ == "__main__":
     unittest.main()
