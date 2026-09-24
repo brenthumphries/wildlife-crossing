@@ -223,6 +223,35 @@ class TestHappyPath(ShipTestCase):
         self.assertEqual(git(self.repo, "status", "--porcelain").strip(), "")
         self.assertIn("README.md", git(self.repo, "log", "-1", "--name-status"))
 
+    def test_a_rename_is_staged_as_both_its_paths(self) -> None:
+        """V10: 2026-09-09, commit 5 of 5 failed verification on a rename.
+
+        A file moved on disk shows as a deletion plus an untracked file, the
+        plan claims both literal paths, and ``git add`` stages both. With git's
+        default rename detection ``diff --cached --name-only`` then reports only
+        the destination, and the staged-set check called the original missing.
+        """
+        self.write("notes/old-name.md", "body that survives the rename\n")
+        git(self.repo, "add", "notes/old-name.md")
+        git(self.repo, "commit", "-q", "-m", "chore: add note")
+        self.base = git(self.repo, "rev-parse", "HEAD").strip()
+        (self.repo / "notes" / "old-name.md").rename(self.repo / "notes" / "new-name.md")
+
+        plan = self.plan_file(
+            {"commits": [{"type": "docs", "subject": "rename the note",
+                          "paths": ["notes/old-name.md", "notes/new-name.md"]}]}
+        )
+        self.assertEqual(ship.main([str(plan), "--execute", "--repo", str(self.repo)]), 0)
+        self.assertEqual(git(self.repo, "status", "--porcelain").strip(), "")
+        self.assertEqual(self.subjects(), ["docs: rename the note"])
+        status = git(self.repo, "log", "-1", "-M", "--name-status", "--format=")
+        self.assertRegex(status, r"R\d+\tnotes/old-name.md\tnotes/new-name.md")
+
+    def test_a_rename_is_checked_even_when_diff_renames_is_on(self) -> None:
+        """The 2026-09-09 workaround was diff.renames=false; it must not be needed."""
+        git(self.repo, "config", "diff.renames", "true")
+        self.test_a_rename_is_staged_as_both_its_paths()
+
     def test_directory_prefix_does_not_match_a_sibling(self) -> None:
         """``game/scripts/ui`` must not swallow ``game/scripts/uix.gd``."""
         self.write("game/scripts/ui/menu.gd", "a\n")

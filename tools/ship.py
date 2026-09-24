@@ -179,8 +179,16 @@ def changed_entries(root: pathlib.Path) -> list[Change]:
 
 
 def staged_paths(root: pathlib.Path) -> set[str]:
-    """Paths currently staged relative to HEAD."""
-    raw = run_git(root, "diff", "--cached", "--name-only", "-z")
+    """Paths currently staged relative to HEAD.
+
+    ``--no-renames`` matters: with git's default rename detection a staged
+    rename is reported as its destination only, while a plan names the literal
+    paths on both sides, so the staged-set check in ``commit_group`` called the
+    original missing (build-review V10; 2026-09-09, worked around once with
+    ``diff.renames=false``). Listing both sides also keeps the pre-staged
+    refusal in ``preflight`` exact.
+    """
+    raw = run_git(root, "diff", "--cached", "--no-renames", "--name-only", "-z")
     return {p for p in raw.split("\0") if p}
 
 
