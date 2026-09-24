@@ -36,6 +36,18 @@ status: active
 > the week of 2026-09-21, which does not yet exist. Nothing else in this note
 > has moved: `warden day` on 2026-09-23 reports 0 of 26 items done.
 
+> [!success] Amendment 2026-09-23b — **Ten items closed, C4 decided: every non-Apple code and verify item but V10 is merged.**
+> C10 (#21), V1 (#22), V2 (#23), D2 (#25), V8 (#24), C11 (#26), V7 (#27), C3
+> (#28), V6 (#29) and V11 (#30), all merged 2026-09-23 with five of five
+> checks. C4 is decided: the camera stays at (13, 6), Brent's call. Suite 26 /
+> 299 / 6,318 to 28 / 310 / 6,378; tool tests 194 to 217. V2, V8 and V7 were
+> each fixed after their runs reported success, and V8's first version would
+> have failed every real export; details in [[../daily-logs/2026-09-23]].
+> **Blockers unchanged:** B1b waits on Apple, B4's implementation has no item,
+> B6 and B7 follow. C1 now waits only on B1b and C7, and C7 only on `godot`
+> reaching `PATH`: the 4.6.3 templates are installed. C5 is unblocked. The
+> amendment above reported 0 of 26; that was true when written.
+
 ## 1. Readiness
 
 **Build case: first.** `facts.build_case` finds no tag, no release note and
