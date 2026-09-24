@@ -125,21 +125,14 @@ jobs:
       # V1: a suite that collects zero tests exits green, which would let a
       # broken discovery config (bad -gdir, wrong suffix) pass CI silently.
       # Fail the build unless GUT actually recorded at least one test case.
+      # V6: this was a `grep -oE '<testcase' | wc -l` pipeline under
+      # `set -euo pipefail`. On zero matches grep exits 1, pipefail fails the
+      # pipeline and set -e ends the step before either ::error:: line prints,
+      # so the one case the guard exists for failed with no message.
+      # suite_figures.py already refuses a missing or empty result file and
+      # annotates the reason itself.
       - name: Guard against a silently-empty suite
-        working-directory: game
-        run: |
-          set -euo pipefail
-          XML=gut_results.xml
-          if [ ! -f "$XML" ]; then
-            echo "::error::GUT wrote no results file ($XML) — cannot confirm any tests ran."
-            exit 1
-          fi
-          TESTS="$(grep -oE '<testcase' "$XML" | wc -l | tr -d '[:space:]')"
-          echo "GUT recorded ${TESTS} test case(s)."
-          if [ "${TESTS:-0}" -eq 0 ]; then
-            echo "::error::GUT collected zero tests — failing the build (V1 zero-tests guard)."
-            exit 1
-          fi
+        run: python3 tools/suite_figures.py --print --xml game/gut_results.xml
 
       # docs/testing-setup.md stated the suite size by hand from 2026-07-30 and
       # was stale at eight consecutive build reviews, corrected seven times. The
