@@ -55,6 +55,16 @@ status: active
 > 12 of 26 items are now closed. Blockers unchanged: B1b waits on Apple, B4's
 > implementation has no item, B6 and B7 follow.
 
+> [!success] Amendment 2026-09-23d — **C9 and V4 are closed: every decision that does not wait on Apple is made.**
+> C9 merged as #34 (`d4ccaf9`): `docs/roadmap.md` records Phase 2's fourth exit
+> criterion as met in tests, not reachable in the shipped build, and
+> dispositions the three leftover Implements items. V4 merged as #35
+> (`b7023a9`): CI exports the Linux arm64 preset for the sandbox and gates its
+> pack; it is not a Release asset. Both were Brent's call; see
+> [[../daily-logs/2026-09-23]]. 14 of 26 items are closed. Blockers unchanged:
+> B1b waits on Apple, B4's implementation has no item and now packages three
+> platforms, B6 and B7 follow.
+
 ## 1. Readiness
 
 **Build case: first.** `facts.build_case` finds no tag, no release note and
