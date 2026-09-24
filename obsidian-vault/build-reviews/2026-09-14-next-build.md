@@ -48,6 +48,13 @@ status: active
 > reaching `PATH`: the 4.6.3 templates are installed. C5 is unblocked. The
 > amendment above reported 0 of 26; that was true when written.
 
+> [!success] Amendment 2026-09-23c — **V10 is closed: every Claude Code item that does not wait on Apple is merged.**
+> V10 merged as #32 (`87440b3`): `ship.py`'s `staged_paths()` passes
+> `--no-renames`, so a rename planned by both paths lands. Reproduced on `main`
+> first, with two new tests and the real CLI; see [[../daily-logs/2026-09-23]].
+> 12 of 26 items are now closed. Blockers unchanged: B1b waits on Apple, B4's
+> implementation has no item, B6 and B7 follow.
+
 ## 1. Readiness
 
 **Build case: first.** `facts.build_case` finds no tag, no release note and
