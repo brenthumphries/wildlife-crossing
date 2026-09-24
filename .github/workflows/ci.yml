@@ -200,10 +200,17 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p ../builds/wildlife-crossing-linux-x86_64 \
+                   ../builds/wildlife-crossing-linux-arm64 \
                    ../builds/wildlife-crossing-windows-x86_64 \
                    ../builds/wildlife-crossing-macos
           godot --headless --export-release "Linux x86_64" \
             ../builds/wildlife-crossing-linux-x86_64/wildlife-crossing.x86_64
+          # V4 (2026-09-23): built for the Linux arm64 sandbox, not shipped.
+          # It rides in the artifact so a sandbox session can boot a real
+          # build; no x86 runner here can boot it, so it is not a Release
+          # asset (docs/export-setup.md).
+          godot --headless --export-release "Linux arm64" \
+            ../builds/wildlife-crossing-linux-arm64/wildlife-crossing.arm64
           godot --headless --export-release "Windows x86_64" \
             ../builds/wildlife-crossing-windows-x86_64/wildlife-crossing.exe
           godot --headless --export-release "macOS" \
@@ -234,6 +241,7 @@ jobs:
           failed=0
           for target in \
             builds/wildlife-crossing-linux-x86_64/wildlife-crossing.pck \
+            builds/wildlife-crossing-linux-arm64/wildlife-crossing.pck \
             builds/wildlife-crossing-windows-x86_64/wildlife-crossing.pck \
             builds/wildlife-crossing-macos/wildlife-crossing.zip
           do
