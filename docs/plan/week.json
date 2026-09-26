@@ -1,202 +1,70 @@
 {
   "schema": 1,
-  "week_of": "2026-09-14",
-  "written_at": "2026-09-14T03:30:00+00:00",
-  "written_by": "seeded by the session that built tools/warden.py, following the weekly-plan skill by hand; the Monday routine writes the next one",
+  "week_of": "2026-09-26",
+  "written_at": "2026-09-26T14:50:00+00:00",
+  "written_by": "weekly-plan skill (sonnet), via bops:weekly, non-Monday catch-up, 12 days since week_of 2026-09-14",
   "measured_against": {
-    "head_sha": "fe901a59827f4c5517a68af1de15cf9699439961",
-    "head_date": "2026-09-10T14:32:05-05:00",
-    "github_state_read_at": "2026-09-10T19:06:22+00:00"
+    "head_sha": "becf6051634c9579e3c82e8ebb0f99be4a761425",
+    "head_date": "2026-09-26T09:45:55-05:00",
+    "github_state_read_at": "2026-09-26T14:49:46+00:00"
   },
   "build_case": "first",
   "readiness": {
     "verdict": "not-ready",
-    "blockers_open": ["B1b", "B4", "B6", "B7"],
-    "summary": "Still the first build: no tag, no release note, no GitHub Release (facts.build_case). Every Phase 1-2 exit criterion is met in code and green in tests (09-08 review, unchanged since), and main's latest run is green; what stands between the tree and something a stranger can run is release mechanics, not game work. Three of the four open blockers are Mac or Apple steps, and one (B4, packaging) is a decision. The week's automatable work is the short items on B6's critical path that do not wait on Apple: version metadata, the [display] section, the two test gaps, and the pack-gate assertion."
+    "blockers_open": [
+      "B6",
+      "B7"
+    ],
+    "summary": "Every other blocker closed since 2026-09-14: B1b (Apple enrolment, certificate, API key) and B4 (packaging decision, archive not embed_pck) both done, B4's implementation landed as C1 and C2 (PR #37). B6, the v0.1.0 cut, still waits on C5 (the QA walk) and C6 (the website download copy), both unblocked now, neither started. B7 waits on B6. latest_main_run is success on the measured SHA."
   },
-  "note": "obsidian-vault/build-reviews/2026-09-14-next-build.md",
+  "note": "obsidian-vault/build-reviews/2026-09-26-next-build.md",
   "items": [
     {
-      "id": "C3",
-      "title": "Set the version metadata the export presets never got",
-      "lane": "code",
-      "model": "sonnet",
-      "mode": "supervised",
-      "size": "S",
-      "priority": 1,
-      "blocker": false,
-      "depends_on": [],
-      "files": ["game/export_presets.cfg"],
-      "acceptance": [
-        "game/export_presets.cfg: application/short_version and application/version read \"0.1.0\" in the macOS preset, matching project.godot config/version",
-        "the Windows preset gains application/file_version and application/product_version set to 0.1.0",
-        "every preset still carries exclude_filter=\"addons/gut/*,tests/*\" (root CLAUDE.md, licensing) — diff shows no other line changed",
-        "CI's export job is green on the pull request"
-      ],
-      "context": "An empty CFBundleShortVersionString is a notarization risk and a built binary must report the version the v0.1.0 tag will carry. The cheapest item on B6's critical path. export_presets.cfg is on the forbidden list, so this runs supervised: `tools/warden run C3 --interactive`.",
-      "references": ["docs/adr/0018-code-signing-and-notarization.md §Consequences", "docs/signing-runbook.md A5", "obsidian-vault/build-reviews/2026-09-08-next-build.md C3"],
-      "status": "open"
-    },
-    {
-      "id": "C10",
-      "title": "Add a [display] section to project.godot so the HUD and credits are legible",
-      "lane": "code",
-      "model": "sonnet",
-      "mode": "auto",
-      "size": "M",
-      "priority": 2,
-      "blocker": false,
-      "depends_on": [],
-      "files": ["game/project.godot", "game/tests/world_renderer_test.gd", "game/tests/hud_test.gd"],
-      "acceptance": [
-        "game/project.godot has a [display] section setting window/size/viewport_width and viewport_height to at least 1280x720, and an explicit window/stretch/mode",
-        "if the stretch mode is anything other than \"disabled\", a GUT test asserts that screen-to-world mapping still round-trips for a known tile (the area commit cb9f9b8 fixed), so the mapping cannot regress silently",
-        "the GUT suite is green with the Scripts count unchanged or higher than docs/testing-setup.md states; if a test file was added, that stated figure is updated in the same commit",
-        "the pull request brief says which resolution and stretch mode were chosen and why, citing the 09-02 walk's legibility failure"
-      ],
-      "context": "The 09-02 QA walk failed the credits-screen and HUD-message legibility clauses because project.godot has no [display] section at all, so exports run at Godot's 1152x648 default with stretch disabled. This is the code half of C5; C5's QA walk waits on it.",
-      "references": ["obsidian-vault/build-reviews/2026-09-08-next-build.md C5", "obsidian-vault/daily-logs/2026-09-02.md", "docs/roadmap.md §Phase 2 exit criteria"],
-      "status": "open"
-    },
-    {
-      "id": "V1",
-      "title": "Add env_config.gd coverage",
-      "lane": "verify",
-      "model": "sonnet",
-      "mode": "auto",
-      "size": "S",
-      "priority": 3,
-      "blocker": false,
-      "depends_on": [],
-      "files": ["game/tests/env_config_test.gd", "docs/testing-setup.md"],
-      "acceptance": [
-        "game/tests/env_config_test.gd exists and covers the per-terrain mortality lookup and the resolution order override -> OS env -> DEFAULT end to end",
-        "docs/testing-setup.md's stated suite size is updated in the same commit (tools/suite_figures.py --check runs in CI and goes red otherwise)",
-        "the suite reaches 25 scripts; the pull request brief quotes the Scripts count from a local run if godot is on PATH, else says CI will report"
-      ],
-      "context": "EnvConfig is the only untested script carrying real branching logic, and the Phase 1 criterion 'deaths at the configured env-var rate' rests on it. GUT only discovers a new *_test.gd after a re-import, which CI does.",
-      "references": ["obsidian-vault/build-reviews/2026-09-08-next-build.md V1", "docs/test-plan.md", "game/CLAUDE.md"],
-      "status": "open"
-    },
-    {
-      "id": "V8",
-      "title": "Assert the two runtime assets survive export",
-      "lane": "code",
-      "model": "sonnet",
-      "mode": "auto",
-      "size": "S",
-      "priority": 4,
-      "blocker": false,
-      "depends_on": [],
-      "files": ["tools/check_pck_contents.py", "tools/tests/test_check_pck_contents.py"],
-      "acceptance": [
-        "tools/check_pck_contents.py asserts that res://assets/audio/crossing_chime.wav and res://assets/sprites/crossing_cue.png are present in the pack and names the missing one when it is not",
-        "tools/tests/test_check_pck_contents.py covers a pack missing exactly one of them",
-        "python3 -m unittest discover -s tools/tests -b is green; no other tool's behaviour changes"
-      ],
-      "context": "Both assets are preloaded, so a missing one fails the smoke boot — but that gate reports 'the binary did not boot', not 'the chime is missing'. The pack gate is where the name belongs.",
-      "references": ["obsidian-vault/build-reviews/2026-09-08-next-build.md V8", "tools/check_pck_contents.py module docstring"],
-      "status": "open"
-    },
-    {
-      "id": "D2",
-      "title": "Correct the public-since date in pipeline-design.md",
-      "lane": "docs",
-      "surface": "code",
-      "model": "haiku",
-      "mode": "auto",
+      "id": "C5",
+      "title": "Visual and audio QA pass, written down",
+      "lane": "mac",
+      "model": "human",
+      "mode": "human",
       "size": "S",
       "priority": 5,
       "blocker": false,
       "depends_on": [],
-      "files": ["docs/pipeline-design.md"],
+      "files": [],
       "acceptance": [
-        "docs/pipeline-design.md §6.2's sentence 'The repository went public on 2026-09-05' reads 2026-08-29, the date obsidian-vault/daily-logs/2026-08-29.md establishes by `gh repo view`",
-        "grep -n \"2026-09-05\" docs/pipeline-design.md returns no line that claims the repository went public on that date; other 2026-09-05 references (the document's own date, decision logs) are untouched",
-        "no other file changes"
+        "a daily log confirms the connectivity overlay's orange-to-teal treatment at segment zoom, the HUD message line and credits screen legible at the new [display] settings, and the Godot version installed on the Mac"
       ],
-      "context": "Two tracked files stated the project's licensing and threat-model premise with the wrong date; signing-runbook.md was corrected by PR #8, pipeline-design.md was not. A stated-line correction with the exact text given — the haiku case in docs/plan/routing.md, and a docs-lane item routed to Claude Code on purpose.",
-      "references": ["obsidian-vault/build-reviews/2026-09-08-next-build.md amendment 2026-09-09b (C8)", "obsidian-vault/daily-logs/2026-08-29.md"],
+      "context": "Unblocked since 2026-09-24: C4 (camera focus) decided, C10 ([display] section) merged as PR #21. The last thing standing between here and B6 needing only C6 besides this.",
+      "references": [
+        "obsidian-vault/build-reviews/2026-09-14-next-build.md C5",
+        "docs/roadmap.md §Phase 2 exit criteria"
+      ],
       "status": "open"
     },
     {
-      "id": "V2",
-      "title": "Cover the constants files",
-      "lane": "verify",
+      "id": "C6",
+      "title": "Add the verification copy and run instructions to the website download section",
+      "lane": "docs",
       "model": "sonnet",
       "mode": "auto",
       "size": "S",
       "priority": 6,
       "blocker": false,
-      "depends_on": ["V1"],
-      "files": ["game/tests/constants_test.gd", "docs/testing-setup.md"],
-      "acceptance": [
-        "a GUT test asserts EconomyConstants, HabitatConstants and SimulationConstants values against docs/data-schemas.md §10, so a silently edited constant fails a test",
-        "docs/testing-setup.md's stated suite size is updated in the same commit",
-        "the suite is green and the Scripts count rises by one"
-      ],
-      "context": "The three constants tables have no test contact at all (economy, habitat) or are only ever read as inputs (simulation). Depends on V1 only so the two suite-size edits to testing-setup.md do not collide in one day.",
-      "references": ["obsidian-vault/build-reviews/2026-09-08-next-build.md V2", "docs/data-schemas.md §10"],
-      "status": "open"
-    },
-    {
-      "id": "C11",
-      "title": "Teach check_pck_contents.py to read a .dmg",
-      "lane": "code",
-      "model": "sonnet",
-      "mode": "auto",
-      "size": "M",
-      "priority": 7,
-      "blocker": false,
-      "depends_on": ["V8"],
-      "files": ["tools/check_pck_contents.py", "tools/tests/test_check_pck_contents.py", "tools/fetch_build.py"],
-      "acceptance": [
-        "resolve_pck accepts a .dmg (mounted with hdiutil on macOS, or the .app it contains) in addition to a .pck, a .app directory or a .zip, and fails with a clear message on Linux where hdiutil is absent",
-        "tests cover the new input shape with a fixture, and skip cleanly where hdiutil is unavailable",
-        "python3 -m unittest discover -s tools/tests -b is green"
-      ],
-      "context": "The release .dmg is built locally, never in CI, and the pack gate cannot read it — the artifact that actually ships is gated by nothing. This is the tools half of C2; the preset half (C2) is supervised because export_presets.cfg is forbidden. Depends on V8 so the two edits to the same file do not collide.",
-      "references": ["obsidian-vault/build-reviews/2026-09-08-next-build.md C2", "docs/signing-runbook.md A5-A6", "docs/adr/0018-code-signing-and-notarization.md"],
-      "status": "open"
-    },
-    {
-      "id": "V7",
-      "title": "Teach build_encyclopedia.py to delete, and test it",
-      "lane": "code",
-      "model": "sonnet",
-      "mode": "auto",
-      "size": "M",
-      "priority": 8,
-      "blocker": false,
       "depends_on": [],
-      "files": ["tools/build_encyclopedia.py", "tools/tests/test_build_encyclopedia.py"],
-      "acceptance": [
-        "the generator removes generated pages whose wiki source is gone",
-        "tools/tests/test_build_encyclopedia.py exists and covers round-trip generation, deletion of an orphan, and the external-asset check",
-        "python3 -m unittest discover -s tools/tests -b is green; the generated website/encyclopedia output for the current wiki is byte-identical to what is committed"
+      "files": [
+        "website/index.html",
+        "website/user-guide.html"
       ],
-      "context": "686 lines, zero tests, and it only ever writes: a deleted wiki entry leaves an orphan page on the public site. The CI-gate half (deploy-website.yml detecting untracked generated files) is a forbidden-path change and is deferred to a supervised follow-up.",
-      "references": ["obsidian-vault/build-reviews/2026-09-08-next-build.md V7", "website/CLAUDE.md"],
-      "status": "open"
-    },
-    {
-      "id": "V10",
-      "title": "ship.py: stage renames as their destination path, with a test",
-      "lane": "code",
-      "model": "sonnet",
-      "mode": "supervised",
-      "size": "S",
-      "priority": 9,
-      "blocker": false,
-      "depends_on": [],
-      "files": ["tools/ship.py", "tools/tests/test_ship.py"],
       "acceptance": [
-        "staged_paths() passes --no-renames so a renamed file is reported as its destination and matches the plan's literal path",
-        "tools/tests/test_ship.py gains a test that stages a rename through a plan and passes",
-        "every existing refusal in test_ship.py still holds"
+        "the download area names each published asset, says Windows is unsigned and what SmartScreen will show, gives the GPG fingerprint and the two verification commands, does not imply the signature suppresses any OS warning, and says how to run each asset",
+        "deploy-website.yml's external-link allowlist is checked against every href added; keys.openpgp.org is added to the allowlist in the same pull request if linked (a supervised edit — say so rather than route around it)",
+        "lands as its own pull request: B4's implementation (C1, C2) already merged as PR #37 without it, so the original plan to bundle them no longer applies"
       ],
-      "context": "Commit 5 of a 5-commit plan failed verification on 2026-09-09 because git diff --cached collapses a rename while the plan names literal paths; worked around once with diff.renames=false. tools/ship.py is on the forbidden list, so: `tools/warden run V10 --interactive`.",
-      "references": ["obsidian-vault/daily-logs/2026-09-09.md §the automation processes, Open questions", "tools/ship.py"],
+      "context": "Unblocked since 2026-09-23: B4 decided archive-not-embed_pck. The bundling note in the 2026-09-14 plan assumed C6 would ride with C1/C2; it did not, so this now stands alone.",
+      "references": [
+        "docs/signing-runbook.md C2",
+        "website/CLAUDE.md",
+        "obsidian-vault/build-reviews/2026-09-14-next-build.md C6"
+      ],
       "status": "open"
     },
     {
@@ -209,14 +77,20 @@
       "priority": 10,
       "blocker": false,
       "depends_on": [],
-      "files": ["docs/pre-build-checklist.md", "README.md"],
+      "files": [
+        "docs/pre-build-checklist.md",
+        "README.md"
+      ],
       "acceptance": [
         "docs/pre-build-checklist.md no longer asserts there is no Godot project to build: either its status is archived with a one-paragraph pointer to docs/plan/week.json and the build reviews as the living punch list, or its checklist is rewritten against docs/plan/facts.json",
         "any README or docs link to it still resolves and describes what it now is",
         "a commit plan on branch docs/d1-… claims every changed path"
       ],
       "context": "Flagged in eight consecutive reviews and never fixed, because §4 rows had no mechanism to close. The repository is public, so the file is stranger-facing. Judgment about what the document should become, so Cowork.",
-      "references": ["obsidian-vault/build-reviews/2026-09-08-next-build.md amendment 2026-09-09b (structural point)", "docs/pre-build-checklist.md"],
+      "references": [
+        "obsidian-vault/build-reviews/2026-09-08-next-build.md amendment 2026-09-09b (structural point)",
+        "docs/pre-build-checklist.md"
+      ],
       "status": "open"
     },
     {
@@ -229,245 +103,18 @@
       "priority": 11,
       "blocker": false,
       "depends_on": [],
-      "files": ["docs/test-plan.md"],
+      "files": [
+        "docs/test-plan.md"
+      ],
       "acceptance": [
         "every P0 row in docs/test-plan.md §11 either names a test that exists in game/tests/ (checked against docs/plan/facts.json game.tests) or is marked deferred with a reason",
         "the note-level figure the reviews quote (named / missing / percent) is recomputed from the edited table and stated in the commit body"
       ],
-      "context": "The 09-01 and 09-08 reviews disagreed about this table's figures (43/35/81% is the correct extraction; 31/23 was a mis-slice). Closing the rows removes the figure from the reviews altogether.",
-      "references": ["obsidian-vault/build-reviews/2026-09-08-next-build.md V3 and amendment 2026-09-09b", "docs/test-plan.md §11"],
-      "status": "open"
-    },
-    {
-      "id": "V6",
-      "title": "Make the zero-tests guard report why it failed, and catch partial drops",
-      "lane": "verify",
-      "model": "sonnet",
-      "mode": "supervised",
-      "size": "S",
-      "priority": 12,
-      "blocker": false,
-      "depends_on": ["V2"],
-      "files": [".github/workflows/ci.yml", "tools/suite_figures.py", "tools/tests/test_suite_figures.py"],
-      "acceptance": [
-        "a zero-test run prints its ::error:: before the step exits (the grep | wc pipeline under set -euo pipefail no longer kills the step first)",
-        "CI fails when the JUnit XML reports fewer test scripts than docs/testing-setup.md states — read from the file, not a constant in ci.yml",
-        "both verified against synthetic XML in tools/tests/test_suite_figures.py"
+      "context": "The 09-01 and 09-08 reviews disagreed about this table's figures. Closing the rows removes the figure from the reviews altogether.",
+      "references": [
+        "obsidian-vault/build-reviews/2026-09-08-next-build.md V3 and amendment 2026-09-09b",
+        "docs/test-plan.md §11"
       ],
-      "context": "The failure this guard was written for (2026-07-19) was a partial drop; at 24 scripts a run that silently lost 23 still passes. ci.yml is on the forbidden list: supervised. Depends on V2 so the stated figure it reads is settled first.",
-      "references": ["obsidian-vault/build-reviews/2026-09-08-next-build.md V6", "tools/suite_figures.py"],
-      "status": "open"
-    },
-    {
-      "id": "V11",
-      "title": "Run the Tool tests job twice, with GITHUB_ACTIONS forced off in one pass",
-      "lane": "verify",
-      "model": "sonnet",
-      "mode": "supervised",
-      "size": "S",
-      "priority": 13,
-      "blocker": false,
-      "depends_on": ["V6"],
-      "files": [".github/workflows/ci.yml"],
-      "acceptance": [
-        "the Tool tests job runs python3 -m unittest discover -s tools/tests -b twice, once with GITHUB_ACTIONS unset",
-        "the job's display name is unchanged (it is a required context in .github/rulesets/protect_main.json; renaming it makes every pull request unmergeable)"
-      ],
-      "context": "A test that counted '::error::' plus 'error:' passed on every machine it was written on and failed only in CI, because the annotation form prints only under GITHUB_ACTIONS. Both modes should run on every pull request.",
-      "references": ["obsidian-vault/daily-logs/2026-09-09.md §the automation processes, Open questions", "docs/automation.md §The checks"],
-      "status": "open"
-    },
-    {
-      "id": "C4",
-      "title": "Decide the tutorial camera focus",
-      "lane": "decision",
-      "model": "human",
-      "mode": "human",
-      "size": "S",
-      "priority": 20,
-      "blocker": false,
-      "depends_on": [],
-      "files": ["game/scripts/main.gd"],
-      "acceptance": [
-        "a dated line in a daily log: keep CAMERA_FOCUS_COORD at (13, 6), or move it to the rows where the 2026-08-10 measurement found the deaths and crossings (rows 0-2)",
-        "if it moves, a one-line code item is added to next week's plan"
-      ],
-      "context": "The opening camera points at the one part of the tutorial where nothing happens, on the first screen a stranger sees. Open since 2026-08-10. One decision, one paragraph; C5's QA walk needs it first.",
-      "references": ["obsidian-vault/daily-logs/2026-08-10.md §Open questions", "obsidian-vault/design/detour-cost-question.md", "tools/measure_tutorial.gd"],
-      "status": "open"
-    },
-    {
-      "id": "C9",
-      "title": "Disposition Phase 2's fourth exit criterion in the roadmap",
-      "lane": "decision",
-      "model": "human",
-      "mode": "human",
-      "size": "S",
-      "priority": 21,
-      "blocker": false,
-      "depends_on": [],
-      "files": ["docs/roadmap.md"],
-      "acceptance": [
-        "docs/roadmap.md Phase 2 gains a dated 'Decision logged' block, in the style of the 2026-07-29 and 2026-08-06 ones, stating either that the criterion is met by confirm_panel_test.gd with the in-artifact path deferred and why that is acceptable for v0.1.0, or that it is deferred outright",
-        "the same block disposes of the three un-deferred Phase 2 Implements items (toolbar tool, P1 group, controlling-entity mapping)"
-      ],
-      "context": "The criterion is met in tests and unreachable in the artifact a stranger runs (main.gd records the ConfirmPanel path as unreachable from the map screen in v0.1.0). B6's release note needs the answer. Your call; once made, `tools/warden cowork C9` will draft the block.",
-      "references": ["docs/roadmap.md §Phase 2 exit criteria", "docs/adr/0015-ecosystem-overpass-fallback-animal-scene.md", "obsidian-vault/build-reviews/2026-09-08-next-build.md C9"],
-      "status": "open"
-    },
-    {
-      "id": "B4",
-      "title": "Decide how a Release ships something a stranger can run",
-      "lane": "decision",
-      "model": "human",
-      "mode": "human",
-      "size": "M",
-      "priority": 22,
-      "blocker": true,
-      "depends_on": [],
-      "files": ["game/export_presets.cfg", ".github/workflows/ci.yml", "tools/check_pck_contents.py", "tools/inspect_pck.py", "docs/signing-runbook.md"],
-      "acceptance": [
-        "a dated decision in a daily log: each published asset is one archive per platform (recommended — it is the only shape that carries LICENSE and THIRD-PARTY-NOTICES.md inside the asset as ADR 0017 requires), or embed_pck with a stated plan for the licence files",
-        "the implementation is added to next week's plan as one supervised item carrying the smoke-windows path, the pack-gate and inspect_pck updates, the SHA256SUMS find pattern, and C6's download copy in the same pull request"
-      ],
-      "context": "Actions artifacts do not preserve the executable bit and a bare .exe with a sibling .pck is a Godot runtime with no game. The decision is yours; the implementation touches three forbidden paths and lands supervised.",
-      "references": ["obsidian-vault/build-reviews/2026-09-08-next-build.md B4", "docs/adr/0017-licensing.md", "docs/export-setup.md"],
-      "status": "open"
-    },
-    {
-      "id": "V4",
-      "title": "Export the Linux arm64 preset in CI, or delete it",
-      "lane": "decision",
-      "model": "human",
-      "mode": "human",
-      "size": "S",
-      "priority": 23,
-      "blocker": false,
-      "depends_on": [],
-      "files": ["game/export_presets.cfg", ".github/workflows/ci.yml"],
-      "acceptance": [
-        "a dated decision in a daily log; then either the arm64 artifact appears in the CI upload and passes check_pck_contents.py, or the preset and builds/wildlife-crossing-linux-arm64/ are gone",
-        "settled before B6, because it changes what the manifest sweep finds"
-      ],
-      "context": "A preset CI never builds, with an empty ghost directory. Exporting it would let a future session boot a real artifact in the arm64 sandbox.",
-      "references": ["obsidian-vault/build-reviews/2026-09-08-next-build.md V4"],
-      "status": "open"
-    },
-    {
-      "id": "C7",
-      "title": "Pin the release machine's engine and install its export templates",
-      "lane": "mac",
-      "model": "human",
-      "mode": "human",
-      "size": "S",
-      "priority": 30,
-      "blocker": false,
-      "depends_on": [],
-      "files": [],
-      "acceptance": [
-        "the Mac's Godot reports 4.6.3.stable, recorded in a daily log",
-        "export templates installed at ~/Library/Application Support/Godot/export_templates/4.6.3.stable/ and the path confirmed",
-        "godot is on PATH, so `warden run` tasks can run the GUT suite locally before pushing"
-      ],
-      "context": "The shipping .dmg is built locally by an engine no gate has checked; THIRD-PARTY-NOTICES.md hard-codes 4.6.3-stable. Download lead time and nothing interesting in it — start early. Also the single biggest quality lever for the automated code tasks, which today rely on CI as their only test signal.",
-      "references": ["docs/export-setup.md", "docs/adr/0012-godot-and-gut-version-pin.md", "THIRD-PARTY-NOTICES.md"],
-      "status": "open"
-    },
-    {
-      "id": "C5",
-      "title": "Visual and audio QA pass, written down",
-      "lane": "mac",
-      "model": "human",
-      "mode": "human",
-      "size": "S",
-      "priority": 31,
-      "blocker": false,
-      "depends_on": ["C4", "C10"],
-      "files": [],
-      "acceptance": [
-        "a daily log confirms the connectivity overlay's orange-to-teal treatment at segment zoom, the HUD message line and credits screen legible at the new [display] settings, and the Godot version installed on the Mac"
-      ],
-      "context": "The 09-02 and 09-05 walks covered everything else. What remains needs eyes on a screen after C10 lands.",
-      "references": ["obsidian-vault/build-reviews/2026-09-08-next-build.md C5", "docs/roadmap.md §Phase 2 exit criteria"],
-      "status": "open"
-    },
-    {
-      "id": "B1b",
-      "title": "Finish the Apple enrolment, certificate and API key",
-      "lane": "mac",
-      "model": "human",
-      "mode": "human",
-      "size": "S",
-      "priority": 32,
-      "blocker": true,
-      "depends_on": [],
-      "files": [],
-      "acceptance": [
-        "signing-runbook A2-A4: a Developer ID Application certificate issued, the Xcode licence accepted (A3, not gated on approval), the App Store Connect API key created and stored off-repo",
-        "the date recorded in a daily log"
-      ],
-      "context": "Submitted 2026-08-27. The only item whose duration no effort can compress; C1, C2 and B6 queue behind it.",
-      "references": ["docs/signing-runbook.md A2-A4", "docs/adr/0018-code-signing-and-notarization.md", "obsidian-vault/daily-logs/2026-08-27.md"],
-      "status": "open"
-    },
-    {
-      "id": "C1",
-      "title": "Configure macOS signing in the export preset",
-      "lane": "code",
-      "model": "sonnet",
-      "mode": "supervised",
-      "size": "M",
-      "priority": 40,
-      "blocker": false,
-      "depends_on": ["B1b", "C7", "C3"],
-      "files": ["game/export_presets.cfg"],
-      "acceptance": [
-        "the macOS preset sets codesign/codesign to Xcode codesign (3), apple_team_id, identity, and notarization to notarytool (2), with credentials supplied via GODOT_MACOS_NOTARIZATION_* environment variables and never written into the file",
-        "a signed test export from the Mac that spctl -a -vvv accepts and whose ticket stapler validate confirms",
-        "export/distribution_type settled and stated in the commit body"
-      ],
-      "context": "codesign=1 is ad-hoc, not real signing — the 09-02 walk recorded exactly that signature. Supervised: the file is forbidden and Godot writes secrets into it, so diff before every commit.",
-      "references": ["docs/signing-runbook.md A5, A7", "obsidian-vault/build-reviews/2026-09-08-next-build.md C1 and amendment 2026-09-09b"],
-      "status": "open"
-    },
-    {
-      "id": "C2",
-      "title": "Change the macOS export target from .zip to .dmg",
-      "lane": "code",
-      "model": "sonnet",
-      "mode": "supervised",
-      "size": "S",
-      "priority": 41,
-      "blocker": false,
-      "depends_on": ["C11", "C1"],
-      "files": ["game/export_presets.cfg", ".github/workflows/ci.yml"],
-      "acceptance": [
-        "the macOS preset exports a .dmg; LICENSE and THIRD-PARTY-NOTICES.md are inside the image, added before signing",
-        "the pack inside the shipped image passes check_pck_contents.py (C11) and that run is recorded in the release log",
-        "CI's export job stays green"
-      ],
-      "context": "A notarization ticket cannot be stapled to a .zip, and the .zip is why the licence files land beside the archive instead of inside the bundle.",
-      "references": ["docs/adr/0018-code-signing-and-notarization.md", "docs/signing-runbook.md A5-A6"],
-      "status": "open"
-    },
-    {
-      "id": "C6",
-      "title": "Add the verification copy and run instructions to the website download section",
-      "lane": "docs",
-      "model": "sonnet",
-      "mode": "auto",
-      "size": "S",
-      "priority": 42,
-      "blocker": false,
-      "depends_on": ["B4"],
-      "files": ["website/index.html", "website/user-guide.html"],
-      "acceptance": [
-        "the download area names each published asset, says Windows is unsigned and what SmartScreen will show, gives the GPG fingerprint and the two verification commands, does not imply the signature suppresses any OS warning, and says how to run each asset",
-        "deploy-website.yml's external-link allowlist is checked against every href added; keys.openpgp.org is added to the allowlist in the same pull request if linked (a supervised edit — say so rather than route around it)",
-        "lands in the same pull request as B4's implementation, because deploy-website.yml publishes on push"
-      ],
-      "context": "The site is public with a download button pointing at an empty Releases page. Waits on B4 for the asset list.",
-      "references": ["docs/signing-runbook.md C2", "website/CLAUDE.md", "obsidian-vault/build-reviews/2026-09-08-next-build.md C6 and amendment 2026-09-09b"],
       "status": "open"
     },
     {
@@ -477,7 +124,7 @@
       "model": "human",
       "mode": "human",
       "size": "S",
-      "priority": 43,
+      "priority": 12,
       "blocker": false,
       "depends_on": [],
       "files": [],
@@ -485,7 +132,57 @@
         "the dco job observed red on a throwaway pull request with an unsigned commit, green once signed off; the pull request closed without merging; recorded in a daily log"
       ],
       "context": "The ruleset has now refused a merge once (Tool tests, PR #12); dco itself has never been red. Fifteen minutes with gh, and it proves the gate that ADR 0019 and 0020 rest on.",
-      "references": ["obsidian-vault/build-reviews/2026-09-08-next-build.md V5 and amendment 2026-09-09c"],
+      "references": [
+        "obsidian-vault/build-reviews/2026-09-08-next-build.md V5 and amendment 2026-09-09c"
+      ],
+      "status": "open"
+    },
+    {
+      "id": "D3",
+      "title": "Fix signing-runbook.md Part D point 3's stale Build-review V2 reference",
+      "lane": "docs",
+      "surface": "code",
+      "model": "haiku",
+      "mode": "auto",
+      "size": "S",
+      "priority": 13,
+      "blocker": false,
+      "depends_on": [],
+      "files": [
+        "docs/signing-runbook.md"
+      ],
+      "acceptance": [
+        "Part D point 3's \"Build-review V2 is still open\" line is corrected or removed. The pack gate already covers Windows and, before 2026-09-26, covered macOS too, via ci.yml's Verify-every-exported-pack's-contents loop.",
+        "no other line in Part D changes"
+      ],
+      "context": "Flagged 2026-09-25 while fixing ci.yml's macOS export: point 3 still describes an open build-review item that looks closed elsewhere in the repo. A stated-line correction, the haiku case in docs/plan/routing.md.",
+      "references": [
+        "obsidian-vault/daily-logs/2026-09-25.md",
+        "docs/signing-runbook.md Part D"
+      ],
+      "status": "open"
+    },
+    {
+      "id": "D4",
+      "title": "Document a safeguard against game/project.godot losing its comments",
+      "lane": "docs",
+      "model": "sonnet",
+      "mode": "auto",
+      "size": "S",
+      "priority": 14,
+      "blocker": false,
+      "depends_on": [],
+      "files": [
+        "game/CLAUDE.md"
+      ],
+      "acceptance": [
+        "game/CLAUDE.md states that opening the project in the Godot editor can silently strip project.godot's comments on save, and instructs running git diff -- game/project.godot before staging any commit that touched the editor",
+        "the note names the 2026-09-25 incident (comments lost, caught, reverted before commit) as the reason"
+      ],
+      "context": "Caught live 2026-09-25 while landing C1: project.godot lost every comment mid-session, most likely from the editor resaving it, and was reverted before it landed in any commit. No regeneration fix is known; a documented pre-commit check is the cheap mitigation until one is.",
+      "references": [
+        "obsidian-vault/daily-logs/2026-09-25.md"
+      ],
       "status": "open"
     },
     {
@@ -497,15 +194,24 @@
       "size": "M",
       "priority": 50,
       "blocker": true,
-      "depends_on": ["B1b", "B4", "C1", "C2", "C3", "C5", "C6", "C7", "V4"],
-      "files": ["docs/release-notes/v0.1.0.md"],
+      "depends_on": [
+        "C5",
+        "C6"
+      ],
+      "files": [
+        "docs/release-notes/v0.1.0.md"
+      ],
       "acceptance": [
         "docs/release-notes/v0.1.0.md in the docs/CLAUDE.md format stating all four scope facts (Bow Valley only; world map look-only; placeholder art and default icon; which artifacts are signed and how to verify)",
         "the v0.1.0 tag exists; spctl/stapler verify the notarized image per runbook A7; the GPG signature verifies per B4; the binaries report 0.1.0",
-        "builds/ cleared before the manifest sweep"
+        "builds/ cleared before the manifest sweep",
+        "the real signed .dmg is checked with check_pck_contents.py (C11 already reads one) and that run is recorded in the release log. C2's own acceptance never got this locally, and this is where it finally does."
       ],
-      "context": "The item that changes the build case. Everything above it is on its path; the release note itself can be drafted in Cowork the week the dependencies close.",
-      "references": ["docs/adr/0018-code-signing-and-notarization.md §Decision", "docs/signing-runbook.md A6-A8, B3-B4, C2"],
+      "context": "The item that changes the build case. B1b, B4, C1, C2, C3, C7 and V4 are all done; only C5 and C6 stand between here and cutting the release.",
+      "references": [
+        "docs/adr/0018-code-signing-and-notarization.md §Decision",
+        "docs/signing-runbook.md A6-A8, B3-B4, C2"
+      ],
       "status": "open"
     },
     {
@@ -517,13 +223,18 @@
       "size": "S",
       "priority": 51,
       "blocker": true,
-      "depends_on": ["B6"],
+      "depends_on": [
+        "B6"
+      ],
       "files": [],
       "acceptance": [
         "the DMG downloaded from the Release URL on a machine that has never had the project opens with no Gatekeeper warning of any kind; the Windows and Linux assets extract and launch on a clean machine; recorded in a daily log"
       ],
       "context": "The one item that turns 'first build' into 'next build' in a following plan.",
-      "references": ["docs/signing-runbook.md A8, A7", "docs/adr/0018-code-signing-and-notarization.md"],
+      "references": [
+        "docs/signing-runbook.md A8, A7",
+        "docs/adr/0018-code-signing-and-notarization.md"
+      ],
       "status": "open"
     }
   ]
