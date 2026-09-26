@@ -460,6 +460,35 @@ def preflight(root: pathlib.Path, plan: Plan, allow_branch_mismatch: bool) -> No
     committer_identity(root)
 
 
+def ensure_target_branch(root: pathlib.Path, plan: Plan) -> None:
+    """Land every commit on the plan's own branch, never on whatever branch
+    happened to be checked out.
+
+    ``--allow-branch-mismatch`` lets ``preflight`` pass with the wrong branch
+    checked out, which is fine for a dry run or ``--verify``. Paired with
+    ``--execute`` it used to mean the commit landed wherever HEAD was pointing
+    — main included, since main has no bypass actor and every one of its
+    protections still applies once a commit is already sitting there, so the
+    only way off is a branch, reset and re-push, done by hand (2026-09-25).
+    Create and check out the plan's branch from the current position instead,
+    the same way ``warden.py``'s own ``cmd_land`` already does when it finds
+    itself on ``main``.
+    """
+    branch = current_branch(root)
+    if branch == plan.branch:
+        return
+    existing = run_git(root, "branch", "--list", plan.branch, check=False).strip()
+    if existing:
+        raise ShipError(
+            f"branch {plan.branch!r} already exists locally, and the current "
+            f"branch is {branch!r}, not it. Check out {plan.branch!r} yourself "
+            "first (or remove the stale branch if it's not meant to be reused), "
+            "then re-run."
+        )
+    run_git(root, "checkout", "-b", plan.branch)
+    print(f"branch mismatch: created and switched to {plan.branch!r} from {branch!r}")
+
+
 # --------------------------------------------------------------------------
 # execution
 # --------------------------------------------------------------------------
@@ -677,7 +706,11 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--allow-branch-mismatch",
         action="store_true",
-        help="proceed even if the current branch is not the plan's branch",
+        help=(
+            "proceed even if the current branch is not the plan's branch; "
+            "with --execute, creates and switches to the plan's branch first "
+            "rather than committing on whatever branch is checked out"
+        ),
     )
     parser.add_argument(
         "--repo",
@@ -712,6 +745,7 @@ def main(argv: list[str] | None = None) -> int:
             print("Re-run with --execute to stage and commit.")
             return 0
 
+        ensure_target_branch(root, plan)
         made = execute(root, plan)
         print(f"\n{len(made)} commit(s) made. Working tree:")
         remaining = changed_entries(root)
