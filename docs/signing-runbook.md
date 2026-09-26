@@ -440,11 +440,16 @@ Superseding ADR 0018 with a new ADR is the mechanism; don't just start signing.
 
 # Part D — Wiring it into the release
 
-1. **Keep the existing CI export exactly as it is.**
-   `.github/workflows/ci.yml` builds all three targets on `ubuntu-latest` and
-   runs `check_pck_contents.py` and `smoke_boot.sh` on every push. Signing is a
-   *release* path, not a *CI* path. Nothing in this runbook belongs in that
-   workflow.
+1. **CI stays a Linux-and-Windows sanity check; macOS export dropped from it
+   entirely (2026-09-26).** `.github/workflows/ci.yml` builds the Linux and
+   Windows targets on `ubuntu-latest` and runs `check_pck_contents.py` and
+   `smoke_boot.sh` on every push. It cannot also build macOS the way it used
+   to: C1 moved `codesign/codesign` to Xcode's real signer, which this runner
+   does not have, and the export preset is the same file CI and the release
+   Mac both read, so there is no per-environment fallback to ad-hoc signing
+   left to keep. Signing is a *release* path, not a *CI* path, same as always;
+   nothing in this runbook belongs in that workflow, and neither key ever
+   touches it.
 2. **No signing secret ever enters GitHub.** Both keys — the Apple certificate
    and the GPG private key — stay on the Mac. This is now true by construction,
    with the Windows route gone: there is nothing left that a CI job would need
