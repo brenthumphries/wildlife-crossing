@@ -19,6 +19,7 @@ Notes are named `YYYY-MM-DD-next-build.md`. Newest first.
 
 <!-- Add one line per review, newest at top: -->
 <!-- - [[YYYY-MM-DD-next-build]] — one-line headline (N blockers) -->
+- [[2026-09-26-next-build]] — First build, measured at `becf605`. **2 blockers open** (B6, B7). B1b and B4 both closed since 09-14; B4's implementation landed as C1/C2 (PR #37). CI's macOS export broke under C1 and was dropped (PR #42). Open: C5, C6, D1, V3, V5, D3, D4.
 - [[2026-09-14-next-build]] — First build, measured at `fe901a5`. **4 blockers open** (B1b, B4, B6, B7). 14 of 26 items closed 2026-09-23: thirteen merged (#21 to #30, #32, #34, #35) and C4 decided. B4 is decided; its implementation is owed. C1 waits on B1b and C7. Open without Apple: C5, D1, V3, V5, C7.
 
 - [[2026-09-08-next-build]] — First build, measured at `16622ec`. **4 blockers, 8 core, 8 verification.** B8 closed (PR #8); C8 closed; V2 and V5 part closed. Shipped without its Step 6 audits; run late, they found sixteen defects, all recorded in its amendments. Two of its own §5 asks are now built and gating, and the `testing-setup.md` §4 row is the first to close by being fixed since 08-18.
