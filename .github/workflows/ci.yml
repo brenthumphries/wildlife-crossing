@@ -201,8 +201,7 @@ jobs:
           set -euo pipefail
           mkdir -p ../builds/wildlife-crossing-linux-x86_64 \
                    ../builds/wildlife-crossing-linux-arm64 \
-                   ../builds/wildlife-crossing-windows-x86_64 \
-                   ../builds/wildlife-crossing-macos
+                   ../builds/wildlife-crossing-windows-x86_64
           godot --headless --export-release "Linux x86_64" \
             ../builds/wildlife-crossing-linux-x86_64/wildlife-crossing.x86_64
           # V4 (2026-09-23): built for the Linux arm64 sandbox, not shipped.
@@ -213,8 +212,13 @@ jobs:
             ../builds/wildlife-crossing-linux-arm64/wildlife-crossing.arm64
           godot --headless --export-release "Windows x86_64" \
             ../builds/wildlife-crossing-windows-x86_64/wildlife-crossing.exe
-          godot --headless --export-release "macOS" \
-            ../builds/wildlife-crossing-macos/wildlife-crossing.zip
+          # macOS is not exported here (2026-09-26). The preset signs with
+          # Xcode codesign and notarizes with notarytool, both macOS-only
+          # binaries this ubuntu-latest runner does not have; a signed release
+          # build only ever happens on the release Mac (signing-runbook.md A6).
+          # A CI job cannot fall back to ad-hoc signing for its own sanity
+          # check either, since the preset's codesign identity and team ID are
+          # committed and real, not placeholders swapped per environment.
 
       # V1: every other gate in this project inspects the *source tree* — the
       # GUT suite, the zero-tests guard, this job's exit status. None of them
@@ -227,12 +231,13 @@ jobs:
       # measured in the 2026-08-04 review — so "the Linux pack is fine" was
       # never evidence about the other two, and under ADR 0018 the Windows
       # binary goes into a public Release having been checked by nothing.
-      # The macOS pack lives inside the .app inside the zip, and is named from
-      # config/name rather than the export path; check_pck_contents.py globs
-      # for it rather than reconstructing the name.
       #
-      # Every pack is checked even after one fails. Three platforms diverging
-      # in three different ways is one report worth reading; the first failure
+      # macOS dropped from this loop (2026-09-26): CI no longer exports it, so
+      # there is nothing here to check. The release .dmg is checked locally,
+      # by hand, as part of the signing session (signing-runbook.md A6-A7).
+      #
+      # Every pack is checked even after one fails. Two platforms diverging
+      # in two different ways is one report worth reading; the first failure
       # alone sends you round the loop twice. Same reasoning smoke_boot.sh
       # gives for always running both of its boots.
       - name: Verify every exported pack's contents
@@ -242,8 +247,7 @@ jobs:
           for target in \
             builds/wildlife-crossing-linux-x86_64/wildlife-crossing.pck \
             builds/wildlife-crossing-linux-arm64/wildlife-crossing.pck \
-            builds/wildlife-crossing-windows-x86_64/wildlife-crossing.pck \
-            builds/wildlife-crossing-macos/wildlife-crossing.zip
+            builds/wildlife-crossing-windows-x86_64/wildlife-crossing.pck
           do
             echo "::group::pack gate — ${target}"
             python3 tools/check_pck_contents.py "$target" \
@@ -265,16 +269,10 @@ jobs:
       # See ADR 0017. Runs with `always()` and tolerates missing directories so
       # a failed preset cannot strip the notices off the presets that worked.
       #
-      # The durable fix landed 2026-08-09 (ADR 0017): CreditsScreen renders
-      # every attribution from Engine.get_copyright_info() at runtime, so the
-      # notices travel inside the binary regardless of packaging. These loose
-      # copies are the second copy, for a distributor or packager who never
-      # launches the game. CI's own macOS export stays a .zip (this runner is
-      # ubuntu-latest; signing-runbook.md A6: DMG export only works from
-      # macOS), so here the notices land beside the .app, not inside it. The
-      # release .dmg built locally per A6 carries them inside the image
-      # instead (C2) — don't repackage that build without carrying these
-      # along.
+      # Only Linux and Windows land in builds/ here (2026-09-26): CI no
+      # longer exports macOS. The release .dmg carries its own copy of both
+      # files inside the image, added locally before signing, not by this
+      # loop (signing-runbook.md A6).
       - name: Bundle license notices with each build
         if: always()
         run: |

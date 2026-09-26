@@ -92,29 +92,30 @@ timeout stops it (exit **124**). A data-less boot also ends at 124, after
 ## CI
 
 `.github/workflows/ci.yml` has an `export` job (after `test`): it installs the
-pinned Godot + templates, exports the Linux/Windows/macOS presets, runs
-`tools/check_pck_contents.py` against **all three** packs, smoke-tests the
-Linux binary, and uploads everything as a workflow artifact (14-day retention).
-A `smoke-windows` job then boots the exported `.exe` headless on a
-`windows-latest` runner (build-review V2). macOS is not booted in CI: it is
-launched and watched by hand during every visual QA and signing session
-([signing-runbook.md](signing-runbook.md) A8), which is a stronger check than a
-headless boot.
+pinned Godot + templates, exports the **Linux and Windows** presets, runs
+`tools/check_pck_contents.py` against both packs, smoke-tests the Linux
+binary, and uploads everything as a workflow artifact (14-day retention). A
+`smoke-windows` job then boots the exported `.exe` headless on a
+`windows-latest` runner (build-review V2).
 
-The macOS pack sits inside the `.app` inside the zip and is named from
-`config/name` (`Wildlife Crossing.pck`), not from the export path — pass the
-gate the `.zip` or the `.app` and it finds the pack itself. Releases are cut manually for now: download the artifact, tag
-`vX.Y.Z`, attach the binaries to a GitHub Release (per `docs/CLAUDE.md`
-versioning).
+**macOS is not exported in CI at all (2026-09-26).** The preset signs with
+Xcode `codesign` and notarizes with `notarytool`, both macOS-only, and this
+job runs on `ubuntu-latest`. A real release build only ever happens on the
+release Mac ([signing-runbook.md](signing-runbook.md) A6), launched and
+watched by hand during every visual QA and signing session (A8) — a stronger
+check than a headless boot would have given CI anyway. Releases are cut
+manually for now: download the Linux/Windows artifacts, build and sign macOS
+locally, tag `vX.Y.Z`, attach the binaries to a GitHub Release (per
+`docs/CLAUDE.md` versioning).
 
 ## Known limitations (first-build placeholders)
 
-- **CI builds are unsigned and always will be.** The macOS export is ad-hoc
-  signed at best and will trip Gatekeeper; Windows is unsigned. This is correct
-  for CI — signing is a *release* path, not a *CI* path. Release builds are
-  signed by hand on Brent's Mac per [signing-runbook.md](signing-runbook.md):
-  macOS is signed and notarized, every artifact is covered by a GPG-signed
-  SHA-256 manifest, and **Windows ships unsigned by decision**
+- **CI builds are unsigned and always will be.** Windows is unsigned; macOS is
+  not built in CI at all (above). This is correct for CI — signing is a
+  *release* path, not a *CI* path. Release builds are signed by hand on
+  Brent's Mac per [signing-runbook.md](signing-runbook.md): macOS is signed
+  and notarized, every artifact is covered by a GPG-signed SHA-256 manifest,
+  and **Windows ships unsigned by decision**
   ([ADR 0018](adr/0018-code-signing-and-notarization.md)).
 - **No icons** — presets ship the default Godot icon until art lands.
 - The Linux arm64 preset exists mainly so the export path can be verified in

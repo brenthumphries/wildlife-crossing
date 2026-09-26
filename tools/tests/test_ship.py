@@ -157,7 +157,14 @@ class ShipTestCase(unittest.TestCase):
         return [line for line in out.splitlines() if line]
 
     def assertRefuses(self, plan: dict, fragment: str, *extra: str) -> None:
-        """Assert --execute raises ShipError mentioning ``fragment``."""
+        """Assert --execute raises ShipError mentioning ``fragment``.
+
+        Mirrors ``main()``'s real order, ``ensure_target_branch`` included:
+        a refusal that only fires there (the target-branch-already-exists
+        case) would otherwise never trigger under this helper, and the test
+        would fail for the wrong reason — no exception at all, rather than
+        the one it means to assert.
+        """
         path = self.plan_file(plan)
         with self.assertRaises(ship.ShipError) as caught:
             root = ship.repo_root(self.repo)
@@ -165,6 +172,7 @@ class ShipTestCase(unittest.TestCase):
             ship.check_lock(root, True, "--force-lock" in extra)
             ship.preflight(root, loaded, "--allow-branch-mismatch" in extra)
             ship.match_paths(loaded, ship.changed_entries(root))
+            ship.ensure_target_branch(root, loaded)
             ship.execute(root, loaded)
         self.assertIn(fragment, str(caught.exception))
 
@@ -353,11 +361,20 @@ class TestPreflightRefusals(ShipTestCase):
         )
 
     def test_branch_mismatch_can_be_overridden(self) -> None:
+        """The override creates and lands on the plan's own branch.
+
+        Fixed 2026-09-25: this used to mean the commit landed wherever HEAD
+        was pointing (see ``docs/plan/queue`` for what that cost when the
+        checked-out branch was a feature branch and the plan targeted a fresh
+        ``docs/log-YYYY-MM-DD``, main's own protections included). Overriding
+        the mismatch must not mean overriding *where the commit lands* too.
+        """
         git(self.repo, "checkout", "-q", "-b", "feat/side")
+        side_before = git(self.repo, "rev-parse", "HEAD").strip()
         self.write("a.md", "a\n")
         plan = self.plan_file(
             {
-                "branch": "main",
+                "branch": "feat/target",
                 "commits": [{"type": "docs", "subject": "one", "paths": ["a.md"]}],
             }
         )
@@ -366,6 +383,29 @@ class TestPreflightRefusals(ShipTestCase):
                 [str(plan), "--execute", "--allow-branch-mismatch", "--repo", str(self.repo)]
             ),
             0,
+        )
+        self.assertEqual(
+            git(self.repo, "rev-parse", "--abbrev-ref", "HEAD").strip(), "feat/target",
+            "should have switched to the plan's own branch, not stayed on feat/side",
+        )
+        self.assertEqual(
+            git(self.repo, "rev-parse", "feat/side").strip(), side_before,
+            "feat/side must be untouched; the commit belongs on feat/target alone",
+        )
+
+    def test_branch_mismatch_refuses_when_the_target_branch_already_exists(self) -> None:
+        """A plan whose branch collides with an existing one is refused, not
+        silently committed there — main included, which every real repo has
+        before ship.py ever runs."""
+        git(self.repo, "checkout", "-q", "-b", "feat/side")
+        self.write("a.md", "a\n")
+        self.assertRefuses(
+            {
+                "branch": "main",
+                "commits": [{"type": "docs", "subject": "one", "paths": ["a.md"]}],
+            },
+            "branch 'main' already exists locally",
+            "--allow-branch-mismatch",
         )
 
     def test_missing_identity_is_refused_before_any_commit(self) -> None:
