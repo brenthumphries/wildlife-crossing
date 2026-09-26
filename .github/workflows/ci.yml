@@ -265,10 +265,16 @@ jobs:
       # See ADR 0017. Runs with `always()` and tolerates missing directories so
       # a failed preset cannot strip the notices off the presets that worked.
       #
-      # Known gap: the macOS preset exports a .zip, so these land beside the
-      # archive rather than inside the .app bundle. The durable fix is an
-      # in-game credits screen built from Engine.get_copyright_info(); until
-      # then, don't repackage the macOS build without carrying these along.
+      # The durable fix landed 2026-08-09 (ADR 0017): CreditsScreen renders
+      # every attribution from Engine.get_copyright_info() at runtime, so the
+      # notices travel inside the binary regardless of packaging. These loose
+      # copies are the second copy, for a distributor or packager who never
+      # launches the game. CI's own macOS export stays a .zip (this runner is
+      # ubuntu-latest; signing-runbook.md A6: DMG export only works from
+      # macOS), so here the notices land beside the .app, not inside it. The
+      # release .dmg built locally per A6 carries them inside the image
+      # instead (C2) — don't repackage that build without carrying these
+      # along.
       - name: Bundle license notices with each build
         if: always()
         run: |
