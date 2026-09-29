@@ -24,6 +24,23 @@ and help species thrive across a living, breathing landscape.
 This project is built with Claude as the primary developer.
 See [`CLAUDE.md`](CLAUDE.md) for full context and conventions.
 
+## Verifying a download
+
+Releases ship `SHA256SUMS.txt` and a detached GPG signature,
+`SHA256SUMS.txt.asc`. The public key is
+[`wildlife-crossing-signing-key.asc`](wildlife-crossing-signing-key.asc), and
+its full fingerprint is:
+
+```
+7F68 A7E0 6349 DA13 6226 F04E 2D5F 1ED6 EFFC 08FD
+```
+
+Import the key, confirm `gpg --fingerprint` prints the same value, then run
+`gpg --verify SHA256SUMS.txt.asc SHA256SUMS.txt` and
+`shasum -a 256 -c SHA256SUMS.txt`. The signature proves the files are
+unchanged; it does not suppress any operating-system warning. The Windows build
+is unsigned on purpose (see [ADR 0018](docs/adr/0018-code-signing-and-notarization.md)).
+
 ## License
 
 Wildlife Crossing is free and open. Code and non-code material are licensed
