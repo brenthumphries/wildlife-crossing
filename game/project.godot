@@ -1,6 +1,4 @@
 ; Engine configuration file.
-; Wildlife Crossing — pinned to Godot 4.6 (ADR 0012).
-; Autoload roster and node choices follow docs/architecture.md §2–3.
 ; It's best edited using the editor UI and not directly,
 ; since the parameters that go here are not all obvious.
 ;
@@ -15,11 +13,6 @@ config_version=5
 config/name="Wildlife Crossing"
 config/description="A cozy wildlife-corridor simulation: build crossings, reconnect fragmented habitat."
 config/version="0.1.0"
-; Boots to the title screen, not straight into play (ADR 0017): the credits
-; screen carries Godot's MIT notice and needs a reachable home. `Main.tscn` is
-; still the playable root — TitleScreen changes into it on Play, or immediately
-; when passed `-- --skip-menu`, which is how tools/smoke_boot.sh keeps testing
-; the full data-loading path.
 run/main_scene="res://scenes/TitleScreen.tscn"
 config/features=PackedStringArray("4.6", "GL Compatibility")
 
@@ -32,14 +25,6 @@ SpeciesRegistry="*res://scripts/systems/species_registry.gd"
 
 [display]
 
-; C10: the 09-02 QA walk failed the credits-screen and HUD-message legibility
-; clauses because this section did not exist, so exports ran at Godot's
-; 1152x648 default with stretch disabled. 1280x720 is the smallest size that
-; clears the failure without inventing a resolution no one asked for.
-; canvas_items was the 09-02 decision's chosen mode (scales every Control
-; together instead of patching individual font sizes per screen) — see
-; game/tests/world_renderer_test.gd for the regression guard on the
-; screen-to-world mapping it also affects, the area cb9f9b8 fixed.
 window/size/viewport_width=1280
 window/size/viewport_height=720
 window/stretch/mode="canvas_items"
@@ -52,6 +37,4 @@ enabled=PackedStringArray("res://addons/gut/plugin.cfg")
 
 renderer/rendering_method="gl_compatibility"
 renderer/rendering_method.mobile="gl_compatibility"
-; Required for the macOS "universal" and Linux arm64 export presets — Godot
-; refuses to export either architecture with ETC2 ASTC disabled.
 textures/vram_compression/import_etc2_astc=true
