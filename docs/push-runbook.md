@@ -53,7 +53,7 @@ with the game commit rather than the CI commit, because it asserts against the
 boot scene that the same commit moves.
 
 ```bash
-cd ~/wildlife-crossing
+cd ~/projects/wildlife-crossing
 ```
 
 ```bash
@@ -117,7 +117,7 @@ session) leaves `.git/index.lock` behind. This has recurred across the
 staging anything:
 
 ```bash
-cd ~/wildlife-crossing
+cd ~/projects/wildlife-crossing
 ```
 
 ```bash
