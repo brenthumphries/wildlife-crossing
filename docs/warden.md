@@ -14,7 +14,7 @@ what it writes and never call GitHub themselves; that split is what stops
 the scheduled processes from stalling on GitHub reads they cannot make.
 
 ```
-alias warden='python3 ~/wildlife-crossing/tools/warden.py'
+alias warden='python3 ~/projects/wildlife-crossing/tools/warden.py'
 ```
 
 Run `warden` bare for a menu, `warden doctor` to check the machine, and

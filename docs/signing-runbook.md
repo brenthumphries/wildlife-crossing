@@ -241,7 +241,7 @@ release builds now happen.
 Then export:
 
 ```bash
-cd ~/wildlife-crossing/game
+cd ~/projects/wildlife-crossing/game
 ```
 
 ```bash
@@ -350,7 +350,7 @@ notarized and stapled — a stapled DMG has different bytes from an unstapled
 one, so checksum last.
 
 ```bash
-cd ~/wildlife-crossing/builds
+cd ~/projects/wildlife-crossing/builds
 ```
 
 ```bash

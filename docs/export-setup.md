@@ -50,8 +50,11 @@ to export either architecture with ETC2 ASTC disabled. It defaulted to absent
 > wherever it sits. This has now happened twice (2026-07-27, 2026-07-28); the
 > 2026-07-27 conclusion that moving comments "above Godot's block" would protect
 > them is wrong. Keep the rationale here, in `docs/`, and treat the in-file
-> comments as a convenience that will vanish. If a comment goes missing after an
-> export run, restore it — the *settings* survive, only the comments are lost.
+> comments as a convenience that will vanish. Since 2026-10-08 the file is
+> committed in Godot's own comment-free form, so editor saves and exports no
+> longer produce a diff; the reason for each setting is in
+> [project-godot-settings.md](project-godot-settings.md). Do not add comments to
+> `project.godot`.
 
 ## What the presets pack, and how to check
 
