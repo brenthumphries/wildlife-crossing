@@ -228,7 +228,10 @@ been open since the licensing session:
    extra two steps that are easy to get wrong.)
 2. **The `.zip` export is why `LICENSE` and `THIRD-PARTY-NOTICES.md` land
    outside the bundle** — flagged in the 2026-08-09 log as the narrowed-but-open
-   macOS notice gap. A DMG carries them in the image alongside the `.app`.
+   macOS notice gap. A DMG *can* carry them in the image alongside the `.app`,
+   but Godot's own DMG export does not put them there: the v0.1.0 export held
+   only `Wildlife Crossing.app`. You add them by hand, before the image is
+   signed (below).
 
 DMG export is only supported when exporting from macOS, which is exactly where
 release builds now happen.
@@ -238,10 +241,14 @@ release builds now happen.
 > signature. Put the notices in the DMG next to the app, never into
 > `Contents/Resources` after the fact.
 
-Then export:
+Then export. Godot does not create the output folder, so make it first:
 
 ```bash
 cd ~/projects/wildlife-crossing/game
+```
+
+```bash
+mkdir -p ../builds/wildlife-crossing-macos
 ```
 
 ```bash
@@ -249,7 +256,67 @@ godot --headless --export-release "macOS" ../builds/wildlife-crossing-macos/wild
 ```
 
 Godot signs during export and submits for notarization. Notarization is a
-round-trip to Apple and usually takes minutes.
+round-trip to Apple and usually takes minutes. That image has the app and
+nothing else, so it is not the one to ship.
+
+### Add the notices, then re-sign and re-notarize
+
+Rebuild the image with `LICENSE` and `THIRD-PARTY-NOTICES.md` next to the app.
+Changing the image changes its bytes, so it must be signed, notarized and
+stapled again; the first submission is not used. Run from the repo root, with
+the three `GODOT_MACOS_NOTARIZATION_*` variables from A5 set. Keep Godot's
+image outside `builds/` so the checksum sweep never sees it:
+
+```bash
+mkdir -p ~/wc-dmg-work/stage && mv builds/wildlife-crossing-macos/wildlife-crossing.dmg ~/wc-dmg-work/godot-original.dmg
+```
+
+```bash
+hdiutil attach -readonly -nobrowse -mountpoint ~/wc-dmg-work/mnt ~/wc-dmg-work/godot-original.dmg
+```
+
+Copy the app with `ditto`, which keeps its signature intact; `cp` does not:
+
+```bash
+ditto ~/wc-dmg-work/mnt/"Wildlife Crossing.app" ~/wc-dmg-work/stage/"Wildlife Crossing.app" && hdiutil detach ~/wc-dmg-work/mnt
+```
+
+```bash
+cp LICENSE THIRD-PARTY-NOTICES.md ~/wc-dmg-work/stage/
+```
+
+```bash
+codesign --verify --deep --strict --verbose=2 ~/wc-dmg-work/stage/"Wildlife Crossing.app"
+```
+
+That must say `valid on disk` before you go on. Then build, sign (with the
+identity string from A2; `--timestamp` is required or notarization rejects it)
+and notarize, waiting for Apple's verdict:
+
+```bash
+hdiutil create -volname "Wildlife Crossing" -srcfolder ~/wc-dmg-work/stage -format UDZO -ov builds/wildlife-crossing-macos/wildlife-crossing.dmg
+```
+
+```bash
+codesign --sign "Developer ID Application: <your name> (<Team ID>)" --timestamp builds/wildlife-crossing-macos/wildlife-crossing.dmg
+```
+
+```bash
+xcrun notarytool submit builds/wildlife-crossing-macos/wildlife-crossing.dmg --key "$GODOT_MACOS_NOTARIZATION_API_KEY" --key-id "$GODOT_MACOS_NOTARIZATION_API_KEY_ID" --issuer "$GODOT_MACOS_NOTARIZATION_API_UUID" --wait
+```
+
+You want `status: Accepted`. If it says `Invalid`, stop and read the log with
+the A7 `notarytool log` command. Then staple and run the A7 checks on this
+rebuilt image. Finally, mount it and confirm `ls` shows `LICENSE`,
+`THIRD-PARTY-NOTICES.md` and `Wildlife Crossing.app`.
+
+`hdiutil create` makes an APFS image where Godot's is HFS+; the v0.1.0 image
+mounted and verified, and A8 is its first test on another machine.
+
+The Windows and Linux exports are not signed, but they have the same gap:
+locally exported folders do not get the copies that CI adds. Copy `LICENSE` and
+`THIRD-PARTY-NOTICES.md` into each folder, and publish one copy of each (see
+B3).
 
 ## A7. Verify — do not trust the export log
 
