@@ -370,6 +370,9 @@ section { margin-block: 3.5rem; }
   max-width: 22rem;
 }
 
+/* Full GPG fingerprint in the download section; wraps rather than scrolls. */
+.fingerprint code { font-size: var(--size-body); overflow-wrap: anywhere; }
+
 /* --------------------------------------------------------------------------
    7. Cards and grids
    -------------------------------------------------------------------------- */

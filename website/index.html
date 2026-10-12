@@ -51,8 +51,7 @@
           mountain corridor, from Yellowstone to the Yukon.
         </p>
         <div class="actions">
-          <a class="btn btn--primary"
-             href="https://github.com/brenthumphries/wildlife-crossing/releases">
+          <a class="btn btn--primary" href="#download">
             Download for Mac, Windows &amp; Linux
           </a>
           <a class="btn btn--ghost" href="user-guide.html">Read the user guide</a>
@@ -250,6 +249,81 @@
           <p class="card__more">Start playing →</p>
         </a></li>
       </ul>
+    </section>
+
+    <section aria-labelledby="download-heading" id="download">
+      <h2 id="download-heading">Download</h2>
+      <p>
+        Every release is on the
+        <a href="https://github.com/brenthumphries/wildlife-crossing/releases">GitHub Releases page</a>.
+        Pick the file for your computer:
+      </p>
+      <ul class="card-grid">
+        <li>
+          <article class="card">
+            <h3>Mac</h3>
+            <p><code>wildlife-crossing.dmg</code></p>
+            <p>
+              Signed and notarized by Apple. Open the disk image, drag the game
+              into Applications, and launch it. macOS should not show a warning.
+            </p>
+          </article>
+        </li>
+        <li>
+          <article class="card">
+            <h3>Windows</h3>
+            <p><code>wildlife-crossing.exe</code> and <code>wildlife-crossing.pck</code></p>
+            <p>
+              <strong>This build is not signed.</strong> Windows will probably
+              show a blue &ldquo;Windows protected your PC&rdquo; screen with an
+              unknown publisher. Choose <em>More info</em>, then <em>Run
+              anyway</em>. Some antivirus programs also flag unsigned Godot games
+              by mistake. Keep both files in the same folder and run the
+              <code>.exe</code>.
+            </p>
+          </article>
+        </li>
+        <li>
+          <article class="card">
+            <h3>Linux</h3>
+            <p><code>wildlife-crossing.x86_64</code> and <code>wildlife-crossing.pck</code></p>
+            <p>
+              Keep both files in the same folder, mark the binary as executable
+              with <code>chmod +x wildlife-crossing.x86_64</code>, and run it.
+            </p>
+          </article>
+        </li>
+      </ul>
+
+      <h3 id="verify">Check your download</h3>
+      <p>
+        Each release also carries <code>SHA256SUMS.txt</code> and
+        <code>SHA256SUMS.txt.asc</code>. The first lists the SHA-256 checksum of
+        every file; the second is its GPG signature. Together they let you
+        confirm that what you downloaded is what was published. This is
+        separate from the Mac notarization above, and separate from the Windows
+        warning: a GPG signature proves the files are unchanged, and it does not
+        make Windows or macOS stop showing a warning of its own.
+      </p>
+      <p>
+        First get the
+        <a href="https://github.com/brenthumphries/wildlife-crossing/blob/main/wildlife-crossing-signing-key.asc">public signing key</a>
+        and import it with <code>gpg --import wildlife-crossing-signing-key.asc</code>.
+        The key&rsquo;s full fingerprint is:
+      </p>
+      <p class="fingerprint"><code>7F68 A7E0 6349 DA13 6226 F04E 2D5F 1ED6 EFFC 08FD</code></p>
+      <p>
+        Compare it with what <code>gpg --fingerprint</code> prints. If it does
+        not match exactly, do not trust the download. Then, in the folder
+        containing the files you downloaded, run these two commands:
+      </p>
+      <pre><code>gpg --verify SHA256SUMS.txt.asc SHA256SUMS.txt
+shasum -a 256 -c SHA256SUMS.txt</code></pre>
+      <p>
+        The first checks that the checksum list was signed by that key. The
+        second checks that your files match the list. Files you did not download
+        will be reported as missing; that is expected.
+      </p>
     </section>
 
     <section aria-labelledby="respect">
