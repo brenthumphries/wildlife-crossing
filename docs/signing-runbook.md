@@ -416,27 +416,49 @@ Run this after every artifact for the release is built and, for macOS, already
 notarized and stapled — a stapled DMG has different bytes from an unstapled
 one, so checksum last.
 
+Build the manifest in a **flat staging folder** that holds exactly the files you
+will publish, not by sweeping `builds/`. Two reasons, both found cutting
+v0.1.0:
+
+- A sweep from `builds/` records paths like
+  `./wildlife-crossing-macos/wildlife-crossing.dmg`. Users download into one flat
+  folder, so `shasum -c` would report every file missing there. It only passed
+  when run from `builds/`.
+- GitHub Release assets cannot share a name. The Windows and Linux folders each
+  have a `wildlife-crossing.pck`, `LICENSE` and `THIRD-PARTY-NOTICES.md`.
+  Publish one copy of each. Confirm the two packs are byte-identical first; if
+  they are not, they need different names.
+
+The staging folder is outside the repo, so a stale artifact in `builds/` can
+never be swept in.
+
 ```bash
-cd ~/projects/wildlife-crossing/builds
+mkdir ~/wc-release-vX.Y.Z && cd ~/projects/wildlife-crossing
 ```
 
 ```bash
-find . -type f \( -name '*.dmg' -o -name '*.exe' -o -name '*.pck' -o -name 'wildlife-crossing.x86_64' \) -print0 | xargs -0 shasum -a 256 > SHA256SUMS.txt
+cp builds/wildlife-crossing-macos/wildlife-crossing.dmg builds/wildlife-crossing-windows-x86_64/wildlife-crossing.exe builds/wildlife-crossing-windows-x86_64/wildlife-crossing.pck builds/wildlife-crossing-linux-x86_64/wildlife-crossing.x86_64 LICENSE THIRD-PARTY-NOTICES.md ~/wc-release-vX.Y.Z/
 ```
 
 ```bash
-cat SHA256SUMS.txt
+cmp builds/wildlife-crossing-windows-x86_64/wildlife-crossing.pck builds/wildlife-crossing-linux-x86_64/wildlife-crossing.pck && echo identical
 ```
 
-Read it before signing. You are attesting to these exact files; a stale
-artifact from a previous build sitting in `builds/` gets signed just as
-happily as a current one.
+That must say `identical`. Then list the files by name, so the manifest has flat
+names and nothing you did not mean to publish:
+
+```bash
+cd ~/wc-release-vX.Y.Z && shasum -a 256 wildlife-crossing.dmg wildlife-crossing.exe wildlife-crossing.pck wildlife-crossing.x86_64 LICENSE THIRD-PARTY-NOTICES.md > SHA256SUMS.txt && cat SHA256SUMS.txt
+```
+
+Read it before signing. You are attesting to these exact files.
 
 ```bash
 gpg --armor --detach-sign SHA256SUMS.txt
 ```
 
-That writes `SHA256SUMS.txt.asc`. Attach **both** files to the GitHub Release.
+That writes `SHA256SUMS.txt.asc`. Attach everything in the staging folder,
+including **both** `SHA256SUMS` files, to the GitHub Release.
 
 ## B4. Verify, as a user would
 
@@ -448,9 +470,11 @@ gpg --verify SHA256SUMS.txt.asc SHA256SUMS.txt
 shasum -a 256 -c SHA256SUMS.txt
 ```
 
-The first proves the manifest is yours; the second proves the binaries match
-the manifest. Put both commands in the release note — an integrity mechanism
-nobody knows how to use is decoration.
+Run them in the staging folder, and again in a fresh folder holding the files
+downloaded from the published Release, which is the real test of what users
+get. The first proves the manifest is yours; the second proves the binaries
+match the manifest. Put both commands in the release note — an integrity
+mechanism nobody knows how to use is decoration.
 
 ---
 
