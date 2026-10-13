@@ -19,6 +19,7 @@ Notes are named `YYYY-MM-DD-next-build.md`. Newest first.
 
 <!-- Add one line per review, newest at top: -->
 <!-- - [[YYYY-MM-DD-next-build]] — one-line headline (N blockers) -->
+- [[2026-10-12-next-build]] — Next build, measured at `4273b1e`. **1 blocker open** (B7). C5, C6 and B6 closed 2026-10-12: v0.1.0 cut and published as a pre-release. Open: Q1, Q2, V5, V3, V12, D3, D1, D4, Q3.
 - [[2026-09-26-next-build]] — First build, measured at `becf605`. **2 blockers open** (B6, B7). B1b and B4 both closed since 09-14; B4's implementation landed as C1/C2 (PR #37). CI's macOS export broke under C1 and was dropped (PR #42). Open: C5, C6, D1, V3, V5, D3, D4.
 - [[2026-09-14-next-build]] — First build, measured at `fe901a5`. **4 blockers open** (B1b, B4, B6, B7). 14 of 26 items closed 2026-09-23: thirteen merged (#21 to #30, #32, #34, #35) and C4 decided. B4 is decided; its implementation is owed. C1 waits on B1b and C7. Open without Apple: C5, D1, V3, V5, C7.
 
