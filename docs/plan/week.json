@@ -1,12 +1,12 @@
 {
   "schema": 1,
   "week_of": "2026-10-12",
-  "written_at": "2026-10-13T19:50:00+00:00",
-  "written_by": "weekly-plan skill (sonnet), via bops:weekly, mid-week catch-up, 16 days since week_of 2026-09-26",
+  "written_at": "2026-10-16T03:00:00+00:00",
+  "written_by": "weekly-plan skill (sonnet), via bops:weekly, mid-week re-run on Thursday 2026-10-15 to route Phase 3, at Brent's request",
   "measured_against": {
-    "head_sha": "4273b1e3c0ee7dc4064f54fc9debf5f1e140598f",
-    "head_date": "2026-10-12T11:50:01-05:00",
-    "github_state_read_at": "2026-10-13T19:42:29+00:00"
+    "head_sha": "d013c6dcacea68509f65a692034953bbd269eb00",
+    "head_date": "2026-10-15T21:36:19-05:00",
+    "github_state_read_at": "2026-10-16T02:50:10+00:00"
   },
   "build_case": "next",
   "readiness": {
@@ -14,13 +14,13 @@
     "blockers_open": [
       "B7"
     ],
-    "summary": "C5, C6 and B6 closed on 2026-10-12: the QA walk passed, the website download copy merged (PR #45), and v0.1.0 was cut, tagged and published as a pre-release with eight assets and a GPG-signed manifest. Build case moves from first to next. One blocker stands: B7, the clean-Mac acceptance test of the published Release, which has not been run. latest_main_run is success on the measured SHA, zero pull requests are open, and the applied ruleset matches the committed copy."
+    "summary": "v0.1.0 is published (tag at d023ef7, pre-release, eight assets) and CI is green on main at d013c6d. B7 is half done: on 2026-10-15 the DMG opened on a clean Mac with no Gatekeeper warning and the downloaded SHA256SUMS.txt verified against its .asc, but the Windows and Linux launch checks are deferred for want of a machine (Linear ATT-62), so B7 still blocks. Q1 is decided: Phase 3 (economy and information) is the build after v0.1.0, Phase 2 completion follows. This plan adds the Phase 3 items: C12 and C13 can start now; C14, C15 and C17 wait on Q4 and C18 on Q5, two spec gaps found while routing."
   },
-  "note": "obsidian-vault/build-reviews/2026-10-12-next-build.md",
+  "note": "obsidian-vault/build-reviews/2026-10-15-next-build.md",
   "items": [
     {
       "id": "B7",
-      "title": "Walk signing-runbook A8 on a clean Mac",
+      "title": "Walk the Windows and Linux halves of runbook A8 on clean machines",
       "lane": "mac",
       "model": "human",
       "mode": "human",
@@ -30,39 +30,16 @@
       "depends_on": [],
       "files": [],
       "acceptance": [
-        "the DMG downloaded from the Release URL on a machine that has never had the project opens with no Gatekeeper warning of any kind; the Windows and Linux assets extract and launch on a clean machine; recorded in a daily log",
-        "the Windows and Linux binaries from the Release report 0.1.0 (the 2026-10-12 log checked the Mac app only)",
-        "SHA256SUMS.txt downloaded from the Release verifies against SHA256SUMS.txt.asc with the published GPG key, and shasum -a 256 -c is OK on the downloaded files"
+        "the Windows and Linux assets from the Release URL extract and launch on a clean machine of each kind, and the title screen of each shows v0.1.0; recorded in a daily log",
+        "the Windows SmartScreen warning, if any, is noted in the log as expected for an unsigned binary (signing runbook Part C), not as a failure"
       ],
-      "context": "B6 is done: v0.1.0 was cut and published as a pre-release on 2026-10-12 (tag v0.1.0 at d023ef7, eight assets). B7 is the acceptance test the release has not had: the rebuilt .dmg is an APFS image where Godot's was HFS+, and it has only been mounted on the Mac that built it. The two extra criteria are the checks the 2026-10-12 log says were not recorded.",
+      "context": "Half done on 2026-10-15: the DMG from the Release opened on a clean Mac with no Gatekeeper warning, and SHA256SUMS.txt verified against its .asc with shasum -c OK (daily log 2026-10-15). What remains is the Windows and Linux launch checks, deferred by Brent for lack of a machine. The remainder is tracked in Linear as ATT-62 (backlog, unscheduled). B7 stays a blocker until both run.",
       "references": [
+        "obsidian-vault/daily-logs/2026-10-15.md",
         "obsidian-vault/daily-logs/2026-10-12.md (Also this session: B6, Open questions)",
-        "docs/signing-runbook.md A8, A7",
-        "docs/adr/0018-code-signing-and-notarization.md"
+        "docs/signing-runbook.md A8, Part C"
       ],
       "status": "open"
-    },
-    {
-      "blocker": false,
-      "depends_on": [],
-      "files": [],
-      "references": [
-        "docs/roadmap.md Phase 2 Decision logged 2026-08-06 and 2026-09-23",
-        "docs/roadmap.md Phase 3 Exit criteria"
-      ],
-      "status": "open",
-      "id": "Q1",
-      "title": "Decide what the next build contains after v0.1.0",
-      "lane": "decision",
-      "model": "human",
-      "mode": "human",
-      "size": "S",
-      "priority": 2,
-      "acceptance": [
-        "a Decision logged block in docs/roadmap.md or a daily log names the next build's scope: Phase 2 completion (in-map segment renderer and hover highlight, deferred post-v0.1.0 on 2026-08-06) or Phase 3 (economy and information), or something else",
-        "the first work items for that scope are named so the next weekly plan can route them"
-      ],
-      "context": "The build case is now next, and week.json holds no feature work. Roadmap Phase 2 completion lists the segment renderer and hover highlight as deferred post-v0.1.0, and Phase 3 exit criteria name economy_manager_test.gd and information_manager_test.gd, which do not exist. Which one the next build targets is the product owner's call, not the planner's. This item is the planner's inference from the roadmap, not something a log asks for."
     },
     {
       "blocker": false,
@@ -80,53 +57,308 @@
       "model": "human",
       "mode": "human",
       "size": "S",
-      "priority": 3,
+      "priority": 2,
       "acceptance": [
         "D4 is kept as written, rewritten, or dropped, with the reason in a daily log"
       ],
       "context": "PR #47 (2026-10-09) committed game/project.godot in Godot's comment-free form, and docs/project-godot-settings.md now records each setting's rationale and says not to add comments to the file. That addresses the 2026-09-25 incident D4 documents. The 2026-10-12 log leaves the call to Brent."
     },
     {
-      "id": "V5",
-      "title": "Exercise the dco job on a deliberately unsigned commit",
-      "lane": "mac",
+      "id": "Q4",
+      "title": "Settle the fragmentation deficit and the information save shape",
+      "lane": "decision",
       "model": "human",
       "mode": "human",
       "size": "S",
-      "priority": 10,
+      "priority": 3,
       "blocker": false,
       "depends_on": [],
       "files": [],
       "acceptance": [
-        "the dco job observed red on a throwaway pull request with an unsigned commit, green once signed off; the pull request closed without merging; recorded in a daily log"
+        "a Decision logged block in docs/roadmap.md or a daily log names how a crossing's pre-crossing connectivity deficit is measured and how it maps onto the 1.0 to 2.0 fragmentation multiplier",
+        "the same block says whether the new optional crossings[].fragmentation_deficit field bumps save_version, with the reason (data-schemas \u00a714 says a bump is MAJOR; ADR 0014 says absent optional keys take defaults)",
+        "the same block names how a purchased information product is recorded under the information save key, since areas_revealed[] cannot say which of three products an area holds"
       ],
-      "context": "The ruleset has now refused a merge once (Tool tests, PR #12); dco itself has never been red. Fifteen minutes with gh, and it proves the gate that ADR 0019 and 0020 rest on.",
+      "context": "Two spec gaps found while routing Phase 3. The PRD says the multiplier comes 'from the pre-crossing connectivity deficit of the link' and defines no deficit; the code has no such measure. A proposal to accept or change: deficit = 1 minus (the larger pre-crossing network's tile count divided by the combined network's tile count after the link), so a link that joins two equal halves scores 0.5 and one that joins a sliver to a large network scores near 0; multiplier = FRAGMENTATION_MULT_MIN + deficit x (FRAGMENTATION_MULT_MAX - FRAGMENTATION_MULT_MIN). On the save: an optional float with a default of 0.0 loads under save_version 1 by ADR 0014's omit-means-default rule, so no bump. On information: keep areas_revealed[] and add a products map keyed by area id, or encode product and area together. Unblocks C14, C15 and C17. The dispatch cannot see a decision as done, so those items stay blocked until the next weekly plan marks Q4 done.",
       "references": [
-        "obsidian-vault/build-reviews/2026-09-08-next-build.md V5 and amendment 2026-09-09c"
+        "docs/roadmap.md \u00a7Phase 3 Decision logged 2026-10-15",
+        "docs/adr/0014-gamestate-serialization-shape.md",
+        "docs/data-schemas.md \u00a714",
+        "obsidian-vault/prd/game-design-overview.md Economy and budget"
       ],
       "status": "open"
     },
     {
-      "id": "V3",
-      "title": "Make every P0 row in docs/test-plan.md §11 name a test or a deferral",
-      "lane": "docs",
+      "id": "Q5",
+      "title": "Decide where a revealed information layer shows before the in-map renderer",
+      "lane": "decision",
+      "model": "human",
+      "mode": "human",
+      "size": "S",
+      "priority": 4,
+      "blocker": false,
+      "depends_on": [],
+      "files": [],
+      "acceptance": [
+        "a Decision logged block in docs/roadmap.md or a daily log names the surface that shows purchased habitat, population and corridor data in the Phase 3 build, or says the visual reveal moves to Phase 2 completion"
+      ],
+      "context": "The roadmap's open question from 2026-10-15. The confirm panel and segment label are unreachable in v0.1.0 (the world map is look-only), so the only live surfaces are the HUD and the B-key build mode. A proposal: a keyboard-opened survey panel in the style of the F2 and F3 overlays, listing the three products with their costs and showing what each has revealed for Bow Valley. Unblocks C18.",
+      "references": [
+        "docs/roadmap.md \u00a7Phase 3 Decision logged 2026-10-15",
+        "obsidian-vault/prd/game-design-overview.md Information and uncertainty",
+        "docs/roadmap.md \u00a7Phase 2 Decision logged 2026-09-23"
+      ],
+      "status": "open"
+    },
+    {
+      "id": "C12",
+      "title": "Add the economy manager with starting budget, spend and credit",
+      "lane": "code",
       "model": "sonnet",
       "mode": "auto",
-      "size": "S",
-      "priority": 11,
+      "size": "M",
+      "priority": 5,
       "blocker": false,
       "depends_on": [],
       "files": [
-        "docs/test-plan.md"
+        "game/scripts/systems/economy_manager.gd",
+        "game/tests/economy_manager_test.gd",
+        "game/scripts/systems/simulation.gd",
+        "game/scripts/systems/game_state.gd",
+        "game/tests/game_state_test.gd",
+        "game/tests/simulation_test.gd",
+        "docs/testing-setup.md"
       ],
       "acceptance": [
-        "every P0 row in docs/test-plan.md §11 either names a test that exists in game/tests/ (checked against docs/plan/facts.json game.tests) or is marked deferred with a reason",
-        "the note-level figure the reviews quote (named / missing / percent) is recomputed from the edited table and stated in the commit body"
+        "economy_manager.gd exists as class EconomyManager with a one-line docstring and is owned and wired by Simulation like the other systems",
+        "a new game starts at EconomyConstants.STARTING_BUDGET (50,000), including GameState.reset(); economy_manager_test.gd asserts it as test_starting_budget",
+        "spend() returns false and leaves the balance unchanged when the amount exceeds the balance; credit() and spend() each emit budget_changed once through Simulation to EventBus (test_budget_changed_emitted)",
+        "budget and last_donation survive the save round trip: a test saves from GameState.to_dict() after a spend and restores the same values with from_dict()",
+        "the stated suite figure in docs/testing-setup.md is updated with tools/suite_figures.py --print and python3 tools/suite_figures.py --check docs/testing-setup.md passes"
       ],
-      "context": "The 09-01 and 09-08 reviews disagreed about this table's figures. Closing the rows removes the figure from the reviews altogether.",
+      "context": "Phase 3's first system. The constants (economy_constants.gd) and signals (event_bus.gd: budget_changed, donation_received) exist; nothing sets or spends the budget, and game_state.gd defaults budget to 0. Everything else in Phase 3 spends or credits through this.",
       "references": [
-        "obsidian-vault/build-reviews/2026-09-08-next-build.md V3 and amendment 2026-09-09b",
-        "docs/test-plan.md §11"
+        "docs/roadmap.md \u00a7Phase 3 Decision logged 2026-10-15",
+        "docs/test-plan.md \u00a76",
+        "docs/simulation-design.md monthly step",
+        "game/CLAUDE.md Systems"
+      ],
+      "status": "open"
+    },
+    {
+      "id": "C13",
+      "title": "Charge for crossings and make the budget gate functional",
+      "lane": "code",
+      "model": "sonnet",
+      "mode": "auto",
+      "size": "M",
+      "priority": 6,
+      "blocker": false,
+      "depends_on": [
+        "C12"
+      ],
+      "files": [
+        "game/scripts/systems/simulation.gd",
+        "game/scripts/main.gd",
+        "game/scripts/ui/build_mode.gd",
+        "game/tests/simulation_test.gd",
+        "game/tests/build_mode_test.gd",
+        "docs/testing-setup.md"
+      ],
+      "acceptance": [
+        "Simulation.build_crossing deducts cost_per_tile from infrastructure.json times the covered tiles on success: a three-tile overpass takes 50,000 to 35,000 (test_overpass_cost_per_tile)",
+        "build_crossing with a budget below the cost returns false, covers no tile and leaves the budget unchanged",
+        "an invalid span, a cancelled build and a rejected confirm cost nothing",
+        "main.gd passes ConfirmPanel the cost of one tile of the cheapest crossing type with available_in_v1 true, read from the registry rather than 0; the 'display-only' comment is updated",
+        "the build status label shows the remaining budget and the log message on a refused build names the shortfall",
+        "no literal 5000 or 15000 appears in the changed scripts",
+        "the stated suite figure in docs/testing-setup.md is updated with tools/suite_figures.py --print and python3 tools/suite_figures.py --check docs/testing-setup.md passes"
+      ],
+      "context": "Today the budget gate is display-only: main.gd passes a minimum crossing cost of 0 and build_mode.running_cost() is informational. This makes the 2026-09-23 note that the confirm path is 'met in tests' true for cost as well.",
+      "references": [
+        "docs/roadmap.md \u00a7Phase 3 Decision logged 2026-10-15",
+        "docs/test-plan.md \u00a76",
+        "docs/adr/0016-crossing-span-geometry.md"
+      ],
+      "status": "open"
+    },
+    {
+      "id": "C16",
+      "title": "Show the budget and the last donation on the HUD",
+      "lane": "code",
+      "model": "sonnet",
+      "mode": "auto",
+      "size": "S",
+      "priority": 7,
+      "blocker": false,
+      "depends_on": [
+        "C12",
+        "C13"
+      ],
+      "files": [
+        "game/scripts/ui/hud.gd",
+        "game/tests/hud_test.gd",
+        "game/scripts/main.gd",
+        "docs/testing-setup.md"
+      ],
+      "acceptance": [
+        "Hud shows the current budget at all times and updates it on budget_changed",
+        "Hud shows the last donation after donation_received and nothing before one arrives",
+        "the new labels do not overlap the build status label, the message line or the crossing cue, and their position and size are named constants",
+        "hud_test.gd covers both labels",
+        "the stated suite figure in docs/testing-setup.md is updated with tools/suite_figures.py --print and python3 tools/suite_figures.py --check docs/testing-setup.md passes"
+      ],
+      "context": "Phase 3 exit criterion: budget_changed and donation_received drive the HUD. Q3 (text size) is separate; follow the existing label style.",
+      "references": [
+        "docs/roadmap.md \u00a7Phase 3 Decision logged 2026-10-15",
+        "docs/roadmap.md \u00a7Phase 3 Exit criteria"
+      ],
+      "status": "open"
+    },
+    {
+      "id": "C14",
+      "title": "Store the fragmentation deficit on each crossing and in the save",
+      "lane": "code",
+      "model": "sonnet",
+      "mode": "supervised",
+      "size": "M",
+      "priority": 8,
+      "blocker": false,
+      "depends_on": [
+        "C12",
+        "Q4"
+      ],
+      "files": [
+        "game/scripts/systems/infrastructure_manager.gd",
+        "game/scripts/systems/simulation.gd",
+        "game/scripts/systems/connectivity_graph.gd",
+        "game/tests/infrastructure_manager_test.gd",
+        "game/tests/simulation_test.gd",
+        "game/tests/save_manager_test.gd",
+        "docs/data-schemas.md",
+        "docs/testing-setup.md"
+      ],
+      "acceptance": [
+        "a completed crossing records the deficit computed before its safe link is added, by the rule Q4 logged, as an optional field on crossings[]",
+        "the field is written by save_state and read back by restore_state as stored; a restored crossing keeps its saved value rather than recomputing it, because restore replays crossings against a partly built graph",
+        "a save with no such key loads with the Q4 default and does not fail",
+        "docs/data-schemas.md \u00a714 documents the field; if Q4 chose a save_version bump, the migration step and its test are included and the pull request says so in its first line",
+        "the stated suite figure in docs/testing-setup.md is updated with tools/suite_figures.py --print and python3 tools/suite_figures.py --check docs/testing-setup.md passes"
+      ],
+      "context": "Supervised because it changes the save format. The roadmap's 2026-10-15 block decided to store the deficit on the crossing; Q4 supplies the formula and the version answer. Do not start before Q4 is logged.",
+      "references": [
+        "docs/roadmap.md \u00a7Phase 3 Decision logged 2026-10-15",
+        "docs/adr/0014-gamestate-serialization-shape.md",
+        "docs/adr/0005-save-file-format.md"
+      ],
+      "status": "open"
+    },
+    {
+      "id": "C15",
+      "title": "Pay monthly donations and the fundraising trickle",
+      "lane": "code",
+      "model": "sonnet",
+      "mode": "auto",
+      "size": "M",
+      "priority": 9,
+      "blocker": false,
+      "depends_on": [
+        "C12",
+        "C14"
+      ],
+      "files": [
+        "game/scripts/systems/economy_manager.gd",
+        "game/tests/economy_manager_test.gd",
+        "game/scripts/systems/simulation.gd",
+        "game/tests/simulation_test.gd",
+        "docs/testing-setup.md"
+      ],
+      "acceptance": [
+        "at each month boundary Simulation calls the economy's monthly income, which pays BASE_GRANT plus, per crossing, this month's crossings times the mean species status_weight times the stored fragmentation multiplier, plus a milestone term (test_donation_formula)",
+        "the milestone term is a named function that returns 0, with a comment pointing at Phase 6",
+        "endangered crossings pay more than common ones for equal usage (test_status_weight_scaling) and the multiplier stays within FRAGMENTATION_MULT_MIN and MAX (test_fragmentation_multiplier_range)",
+        "when the budget is below the cost of the cheapest action, FUNDRAISING_TRICKLE is added (test_fundraising_trickle_prevents_deadlock)",
+        "donation_received(amount, breakdown) is emitted through EventBus with the base, per-crossing and milestone parts; the per-crossing tally resets each month",
+        "the stated suite figure in docs/testing-setup.md is updated with tools/suite_figures.py --print and python3 tools/suite_figures.py --check docs/testing-setup.md passes"
+      ],
+      "context": "Phase 3 exit criteria: the donation formula matches the spec across status weights and fragmentation multipliers, and the trickle prevents deadlock. Tallies come from animal_crossed; species weights from species_stats.json status_weight.",
+      "references": [
+        "docs/roadmap.md \u00a7Phase 3 Decision logged 2026-10-15",
+        "docs/test-plan.md \u00a76",
+        "docs/simulation-design.md monthly step",
+        "obsidian-vault/prd/game-design-overview.md Economy and budget"
+      ],
+      "status": "open"
+    },
+    {
+      "id": "C17",
+      "title": "Add the information manager for the three area products",
+      "lane": "code",
+      "model": "sonnet",
+      "mode": "auto",
+      "size": "M",
+      "priority": 10,
+      "blocker": false,
+      "depends_on": [
+        "C12",
+        "Q4"
+      ],
+      "files": [
+        "game/scripts/systems/information_manager.gd",
+        "game/tests/information_manager_test.gd",
+        "game/scripts/systems/simulation.gd",
+        "game/scripts/systems/game_state.gd",
+        "game/tests/game_state_test.gd",
+        "docs/testing-setup.md",
+        "docs/data-schemas.md"
+      ],
+      "acceptance": [
+        "habitat assessment, population survey and movement corridor study can each be bought for an area; each spends its EconomyConstants cost (test_costs_match_constants) and emits information_purchased(product, area_id)",
+        "each product exposes exactly its own layer and no other: habitat numerics and patch sizes, species present with counts and trends, attempted routes and mortality hotspots (test_purchase_reveals_layer)",
+        "a purchase is permanent for the session and across save and load, recorded in the shape Q4 chose (test_information_is_permanent)",
+        "buying a product the area already holds, or with too little budget, is refused and charges nothing",
+        "an area that is not the unlocked, loaded one exposes no ecological layer (test_locked_sub_area_no_ecological_data)",
+        "the community liaison briefing is not implemented; INFO_LIAISON_BRIEFING and entities_revealed stay unused",
+        "the stated suite figure in docs/testing-setup.md is updated with tools/suite_figures.py --print and python3 tools/suite_figures.py --check docs/testing-setup.md passes"
+      ],
+      "context": "Data and logic only; C18 shows it. The roadmap's 2026-10-15 block put the liaison briefing in Phase 5 and left three products. Do not start before Q4 names the stored shape.",
+      "references": [
+        "docs/roadmap.md \u00a7Phase 3 Decision logged 2026-10-15",
+        "docs/test-plan.md \u00a77",
+        "obsidian-vault/prd/game-design-overview.md Information and uncertainty"
+      ],
+      "status": "open"
+    },
+    {
+      "id": "C18",
+      "title": "Show purchased information layers in the game",
+      "lane": "code",
+      "model": "sonnet",
+      "mode": "supervised",
+      "size": "M",
+      "priority": 11,
+      "blocker": false,
+      "depends_on": [
+        "C17",
+        "Q5"
+      ],
+      "files": [
+        "game/scripts/main.gd",
+        "game/scripts/ui/hud.gd",
+        "game/tests/hud_test.gd",
+        "docs/testing-setup.md"
+      ],
+      "acceptance": [
+        "the surface Q5 chose lets the player buy each product and shows its revealed data, using the information manager's public API only",
+        "without a purchase the surface shows habitat as the four free bands, population as unknown and no corridor data",
+        "a test covers each layer's before and after state",
+        "Brent walks the build windowed and records it in a daily log before merge (supervised)",
+        "the stated suite figure in docs/testing-setup.md is updated with tools/suite_figures.py --print and python3 tools/suite_figures.py --check docs/testing-setup.md passes"
+      ],
+      "context": "Phase 3 exit criterion: each information product reveals exactly its layer. Supervised because it is a visual change that no headless test can confirm; the walk is the evidence. Do not start before Q5 is logged.",
+      "references": [
+        "docs/roadmap.md \u00a7Phase 3 Decision logged 2026-10-15",
+        "docs/test-plan.md \u00a77"
       ],
       "status": "open"
     },
@@ -184,13 +416,37 @@
       "status": "open"
     },
     {
+      "id": "V3",
+      "title": "Make every P0 row in docs/test-plan.md \u00a711 name a test or a deferral",
+      "lane": "docs",
+      "model": "sonnet",
+      "mode": "auto",
+      "size": "S",
+      "priority": 14,
+      "blocker": false,
+      "depends_on": [],
+      "files": [
+        "docs/test-plan.md"
+      ],
+      "acceptance": [
+        "every P0 row in docs/test-plan.md \u00a711 either names a test that exists in game/tests/ (checked against docs/plan/facts.json game.tests) or is marked deferred with a reason",
+        "the note-level figure the reviews quote (named / missing / percent) is recomputed from the edited table and stated in the commit body"
+      ],
+      "context": "The 09-01 and 09-08 reviews disagreed about this table's figures. Closing the rows removes the figure from the reviews altogether.",
+      "references": [
+        "obsidian-vault/build-reviews/2026-09-08-next-build.md V3 and amendment 2026-09-09b",
+        "docs/test-plan.md \u00a711"
+      ],
+      "status": "open"
+    },
+    {
       "id": "D1",
       "title": "Retire or rewrite docs/pre-build-checklist.md",
       "lane": "docs",
       "model": "sonnet",
       "mode": "auto",
       "size": "S",
-      "priority": 14,
+      "priority": 15,
       "blocker": false,
       "depends_on": [],
       "files": [
@@ -200,9 +456,9 @@
       "acceptance": [
         "docs/pre-build-checklist.md no longer asserts there is no Godot project to build: either its status is archived with a one-paragraph pointer to docs/plan/week.json and the build reviews as the living punch list, or its checklist is rewritten against docs/plan/facts.json",
         "any README or docs link to it still resolves and describes what it now is",
-        "a commit plan on branch docs/d1-… claims every changed path"
+        "a commit plan on branch docs/d1-\u2026 claims every changed path"
       ],
-      "context": "Flagged in eight consecutive reviews and never fixed, because §4 rows had no mechanism to close. The repository is public, so the file is stranger-facing. Judgment about what the document should become, so Cowork.",
+      "context": "Flagged in eight consecutive reviews and never fixed, because \u00a74 rows had no mechanism to close. The repository is public, so the file is stranger-facing. Judgment about what the document should become, so Cowork.",
       "references": [
         "obsidian-vault/build-reviews/2026-09-08-next-build.md amendment 2026-09-09b (structural point)",
         "docs/pre-build-checklist.md"
@@ -216,7 +472,7 @@
       "model": "sonnet",
       "mode": "auto",
       "size": "S",
-      "priority": 15,
+      "priority": 16,
       "blocker": false,
       "depends_on": [
         "Q2"
@@ -231,6 +487,26 @@
       "context": "Caught live 2026-09-25 while landing C1: project.godot lost every comment mid-session, most likely from the editor resaving it, and was reverted before it landed in any commit. No regeneration fix is known; a documented pre-commit check is the cheap mitigation until one is. PR #47 has since committed project.godot comment-free and docs/project-godot-settings.md records why; Q2 decides whether this item is still wanted.",
       "references": [
         "obsidian-vault/daily-logs/2026-09-25.md"
+      ],
+      "status": "open"
+    },
+    {
+      "id": "V5",
+      "title": "Exercise the dco job on a deliberately unsigned commit",
+      "lane": "mac",
+      "model": "human",
+      "mode": "human",
+      "size": "S",
+      "priority": 17,
+      "blocker": false,
+      "depends_on": [],
+      "files": [],
+      "acceptance": [
+        "the dco job observed red on a throwaway pull request with an unsigned commit, green once signed off; the pull request closed without merging; recorded in a daily log"
+      ],
+      "context": "The ruleset has now refused a merge once (Tool tests, PR #12); dco itself has never been red. Fifteen minutes with gh, and it proves the gate that ADR 0019 and 0020 rest on.",
+      "references": [
+        "obsidian-vault/build-reviews/2026-09-08-next-build.md V5 and amendment 2026-09-09c"
       ],
       "status": "open"
     },
@@ -253,6 +529,28 @@
         "either an item is added (font size or larger default window) or the text is declared fine at 1280x720, with the reason in a daily log"
       ],
       "context": "C5 passed on 2026-10-12: HUD message line, HUD lines and credits screen were small but legible at 1280x720 with canvas_items stretch. The log says it is not tracked anywhere yet and Brent decides whether it earns an item."
+    },
+    {
+      "blocker": false,
+      "depends_on": [],
+      "files": [],
+      "references": [
+        "docs/roadmap.md Phase 2 Decision logged 2026-08-06 and 2026-09-23",
+        "docs/roadmap.md Phase 3 Exit criteria"
+      ],
+      "status": "done",
+      "id": "Q1",
+      "title": "Decide what the next build contains after v0.1.0",
+      "lane": "decision",
+      "model": "human",
+      "mode": "human",
+      "size": "S",
+      "priority": 0,
+      "acceptance": [
+        "a Decision logged block in docs/roadmap.md or a daily log names the next build's scope: Phase 2 completion (in-map segment renderer and hover highlight, deferred post-v0.1.0 on 2026-08-06) or Phase 3 (economy and information), or something else",
+        "the first work items for that scope are named so the next weekly plan can route them"
+      ],
+      "context": "The build case is now next, and week.json holds no feature work. Roadmap Phase 2 completion lists the segment renderer and hover highlight as deferred post-v0.1.0, and Phase 3 exit criteria name economy_manager_test.gd and information_manager_test.gd, which do not exist. Which one the next build targets is the product owner's call, not the planner's. This item is the planner's inference from the roadmap, not something a log asks for. Decided 2026-10-15: Phase 3 is the next build, Phase 2 completion follows (docs/roadmap.md \u00a7Phase 3 Decision logged 2026-10-15, PR #55; Linear ATT-63)."
     }
   ]
 }
