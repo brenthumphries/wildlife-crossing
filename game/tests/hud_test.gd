@@ -49,3 +49,34 @@ func test_message_and_cue_fade_independently() -> void:
 	_h._process(Hud.CUE_FLASH_SECONDS)   # cue's shorter window elapses fully
 	assert_eq(_h._cue_icon.modulate.a, 0.0, "cue has fully faded")
 	assert_true(_h._message_label.modulate.a > 0.0, "message's longer window has not")
+
+func test_budget_label_starts_at_the_starting_budget() -> void:
+	assert_eq(_h._budget_label.text, "Budget: $%d" % EconomyConstants.STARTING_BUDGET)
+	assert_true(_h._budget_label.visible)
+
+func test_set_budget_updates_the_label() -> void:
+	_h.set_budget(1234)
+	assert_eq(_h._budget_label.text, "Budget: $1234")
+
+func test_donation_label_hidden_before_any_donation() -> void:
+	assert_false(_h._donation_label.visible)
+
+func test_set_last_donation_shows_the_amount() -> void:
+	_h.set_last_donation(250)
+	assert_true(_h._donation_label.visible)
+	assert_eq(_h._donation_label.text, "Last donation: $250")
+
+func test_zero_donation_keeps_the_label_hidden() -> void:
+	_h.set_last_donation(250)
+	_h.set_last_donation(0)
+	assert_false(_h._donation_label.visible)
+
+func test_ledger_labels_do_not_overlap_other_hud_elements() -> void:
+	var budget := Rect2(Hud.BUDGET_LABEL_POSITION, Hud.BUDGET_LABEL_SIZE)
+	var donation := Rect2(Hud.DONATION_LABEL_POSITION, Hud.DONATION_LABEL_SIZE)
+	var cue := Rect2(_h._cue_icon.position, _h._cue_icon.custom_minimum_size)
+	var message := Rect2(_h._message_label.position, Vector2(0.0, 24.0))
+	assert_false(budget.intersects(donation), "budget vs donation")
+	assert_false(budget.intersects(cue), "budget vs cue icon")
+	assert_false(donation.intersects(cue), "donation vs cue icon")
+	assert_true(budget.position.y >= message.end.y, "budget below message line")
