@@ -366,3 +366,28 @@ func test_the_deficit_survives_a_json_round_trip() -> void:
 	var back: Dictionary = JSON.parse_string(JSON.stringify(_sim.save_state()))
 	assert_almost_eq(_saved_deficit(_restored_copy(back)), _saved_deficit(_sim), 0.0001,
 		"the float survives the disk format")
+
+# --- monthly income (C15) ---------------------------------------------------
+
+func test_the_month_boundary_pays_income_through_the_event_bus() -> void:
+	var bus: Node = get_tree().root.get_node_or_null("EventBus")
+	watch_signals(bus)
+	var before: int = _sim.economy.budget
+	for i in Simulation.TICKS_PER_MONTH - 1:
+		_sim.tick()
+	assert_signal_not_emitted(bus, "donation_received", "nothing is paid before the boundary")
+	_sim.tick()
+	assert_signal_emit_count(bus, "donation_received", 1, "one donation at the month boundary")
+	assert_gte(_sim.economy.budget, before + EconomyConstants.BASE_GRANT, "at least the base grant is credited")
+	assert_eq(_sim.economy.last_donation, _sim.economy.budget - before, "last_donation is what was paid")
+
+func test_a_traversal_is_tallied_for_the_month() -> void:
+	_sim.build_crossing(SEG, "overpass", SPAN)
+	var crossing_id: String = _sim.infrastructure.crossing_id_for(SEG)
+	var species_id: String = _sim.agents[0]["species_id"]
+	_sim.species.report_crossed(crossing_id, species_id)
+	var weight: int = int(_registries()["species"][species_id]["status_weight"])
+	var deficit: float = float(_sim.infrastructure.crossings()[0]["fragmentation_deficit"])
+	var expected_extra: int = roundi(weight * _sim.economy.fragmentation_multiplier(deficit))
+	var paid: int = _sim.economy.run_monthly_income(_sim.infrastructure.crossings())
+	assert_eq(paid, EconomyConstants.BASE_GRANT + expected_extra, "the traversal pays weight x multiplier on top of the grant")

@@ -67,6 +67,7 @@ func load_world(sub_area_id: int, registries: Dictionary, seed_value: int) -> vo
 	species.set_coverage(infrastructure.coverage())
 
 	economy = EconomyManager.new()
+	economy.setup(registries["species"], registries["infrastructure"])
 
 	_wire_signals()
 	_spawn_agents()
@@ -90,6 +91,7 @@ func tick() -> void:
 	if _ticks % TICKS_PER_MONTH == 0:
 		population.monthly_step()
 		resync_agents()
+		economy.run_monthly_income(infrastructure.crossings())
 
 ## Current in-game day, derived from the tick counter (architecture §4).
 func current_day() -> int:
@@ -341,9 +343,11 @@ func _wire_signals() -> void:
 	infrastructure.crossing_completed.connect(_on_crossing_completed)
 	population.population_recovered.connect(_on_population_recovered)
 	economy.budget_changed.connect(_on_budget_changed)
+	economy.donation_received.connect(_on_donation_received)
 
 func _on_animal_crossed(crossing_id: String, species_id: String) -> void:
 	infrastructure.on_animal_crossed(crossing_id)
+	economy.record_crossing(crossing_id, species_id)
 	var bus := _event_bus()
 	if bus:
 		bus.animal_crossed.emit(crossing_id, species_id)
@@ -373,6 +377,11 @@ func _on_budget_changed(new_balance: int) -> void:
 	var bus := _event_bus()
 	if bus:
 		bus.budget_changed.emit(new_balance)
+
+func _on_donation_received(amount: int, breakdown: Dictionary) -> void:
+	var bus := _event_bus()
+	if bus:
+		bus.donation_received.emit(amount, breakdown)
 
 ## The EventBus autoload if present, else null (so unit instantiation needs no tree).
 func _event_bus() -> Node:
