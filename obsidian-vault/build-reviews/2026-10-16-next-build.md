@@ -10,6 +10,15 @@ status: active
 > [`docs/plan/week.json`](../../docs/plan/week.json); `tools/warden.py day`
 > dispatches from it.
 
+> [!success] Amendment 2026-10-16 (later) — **Q5 is decided, and C18 is rewritten around the Info panel.**
+> Brent chose a keyboard-opened Info panel on the `I` key for this build, with
+> arrow keys then Enter to buy and patches labelled by biome and size. Map
+> markers for the corridor hotspots move to Phase 2 completion. The decision is
+> in the third Phase 3 Decision logged block of `docs/roadmap.md`. C18 now
+> creates `information_panel.gd` and its test, adds a free-band accessor to
+> `InformationManager` (the manager returned a band only after a purchase), and
+> no longer touches `hud.gd`. This is the fourth edit of `week.json` this week.
+
 > [!info] Snapshot
 > Measured against **`3f3d227`** (*Merge pull request #62 from
 > brenthumphries/docs/log-2026-10-15-evening*, 2026-10-16T09:59:41-05:00) on

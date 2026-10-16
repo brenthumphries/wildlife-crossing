@@ -402,6 +402,42 @@ systems).
 > `data-schemas.md` §14. The next weekly plan marks Q4 done, which unblocks C14,
 > C15 and C17.
 
+> **Decision logged (2026-10-16): purchased information is shown in a
+> keyboard-opened Info panel in this build; map markers come with Phase 2
+> completion.** Resolves Q5 from the 2026-10-15 plan. Brent's call, accepted as
+> the plan proposed it. C18 builds it.
+>
+> **The surface.** Pressing `I` opens a modal overlay, in the style of the F1
+> credits and the F2 and F3 minigames, listing the three products for the loaded
+> sub-area (Bow Valley) with price and bought state. The arrow keys move the
+> selection and Enter buys the selected product; an unaffordable or already held
+> product is disabled and charges nothing. Before any purchase it lists each
+> patch with its free habitat band, population as "unknown" and no corridor data.
+> Each purchase reveals only its own layer: exact quality and tile counts,
+> species with counts and trends, or the hotspot list. Rejected: deferring the
+> visuals to Phase 2 completion, which would leave the "spend now to decide
+> better" loop unplayable; and a single-key purchase, because a mis-press costs
+> 1,000 to 3,000. `F4` was rejected as the key because a Mac laptop needs `fn`
+> for it, as F2 and F3 already do.
+>
+> **Patch labels.** Patches read "forest patch, 42 tiles", numbered by size,
+> largest first, with ties broken by patch key. The raw patch ids stay out of the
+> panel.
+>
+> **The free band needs an accessor.** `InformationManager` returns a patch's band
+> only once the habitat assessment is held. C18 adds a free view that returns the
+> label, the tile count and the band, never the numeric quality, so the panel does
+> not read `HabitatManager` directly.
+>
+> **Corridor data is per session.** The tallies are not saved, so after a load the
+> corridor section starts empty. The panel says "since this session started or
+> loaded".
+>
+> **Phase 2 completion gains one item.** Hotspot markers on the map while placing
+> a span, shown when a corridor study is held, because that is where the data
+> changes what the player builds. It needs the in-map renderer, so it follows the
+> segment renderer (C1) and hover highlight (C2) from the 2026-09-23 block.
+
 ---
 
 ## Phase 4 — Seasons

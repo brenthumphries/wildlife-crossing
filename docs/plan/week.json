@@ -2,7 +2,7 @@
   "schema": 1,
   "week_of": "2026-10-12",
   "written_at": "2026-10-16T15:20:00+00:00",
-  "written_by": "weekly-plan skill (sonnet), via bops:weekly, mid-week re-run on Friday 2026-10-16 to mark Q4 done, at Brent's request",
+  "written_by": "weekly-plan skill (sonnet), via bops:weekly, mid-week re-run on Friday 2026-10-16 to mark Q4 done, at Brent's request; Q5 and C18 amended 2026-10-16 after Brent's call",
   "measured_against": {
     "head_sha": "3f3d227d98da3f2910ea59a9d60c95a1a71b17ea",
     "head_date": "2026-10-16T09:59:41-05:00",
@@ -102,13 +102,13 @@
       "acceptance": [
         "a Decision logged block in docs/roadmap.md or a daily log names the surface that shows purchased habitat, population and corridor data in the Phase 3 build, or says the visual reveal moves to Phase 2 completion"
       ],
-      "context": "The roadmap's open question from 2026-10-15. The confirm panel and segment label are unreachable in v0.1.0 (the world map is look-only), so the only live surfaces are the HUD and the B-key build mode. A proposal: a keyboard-opened survey panel in the style of the F2 and F3 overlays, listing the three products with their costs and showing what each has revealed for Bow Valley. Unblocks C18.",
+      "context": "The roadmap's open question from 2026-10-15. The confirm panel and segment label are unreachable in v0.1.0 (the world map is look-only), so the only live surfaces are the HUD and the B-key build mode. A proposal: a keyboard-opened survey panel in the style of the F2 and F3 overlays, listing the three products with their costs and showing what each has revealed for Bow Valley. Unblocks C18. Decided 2026-10-16 (Brent): the Info panel on the I key; recorded in docs/roadmap.md Phase 3, Decision logged 2026-10-16.",
       "references": [
         "docs/roadmap.md \u00a7Phase 3 Decision logged 2026-10-15",
         "obsidian-vault/prd/game-design-overview.md Information and uncertainty",
         "docs/roadmap.md \u00a7Phase 2 Decision logged 2026-09-23"
       ],
-      "status": "open"
+      "status": "done"
     },
     {
       "id": "C12",
@@ -334,7 +334,7 @@
     },
     {
       "id": "C18",
-      "title": "Show purchased information layers in the game",
+      "title": "Add the Info panel that buys and shows information layers",
       "lane": "code",
       "model": "sonnet",
       "mode": "supervised",
@@ -346,22 +346,28 @@
         "Q5"
       ],
       "files": [
+        "game/scripts/ui/information_panel.gd",
+        "game/tests/information_panel_test.gd",
+        "game/scripts/systems/information_manager.gd",
+        "game/tests/information_manager_test.gd",
         "game/scripts/main.gd",
-        "game/scripts/ui/hud.gd",
-        "game/tests/hud_test.gd",
         "docs/testing-setup.md"
       ],
       "acceptance": [
-        "the surface Q5 chose lets the player buy each product and shows its revealed data, using the information manager's public API only",
-        "without a purchase the surface shows habitat as the four free bands, population as unknown and no corridor data",
-        "a test covers each layer's before and after state",
-        "Brent walks the build windowed and records it in a daily log before merge (supervised)",
+        "pressing I opens InformationPanel (a BaseScreen in game/scripts/ui/information_panel.gd, on its own CanvasLayer above the HUD) and I or Escape closes it; it is modal like the credits and minigame overlays, so build mode and map clicks do not act behind it; main.gd wires it the way it wires the F1, F2 and F3 overlays",
+        "the panel lists the three products for the loaded sub-area with price (InformationManager.cost_of), bought state and the current budget; the arrow keys move the selection and Enter buys the selected one through InformationManager.purchase; an unaffordable or already held product is shown disabled and Enter on it charges nothing",
+        "before any purchase the panel lists each patch as '<biome> patch, <n> tiles', numbered by size largest first with ties broken by patch key, with its free habitat band, population shown as unknown and no corridor data; the numbering is identical across the three layers",
+        "after a purchase only that product's layer appears: exact quality and tile counts, species with counts and trends, or the hotspot list deadliest first; the corridor section says it covers the time since the session started or loaded",
+        "the free band, label and tile count come from a new InformationManager accessor that never returns the numeric quality; the panel does not read HabitatManager directly; a test asserts the numeric quality is absent before the habitat assessment is bought",
+        "information_panel_test.gd covers each layer's before and after text, selection and Enter, and the disabled cases, building the panel without a scene tree where it can",
+        "Brent walks the build windowed (I to open, buy each product, F5 then F9, I again) and records it in a daily log before merge",
         "the stated suite figure in docs/testing-setup.md is updated with tools/suite_figures.py --print and python3 tools/suite_figures.py --check docs/testing-setup.md passes"
       ],
-      "context": "Phase 3 exit criterion: each information product reveals exactly its layer. Supervised because it is a visual change that no headless test can confirm; the walk is the evidence. Do not start before Q5 is logged.",
+      "context": "Phase 3 exit criterion: each information product reveals exactly its layer. Q5 is decided: the Info panel on the I key, arrow keys then Enter to buy, patches labelled and numbered by size (docs/roadmap.md Phase 3, Decision logged 2026-10-16). Supervised because it is a visual change that no headless test can confirm; the walk is the evidence. Hotspot markers on the map are not in this item; they join Phase 2 completion.",
       "references": [
-        "docs/roadmap.md \u00a7Phase 3 Decision logged 2026-10-15",
-        "docs/test-plan.md \u00a77"
+        "docs/roadmap.md \u00a7Phase 3 Decision logged 2026-10-16",
+        "docs/test-plan.md \u00a77",
+        "obsidian-vault/design/ui-ux-spec.md \u00a78 and \u00a710"
       ],
       "status": "open"
     },
