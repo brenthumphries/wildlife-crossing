@@ -19,6 +19,16 @@ status: active
 > `InformationManager` (the manager returned a band only after a purchase), and
 > no longer touches `hud.gd`. This is the fourth edit of `week.json` this week.
 
+> [!success] Amendment 2026-10-16 (evening) — **C14, C15, C17 and C18 are closed, and Phase 3's code is complete.**
+> Merged pull requests: C14 in #64, C15 in #65, C17 in #66 and C18 in #68. Brent
+> walked the Info panel windowed and every keyed step worked; the one finding was
+> that the text is very small, which also hid whether B is ignored behind the
+> panel, and which settled Q3 (text size earns work) and, in part, a new
+> decision, Q6 (a larger default for all text, adjustable from a title screen
+> option and with Ctrl+= and Ctrl+-). The steps and where the setting persists are still
+> open. The dispatch shows the Phase 3 items as done. The suite is now 31
+> scripts / 379 tests / 6,629 asserts. See [[../daily-logs/2026-10-16]].
+
 > [!info] Snapshot
 > Measured against **`3f3d227`** (*Merge pull request #62 from
 > brenthumphries/docs/log-2026-10-15-evening*, 2026-10-16T09:59:41-05:00) on
