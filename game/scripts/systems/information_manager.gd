@@ -85,6 +85,26 @@ func layer(product: String, area_id: int) -> Dictionary:
 			return _corridor_layer()
 	return {}
 
+## What every patch shows for free, largest first (ties by patch key): `number` (1-based
+## in that order), `patch_id`, `biome`, `tile_count` and the habitat `band` label. It never
+## carries the numeric quality, which only the habitat assessment layer holds. Empty for an
+## area that is not the loaded unlocked one.
+func patch_overview(area_id: int) -> Array:
+	if not is_readable(area_id):
+		return []
+	var out: Array = []
+	for idx in _graph.patches.size():
+		out.append({
+			"patch_id": _graph.patch_key(idx),
+			"biome": _habitat.patch_biome(idx),
+			"tile_count": _graph.patch_tile_count(idx),
+			"band": _habitat.band(_habitat.quality(idx)),
+		})
+	out.sort_custom(_by_size_then_key)
+	for i in out.size():
+		out[i]["number"] = i + 1
+	return out
+
 ## Every layer held for `area_id`, keyed by product id; empty when none is.
 func revealed_layers(area_id: int) -> Dictionary:
 	var out: Dictionary = {}
@@ -181,3 +201,8 @@ func _by_deaths(a: Dictionary, b: Dictionary) -> bool:
 	if int(a["deaths"]) != int(b["deaths"]):
 		return int(a["deaths"]) > int(b["deaths"])
 	return _by_tile(a, b)
+
+func _by_size_then_key(a: Dictionary, b: Dictionary) -> bool:
+	if int(a["tile_count"]) != int(b["tile_count"]):
+		return int(a["tile_count"]) > int(b["tile_count"])
+	return String(a["patch_id"]) < String(b["patch_id"])
