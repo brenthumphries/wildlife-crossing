@@ -157,6 +157,33 @@ func network_of(patch_index: int) -> Array:
 				stack.append(q)
 	return seen.keys()
 
+## Fragmentation deficit of joining the networks that `patch_indices` belong to
+## (roadmap Phase 3, Decision logged 2026-10-15): with `combined` the total tile
+## count of the distinct networks and `largest` the biggest of them,
+## `min(1, (combined - largest) / largest)`. Two equal halves score 1.0, a 10%
+## sliver joined to a large network 0.1, and patches already in one network 0.
+## Measure it before the joining safe links are added.
+func fragmentation_deficit(patch_indices: Array) -> float:
+	var seen: Dictionary = {}       # network anchor (smallest patch index) -> true
+	var combined: int = 0
+	var largest: int = 0
+	for idx: int in patch_indices:
+		var network: Array = network_of(idx)
+		if network.is_empty():
+			continue
+		var anchor: int = network.min()
+		if seen.has(anchor):
+			continue
+		seen[anchor] = true
+		var tiles: int = 0
+		for p: int in network:
+			tiles += patch_tile_count(p)
+		combined += tiles
+		largest = maxi(largest, tiles)
+	if largest == 0:
+		return 0.0
+	return minf(1.0, float(combined - largest) / float(largest))
+
 func same_network(a: Vector2i, b: Vector2i) -> bool:
 	var pa: int = patch_at(a)
 	var pb: int = patch_at(b)

@@ -287,6 +287,7 @@ func _crossings_state() -> Array:
 			"crossing_type": String(c["crossing_type"]),
 			"covered_tiles": tiles,
 			"built_on_day": int(c.get("built_on_day", 0)),
+			"fragmentation_deficit": float(c.get("fragmentation_deficit", 0.0)),
 		})
 	return out
 
@@ -301,6 +302,11 @@ func _restore_crossings(saved: Array) -> void:
 		infrastructure.current_day = int(c.get("built_on_day", 0))
 		if not infrastructure.build_span(String(c["segment_id"]), String(c["crossing_type"]), tiles):
 			push_warning("Saved crossing %s no longer forms a valid span — skipped" % String(c.get("crossing_id", "?")))
+			continue
+		# Keep the saved deficit as stored: the replay's own measurement ran against a
+		# partly built graph. A save with no key reads as 0.0 (a 1.0x multiplier).
+		infrastructure.restore_fragmentation_deficit(infrastructure.crossing_id_for(String(c["segment_id"])),
+			float(c.get("fragmentation_deficit", 0.0)))
 	infrastructure.current_day = 0
 	species.set_coverage(infrastructure.coverage())
 

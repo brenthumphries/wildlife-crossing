@@ -107,6 +107,18 @@ func test_a_current_version_payload_passes_through_untouched() -> void:
 	assert_eq(int(out["save_version"]), SaveManager.READABLE_VERSION, "the version is unchanged")
 	assert_eq(int((out["economy"] as Dictionary)["budget"]), 45000, "the payload is unchanged")
 
+func test_a_save_with_a_crossing_lacking_the_deficit_key_still_loads() -> void:
+	# Written before C14: crossings[] without fragmentation_deficit. The field is
+	# additive and optional (ADR 0014), so save_version stays 1 and nothing refuses.
+	var payload: Dictionary = _payload()
+	payload["crossings"] = [{ "crossing_id": "x_s7_trans_canada_bow_a", "segment_id": "s7_trans_canada_bow_a",
+		"sub_area_id": 7, "crossing_type": "overpass", "covered_tiles": [[12, 5], [13, 5]], "built_on_day": 3 }]
+	assert_eq(SaveManager.save(payload, _path), "", "the old-shape save writes")
+	var loaded: Dictionary = SaveManager.load_save(_path)
+	assert_eq((loaded["crossings"] as Array).size(), 1, "the old-shape save loads")
+	assert_false(((loaded["crossings"] as Array)[0] as Dictionary).has("fragmentation_deficit"),
+		"the loader does not invent the key; the simulation defaults it to 0.0")
+
 func test_an_older_version_with_no_step_is_refused() -> void:
 	# The chain is empty by design (save_version has never been bumped). This
 	# guards the contract: a version below READABLE_VERSION with no step must

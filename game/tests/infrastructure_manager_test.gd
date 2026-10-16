@@ -160,3 +160,22 @@ func test_completed_minimal_span_route_is_zero_mortality() -> void:
 	assert_gt(path.size(), 0, "a route exists across the minimal span")
 	assert_false(Pathfinding.path_crosses_hazard(_world, path, { "covered": _infra.coverage() }),
 		"the route through the minimal 2-tile span is zero-mortality")
+
+# --- fragmentation deficit stored on the crossing (C14) ---------------------
+
+func test_completed_crossing_records_the_deficit_measured_before_its_links() -> void:
+	var west: int = _graph.patch_at(Vector2i(6, 5))
+	var east: int = _graph.patch_at(Vector2i(20, 5))
+	var expected: float = _graph.fragmentation_deficit([west, east])
+	assert_gt(expected, 0.0, "the highway really splits the map before the crossing")
+	_infra.build_span(SEG, "overpass", BOW_VALLEY_SPAN)
+	var stored: float = float((_infra.crossings()[0] as Dictionary)["fragmentation_deficit"])
+	assert_almost_eq(stored, expected, 0.0001, "the crossing stores the deficit of the split it joins")
+	assert_eq(_graph.fragmentation_deficit([west, east]), 0.0,
+		"measured after the links the networks are one, so measuring late would store 0")
+
+func test_restore_fragmentation_deficit_overwrites_the_stored_value() -> void:
+	_infra.build_span(SEG, "overpass", BOW_VALLEY_SPAN)
+	_infra.restore_fragmentation_deficit(_infra.crossing_id_for(SEG), 0.42)
+	assert_almost_eq(float((_infra.crossings()[0] as Dictionary)["fragmentation_deficit"]), 0.42, 0.0001,
+		"a restored crossing keeps its saved value")

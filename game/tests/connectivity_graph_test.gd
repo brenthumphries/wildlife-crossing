@@ -68,3 +68,64 @@ func test_alias_resolution_for_habitat_biomes() -> void:
 	var biomes := cg.resolve_habitat_biomes(GRIZZLY)
 	assert_true(biomes.has("forest"), "forest resolves directly")
 	assert_true(biomes.has("alpine"), "alpine_meadow resolves to alpine via alias")
+
+# --- fragmentation deficit (roadmap Phase 3, Decision logged 2026-10-15) ----
+
+## A graph over forest columns separated by one-tile-wide road columns, so each
+## forest block is its own patch. `widths` gives each block's width in columns;
+## every block is `height` rows tall.
+func _strips(widths: Array, height: int) -> ConnectivityGraph:
+	var regions: Array = []
+	var q: int = 0
+	for i in widths.size():
+		regions.append({ "rect": [q, 0, q + int(widths[i]) - 1, height - 1], "tile": "forest" })
+		q += int(widths[i])
+		if i < widths.size() - 1:
+			regions.append({ "rect": [q, 0, q, height - 1], "tile": "road" })
+			q += 1
+	var wd := WorldData.new()
+	wd.load_from_dict({ "sub_area_id": 99, "origin": [0, 0], "regions": regions }, TILES)
+	var cg := ConnectivityGraph.new()
+	cg.build(wd, BIOME_GROUPS)
+	return cg
+
+func _patches_at_strip_starts(cg: ConnectivityGraph, widths: Array) -> Array:
+	var out: Array = []
+	var q: int = 0
+	for w in widths:
+		out.append(cg.patch_at(Vector2i(q, 0)))
+		q += int(w) + 1
+	return out
+
+func test_deficit_of_two_equal_halves_is_one() -> void:
+	var cg := _strips([2, 2], 4)
+	assert_eq(cg.patches.size(), 2, "the road column splits two equal patches")
+	assert_almost_eq(cg.fragmentation_deficit(_patches_at_strip_starts(cg, [2, 2])), 1.0, 0.0001,
+		"two equal halves score 1.0 (a 2.0x multiplier)")
+
+func test_deficit_of_a_ten_percent_sliver_is_a_tenth() -> void:
+	var cg := _strips([10, 1], 10)     # 100 tiles and 10 tiles
+	assert_almost_eq(cg.fragmentation_deficit(_patches_at_strip_starts(cg, [10, 1])), 0.1, 0.0001,
+		"a 10% sliver joined to a large network scores 0.1 (a 1.1x multiplier)")
+
+func test_deficit_of_patches_already_in_one_network_is_zero() -> void:
+	var cg := _bow_valley()
+	var west := cg.patch_at(Vector2i(0, 0))
+	var alpine := cg.patch_at(Vector2i(0, 10))
+	assert_true(cg.network_of(west).has(alpine), "the fixture patches share a network")
+	assert_eq(cg.fragmentation_deficit([west, alpine]), 0.0,
+		"patches already in one network cost nothing to join")
+
+func test_deficit_counts_each_network_once() -> void:
+	var cg := _strips([2, 2], 4)
+	var ids: Array = _patches_at_strip_starts(cg, [2, 2])
+	assert_almost_eq(cg.fragmentation_deficit([ids[0], ids[0], ids[1], ids[1]]), 1.0, 0.0001,
+		"repeating a patch does not double its network")
+
+func test_deficit_is_capped_at_one() -> void:
+	var cg := _strips([2, 2, 2], 4)
+	assert_almost_eq(cg.fragmentation_deficit(_patches_at_strip_starts(cg, [2, 2, 2])), 1.0, 0.0001,
+		"three equal networks would score 2.0 uncapped; min(1, ...) holds it at 1.0")
+
+func test_deficit_of_nothing_is_zero() -> void:
+	assert_eq(_strips([2, 2], 4).fragmentation_deficit([]), 0.0, "no bordering patches, no deficit")
