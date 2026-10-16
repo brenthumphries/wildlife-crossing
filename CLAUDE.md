@@ -215,15 +215,15 @@ Always load the relevant scoped file before working in that area.
 
 ---
 
-## brent-ops
+## bops
 
-Process conventions read by the brent-ops plugin (`/next`, `/route`, `/daily`,
+Process conventions read by the bops plugin (`/next`, `/route`, `/daily`,
 `/log`, `/verify`, `/weekly`). The skills read this block and the files it
 names, nothing else, for where logs, reviews, plans and commit plans live.
 Change the process here, not in the skills.
 
 ```yaml
-brent-ops:
+bops:
   project: wildlife-crossing
   logs:
     dir: obsidian-vault/daily-logs
@@ -258,4 +258,30 @@ brent-ops:
     skill: .claude/skills/weekly-plan/SKILL.md
   verify:
     tests: "python3 -m unittest discover -s tools/tests -b for tools/; GUT runs in CI for game/"
+```
+
+---
+
+## youtube
+
+Process conventions read by the brent-ops YouTube pipeline (`/topics`, `/package`).
+The skills read this block and the files it names, nothing else, for where the
+inbox, packages, sources, and thumbnail template live. Change the process here,
+not in the skills.
+
+```yaml
+youtube:
+  inbox: obsidian-vault/youtube/inbox.md        # the approval surface; one file
+  packages: obsidian-vault/youtube/packages/    # one folder per approved topic
+  sources:                                      # what /topics reads for material
+    - docs/                                     # design docs, ADRs, runbooks
+    - obsidian-vault/daily-logs/                # last 14 days
+    - obsidian-vault/build-reviews/             # if reviews are on
+  audience: professionals new to AI, plain language, no jargon without a one-line gloss
+  formats: [talking-head, screen-share]
+  thumbnail:
+    template: obsidian-vault/youtube/thumbnail-template.html
+  descript:
+    folder: YouTube/Wildlife Crossing            # Descript folder for stub projects
+    stub: ask                                    # ask | always | never
 ```

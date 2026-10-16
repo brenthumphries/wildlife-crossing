@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<!--
+  Thumbnail template. 1280x720. Fill CONFIG, open in Chrome, render.
+
+  Render on the Mac (pick one):
+    0. One line, no install beyond npm:
+       npx --yes playwright screenshot --viewport-size=1280,720 thumbnail.html thumbnail.png
+    1. Chrome: open the file, DevTools > Cmd+Shift+P > "Capture node screenshot"
+       with #stage selected. Or resize the window to 1280x720 and Cmd+Shift+4.
+    2. Headless:
+       "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" \
+         --headless --screenshot=thumbnail.png --window-size=1280,720 \
+         --hide-scrollbars "file://$PWD/thumbnail.html"
+
+  Layouts:
+    split  text on the left two thirds, face cutout on the right. Needs CONFIG.face.
+    full   text over a darkened screenshot. Needs CONFIG.image.
+
+  Rules the layout enforces so the text stays readable at 168px wide:
+    headline is three to five words; the font scales down past 22 characters
+    but the spec should not rely on that. No third line. Kicker is optional.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>thumbnail</title>
+<script>
+const CONFIG = {
+  layout:   "split",                       // "split" | "full"
+  headline: "One number broke it",         // 3 to 5 words; the promise
+  kicker:   "Wildlife sim, month 4",       // short, optional; "" to hide
+  accent:   "amber",                       // amber | red | teal | violet
+  face:     "assets/face-cutout.png",      // split layout; transparent PNG
+  image:    "",                            // full layout; screenshot path
+  badge:    "",                            // optional corner tag, e.g. "Ep 3" or "BUG"
+  emphasis: "broke"                        // one word from the headline to color; "" for none
+};
+</script>
+<style>
+  :root {
+    --amber: #f5b301; --red: #ff4d3d; --teal: #22d3c5; --violet: #a78bfa;
+    --bg: #0e1116; --bg2: #1a1f28; --ink: #ffffff; --ink2: #c9d1dc;
+  }
+  html, body { margin: 0; background: #000; }
+  #stage {
+    position: relative; width: 1280px; height: 720px; overflow: hidden;
+    background: radial-gradient(120% 100% at 15% 20%, var(--bg2) 0%, var(--bg) 60%, #05070a 100%);
+    font-family: "Helvetica Neue", "SF Pro Display", Inter, Arial, sans-serif;
+    color: var(--ink);
+  }
+  /* pixel-grid texture, a nod to the game's aesthetic, kept faint */
+  #stage::before {
+    content: ""; position: absolute; inset: 0; pointer-events: none;
+    background-image:
+      linear-gradient(rgba(255,255,255,.035) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,.035) 1px, transparent 1px);
+    background-size: 32px 32px;
+  }
+  #accentbar { position: absolute; left: 0; top: 0; bottom: 0; width: 22px; background: var(--accent); }
+  #img {
+    position: absolute; inset: 0; background-size: cover; background-position: center;
+    display: none;
+  }
+  #img::after {
+    content: ""; position: absolute; inset: 0;
+    background: linear-gradient(90deg, rgba(5,7,10,.94) 0%, rgba(5,7,10,.78) 55%, rgba(5,7,10,.35) 100%);
+  }
+  #face {
+    position: absolute; right: -20px; bottom: 0; height: 700px; width: 520px;
+    background-size: contain; background-position: bottom right; background-repeat: no-repeat;
+    display: none;
+    filter: drop-shadow(-18px 0 40px rgba(0,0,0,.6));
+  }
+  #text {
+    position: absolute; left: 74px; top: 0; bottom: 0; display: flex;
+    flex-direction: column; justify-content: center; gap: 22px; width: 760px;
+  }
+  .full #text { width: 900px; }
+  #kicker {
+    font-size: 40px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase;
+    color: var(--accent);
+  }
+  #headline {
+    font-size: 132px; line-height: .96; font-weight: 900; letter-spacing: -.035em;
+    text-shadow: 0 6px 0 rgba(0,0,0,.45), 0 0 60px rgba(0,0,0,.6);
+    max-height: 2.05em; overflow: hidden;
+  }
+  #headline em { font-style: normal; color: var(--accent); }
+  #badge {
+    position: absolute; top: 36px; right: 36px; padding: 10px 22px;
+    font-size: 34px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase;
+    background: var(--accent); color: #0b0d12; border-radius: 6px;
+    transform: rotate(3deg); display: none;
+  }
+  .split #face { display: block; }
+  .full #img { display: block; }
+  .full #face { display: none; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="img"></div>
+  <div id="accentbar"></div>
+  <div id="face"></div>
+  <div id="text">
+    <div id="kicker"></div>
+    <div id="headline"></div>
+  </div>
+  <div id="badge"></div>
+</div>
+<script>
+(function () {
+  const s = document.getElementById('stage');
+  s.classList.add(CONFIG.layout === 'full' ? 'full' : 'split');
+  s.style.setProperty('--accent', `var(--${CONFIG.accent || 'amber'})`);
+
+  const esc = t => t.replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+  let h = esc(CONFIG.headline || '');
+  if (CONFIG.emphasis) {
+    const re = new RegExp(`(^|\\s)(${esc(CONFIG.emphasis).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})(?=\\s|$|[.,!?])`);
+    h = h.replace(re, '$1<em>$2</em>');
+  }
+  const hl = document.getElementById('headline');
+  hl.innerHTML = h;
+  const len = (CONFIG.headline || '').length;
+  if (len > 30) hl.style.fontSize = '96px';
+  else if (len > 22) hl.style.fontSize = '112px';
+
+  const k = document.getElementById('kicker');
+  if (CONFIG.kicker) k.textContent = CONFIG.kicker; else k.remove();
+
+  if (CONFIG.face) document.getElementById('face').style.backgroundImage = `url("${CONFIG.face}")`;
+  if (CONFIG.image) document.getElementById('img').style.backgroundImage = `url("${CONFIG.image}")`;
+
+  const b = document.getElementById('badge');
+  if (CONFIG.badge) { b.textContent = CONFIG.badge; b.style.display = 'block'; }
+})();
+</script>
+</body>
+</html>
