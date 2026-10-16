@@ -545,10 +545,12 @@ Superseding ADR 0018 with a new ADR is the mechanism; don't just start signing.
    and the GPG private key — stay on the Mac. This is now true by construction,
    with the Windows route gone: there is nothing left that a CI job would need
    credentials for. Keep it that way.
-3. **Gate the other two platforms' packs.** Build-review V2 is still open: the
-   pck gate and smoke boot run on the Linux binary only. Publishing a checksum
-   for a Windows `.exe` that no gate has ever checked attests to the integrity
-   of contents nobody verified.
+3. **Gate the other two platforms' packs.** `ci.yml`'s "Verify every exported
+   pack's contents" loop runs the pck gate on the Linux and Windows packs (V2,
+   closed 2026-08-10). macOS left that loop on 2026-09-26, when CI stopped
+   exporting it, so the release `.dmg` is checked by hand in A6–A7 instead.
+   Publishing a checksum for a binary nobody has inspected attests to contents
+   nobody verified; do not skip that check in the signing session.
 4. **Checksum last, after stapling.** See B3.
 5. **State the signing status in the release note.** Which artifacts are
    signed, which are not, and how to verify. `docs/release-notes/v0.1.0.md`
