@@ -280,6 +280,81 @@ systems).
   save/load.
 - `economy_manager_test.gd`, `information_manager_test.gd` green.
 
+> **Decision logged (2026-10-15): the build after v0.1.0 is Phase 3. Phase 2
+> completion is the build after that.** Brent's call. Resolves Q1 from the
+> 2026-10-12 plan. Phase 3 is mostly logic and tests, so most of it can run
+> unattended. Phase 2 completion is mostly rendering and needs a person watching
+> the screen. Rejected: Phase 2 completion first, which would remove the "met in
+> tests, not reachable" caveat on the 2026-09-23 block sooner but gives the
+> player nothing new to feel; and both phases as one build, which is too large
+> to route as S and M items.
+>
+> **State of the code when this was decided.** `economy_constants.gd` holds the
+> constants and `event_bus.gd` declares `budget_changed`, `donation_received` and
+> `information_purchased`. `game_state.gd` stores `budget` and `last_donation`,
+> both defaulting to 0, and nothing sets `STARTING_BUDGET`. The save schema
+> already has the `economy` and `information` keys. The simulation has a
+> 30-day month (`TICKS_PER_MONTH`). `main.gd` passes a minimum crossing cost of
+> 0 to the confirm panel, so the budget gate is display-only. Neither test file
+> exists.
+>
+> **In scope:**
+>
+> - Starting budget set on a new game; spends and credits move the budget and
+>   emit `budget_changed`.
+> - Crossings cost `OVERPASS_COST_PER_TILE` per covered tile, and the budget gate
+>   blocks what the player cannot afford.
+> - Monthly income: `BASE_GRANT` plus, per crossing, crossings that month times
+>   mean status weight times fragmentation multiplier, with the
+>   `FUNDRAISING_TRICKLE` when the budget is below the cheapest action. Emits
+>   `donation_received`. The HUD shows the budget and the last donation.
+> - Three area information products: habitat assessment, population survey and
+>   movement corridor study. Each reveals exactly its layer, permanently, and
+>   survives save and load. Emits `information_purchased`.
+>
+> **Decided with it:**
+>
+> - **Milestone bonuses pay 0 in this build.** The term stays a named hook so
+>   Phase 6 can add amounts without changing the formula. No amounts exist and
+>   milestones are a Phase 6 track. Rejected: a first-crossing bonus now.
+> - **The community liaison briefing is out; it moves to Phase 5.** It reveals
+>   permission weights for a governmental entity and no permission system
+>   exists. `INFO_LIAISON_BRIEFING` and the `entities_revealed` save key stay
+>   unused. Rejected: a purchasable stub that reveals nothing.
+> - **The fragmentation multiplier is stored on the crossing when it is built.**
+>   The pre-crossing connectivity deficit is recorded once, as a new field on
+>   `crossings[]`. Rejected: recomputing the deficit each month by re-running
+>   connectivity without the crossing. This changes the save format, and
+>   `data-schemas.md` says a `save_version` bump is MAJOR, so the item that adds
+>   the field settles whether the bump is needed (optional field with a
+>   default, or a bump with a migration, per
+>   [0005](adr/0005-save-file-format.md)) and flags it to Brent before merging.
+>
+> **Open:**
+>
+> - **Where a revealed layer shows.** Phase 3 lands before the in-map renderer,
+>   so the existing UI (HUD, confirm panel, segment label) is the only place to
+>   show habitat numerics, population counts and corridor data. The information
+>   item proposes a surface. If none fits, the data layer and its tests ship in
+>   this build and the visual reveal moves with Phase 2 completion.
+>
+> **First work items, for the next weekly plan to route and number:**
+>
+> 1. Economy manager with starting budget, spend and credit, and
+>    `economy_manager_test.gd`.
+> 2. Crossing cost and the functional budget gate, replacing the display-only
+>    gate in `main.gd`.
+> 3. Monthly donation formula, trickle and the stored fragmentation deficit, with
+>    the save-format question above, and the HUD budget and donation display.
+> 4. Information manager for the three area products, with
+>    `information_manager_test.gd` and save and load coverage.
+> 5. The visual reveal of each layer, subject to the open question.
+>
+> Items 1 to 4 are `code` lane and suit `sonnet`. Item 3 touches the save format
+> and `crossings[]`, so it runs `supervised`. The Phase 2 completion items
+> (in-map segment renderer, hover highlight, toolbar tool, P1 hover extras) stay
+> as dispositioned on 2026-09-23.
+
 ---
 
 ## Phase 4 — Seasons
