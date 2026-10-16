@@ -19,6 +19,7 @@ var habitat: HabitatManager
 var population: PopulationModel
 var infrastructure: InfrastructureManager
 var species: SpeciesManager
+var economy: EconomyManager
 var env: EnvConfig
 var rng: RandomNumberGenerator
 
@@ -64,6 +65,8 @@ func load_world(sub_area_id: int, registries: Dictionary, seed_value: int) -> vo
 	infrastructure = InfrastructureManager.new()
 	infrastructure.setup(world, graph, registries["infrastructure"], registries["segments"])
 	species.set_coverage(infrastructure.coverage())
+
+	economy = EconomyManager.new()
 
 	_wire_signals()
 	_spawn_agents()
@@ -300,6 +303,7 @@ func _wire_signals() -> void:
 	species.animal_died.connect(_on_animal_died)
 	infrastructure.crossing_completed.connect(_on_crossing_completed)
 	population.population_recovered.connect(_on_population_recovered)
+	economy.budget_changed.connect(_on_budget_changed)
 
 func _on_animal_crossed(crossing_id: String, species_id: String) -> void:
 	infrastructure.on_animal_crossed(crossing_id)
@@ -327,6 +331,11 @@ func _on_population_recovered(patch_id: int, species_id: String, event_type: Str
 	var bus := _event_bus()
 	if bus:
 		bus.population_recovered.emit(patch_id, species_id, event_type)
+
+func _on_budget_changed(new_balance: int) -> void:
+	var bus := _event_bus()
+	if bus:
+		bus.budget_changed.emit(new_balance)
 
 ## The EventBus autoload if present, else null (so unit instantiation needs no tree).
 func _event_bus() -> Node:

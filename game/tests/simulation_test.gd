@@ -263,3 +263,19 @@ func test_patch_keys_are_stable_across_two_derivations_of_the_same_world() -> vo
 	for idx in _sim.graph.patches.size():
 		assert_eq(other.graph.patch_key(idx), _sim.graph.patch_key(idx),
 			"patch_id is deterministic from the static map, which is what makes a save re-resolve")
+
+# --- economy (Phase 3) ------------------------------------------------------
+
+func test_simulation_owns_an_economy_at_the_starting_budget() -> void:
+	assert_not_null(_sim.economy, "load_world builds the economy manager")
+	assert_eq(_sim.economy.budget, EconomyConstants.STARTING_BUDGET, "and it starts at the starting budget")
+
+func test_budget_changes_reach_the_event_bus_once() -> void:
+	var bus: Node = get_tree().root.get_node_or_null("EventBus")
+	assert_not_null(bus, "the EventBus autoload is present under GUT")
+	watch_signals(bus)
+	_sim.economy.spend(5000)
+	assert_signal_emit_count(bus, "budget_changed", 1, "spend relays once")
+	_sim.economy.credit(1000)
+	assert_signal_emit_count(bus, "budget_changed", 2, "credit relays once")
+	assert_signal_emitted_with_parameters(bus, "budget_changed", [EconomyConstants.STARTING_BUDGET - 4000])

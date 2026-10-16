@@ -125,6 +125,9 @@ func test_loaded_collections_do_not_alias_the_payload() -> void:
 	assert_eq(_state.patches.size(), 1,
 		"the caller's payload is deep-copied — mutating it must not reach into live state")
 
+func test_new_game_starts_at_the_starting_budget() -> void:
+	assert_eq(_state.budget, EconomyConstants.STARTING_BUDGET, "a fresh GameState holds the starting budget")
+
 # --- omit-means-default (ADR 0014) -----------------------------------------
 
 func test_absent_keys_take_defaults() -> void:
@@ -133,7 +136,7 @@ func test_absent_keys_take_defaults() -> void:
 	assert_true(_state.from_dict({ "save_version": 1 }), "a minimal payload still loads")
 	assert_eq(_state.year, 1, "an absent clock takes the default year")
 	assert_eq(_state.season, "spring", "an absent clock takes the default season")
-	assert_eq(_state.budget, 0, "an absent economy takes the default budget")
+	assert_eq(_state.budget, EconomyConstants.STARTING_BUDGET, "an absent economy takes the starting budget")
 	assert_eq(_state.patches, [], "an absent collection loads empty, not stale")
 
 func test_partial_sections_default_only_the_missing_keys() -> void:
@@ -177,7 +180,8 @@ func test_reset_returns_every_field_to_its_new_game_value() -> void:
 	assert_eq(_state.active_sub_area_id, 7, "sub-area returns to the tutorial default")
 	assert_eq(_state.year, 1, "clock returns to year 1")
 	assert_eq(_state.season, "spring", "clock returns to spring")
-	assert_eq(_state.budget, 0, "economy is cleared")
+	assert_eq(_state.budget, EconomyConstants.STARTING_BUDGET, "budget returns to the starting budget")
+	assert_eq(_state.last_donation, 0, "last donation is cleared")
 	assert_eq(_state.playtime_seconds, 0, "playtime is cleared")
 	assert_eq(_state.patches, [], "patch records are cleared")
 	assert_eq(_state.crossings, [], "crossing records are cleared")
