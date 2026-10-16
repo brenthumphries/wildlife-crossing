@@ -41,6 +41,7 @@ func _full_payload() -> Dictionary:
 		}],
 		"information": {
 			"areas_revealed": ["7"], "entities_revealed": ["parks_canada"],
+			"products_by_area": { "7": ["habitat_assessment", "corridor_study"] },
 		},
 		"crossings": [{
 			"crossing_id": "c1", "segment_id": "7:seg:14", "sub_area_id": 7,
@@ -151,6 +152,8 @@ func test_information_keeps_its_default_subkeys() -> void:
 	assert_eq(_state.information["areas_revealed"], ["7"], "the supplied list is taken")
 	assert_eq(_state.information["entities_revealed"], [],
 		"the omitted list is present and empty, so readers need no has() guard")
+	assert_eq(_state.information["products_by_area"], {},
+		"an older save without products_by_area loads with none bought")
 
 func test_a_non_array_collection_loads_empty_rather_than_corrupting_state() -> void:
 	assert_true(_state.from_dict({ "save_version": 1, "patches": "not an array" }),

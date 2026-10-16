@@ -20,6 +20,7 @@ var population: PopulationModel
 var infrastructure: InfrastructureManager
 var species: SpeciesManager
 var economy: EconomyManager
+var information: InformationManager
 var env: EnvConfig
 var rng: RandomNumberGenerator
 
@@ -68,6 +69,11 @@ func load_world(sub_area_id: int, registries: Dictionary, seed_value: int) -> vo
 
 	economy = EconomyManager.new()
 	economy.setup(registries["species"], registries["infrastructure"])
+
+	# Only playable sub-areas are ever loaded, so the loaded one is unlocked (Phase 5's
+	# permissions manager will own unlocking).
+	information = InformationManager.new()
+	information.setup(economy, habitat, graph, population, sub_area_id, true)
 
 	_wire_signals()
 	_spawn_agents()
@@ -216,6 +222,8 @@ func _step_agent(a: Dictionary) -> void:
 	if a["in_crossing"]:
 		species.report_crossed(a["last_crossing"], a["species_id"])   # one traversal completed
 		a["in_crossing"] = false
+	if world.is_hazardous(coord):
+		information.record_attempt(coord)
 	if world.is_hazardous(coord) and species.rolls_death(coord):
 		species.report_died(a["species_id"], coord, world.tile_at(coord))
 		a["alive"] = false
@@ -223,7 +231,8 @@ func _step_agent(a: Dictionary) -> void:
 # --- save / load (ADR 0014, data-schemas §14) ------------------------------
 
 ## This simulation's mutable state in the §14 shape: the `patches[]` population
-## records, the `crossings[]` the player has completed, the `economy` ledger, plus
+## records, the `crossings[]` the player has completed, the `economy` ledger, the
+## purchased `information` (`areas_revealed[]`, `products_by_area`), plus
 ## the sub-area they belong to. Everything else the simulation holds — the connectivity
 ## graph, habitat quality, the agent pool — is derived and deliberately absent,
 ## because ADR 0014 rebuilds it on load rather than trusting a stored copy that
@@ -234,6 +243,7 @@ func save_state() -> Dictionary:
 		"patches": _patches_state(),
 		"crossings": _crossings_state(),
 		"economy": { "budget": economy.budget, "last_donation": economy.last_donation },
+		"information": information.save_state(),
 	}
 
 ## Rebuild this simulation from a §14 payload: reload the sub-area from static
@@ -250,6 +260,7 @@ func restore_state(state: Dictionary, registries: Dictionary, seed_value: int) -
 	_restore_crossings(state.get("crossings", []))
 	_restore_patches(state.get("patches", []))
 	_restore_economy(state.get("economy", {}))
+	information.restore(state.get("information", {}))
 	_restoring = false
 	resync_agents()
 
@@ -344,6 +355,8 @@ func _wire_signals() -> void:
 	population.population_recovered.connect(_on_population_recovered)
 	economy.budget_changed.connect(_on_budget_changed)
 	economy.donation_received.connect(_on_donation_received)
+	species.animal_died.connect(_on_animal_died_record)
+	information.information_purchased.connect(_on_information_purchased)
 
 func _on_animal_crossed(crossing_id: String, species_id: String) -> void:
 	infrastructure.on_animal_crossed(crossing_id)
@@ -377,6 +390,14 @@ func _on_budget_changed(new_balance: int) -> void:
 	var bus := _event_bus()
 	if bus:
 		bus.budget_changed.emit(new_balance)
+
+func _on_animal_died_record(_species_id: String, tile: Vector2i, _cause: String) -> void:
+	information.record_death(tile)
+
+func _on_information_purchased(product: String, area_id: String) -> void:
+	var bus := _event_bus()
+	if bus:
+		bus.information_purchased.emit(product, area_id)
 
 func _on_donation_received(amount: int, breakdown: Dictionary) -> void:
 	var bus := _event_bus()

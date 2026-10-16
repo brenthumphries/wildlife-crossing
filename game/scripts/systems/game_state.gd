@@ -35,7 +35,7 @@ var last_saved_at_unix: int = 0
 var patches: Array = []
 var entities: Array = []
 var crossings: Array = []
-var information: Dictionary = { "areas_revealed": [], "entities_revealed": [] }
+var information: Dictionary = { "areas_revealed": [], "entities_revealed": [], "products_by_area": {} }
 var milestones: Dictionary = { "reached": [], "capstone_reached": false }
 
 ## Serialize mutable state to the §14 GameState shape. Derived state is rebuilt
@@ -100,7 +100,7 @@ func from_dict(data: Dictionary) -> bool:
 	entities = _array_of(data, "entities")
 	crossings = _array_of(data, "crossings")
 	information = _merged(data.get("information", {}),
-		{ "areas_revealed": [], "entities_revealed": [] })
+		{ "areas_revealed": [], "entities_revealed": [], "products_by_area": {} })
 	milestones = _merged(data.get("milestones", {}),
 		{ "reached": [], "capstone_reached": false })
 
@@ -122,7 +122,7 @@ func reset() -> void:
 	patches = []
 	entities = []
 	crossings = []
-	information = { "areas_revealed": [], "entities_revealed": [] }
+	information = { "areas_revealed": [], "entities_revealed": [], "products_by_area": {} }
 	milestones = { "reached": [], "capstone_reached": false }
 
 # --- helpers ---------------------------------------------------------------
