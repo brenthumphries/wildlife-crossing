@@ -613,7 +613,7 @@ pool) is **rebuilt on `game_loaded`**, not stored.
 | `economy` | object | `budget`, `last_donation` |
 | `patches` | object[] | per patch: `patch_id`, `sub_area_id`, `species[]` of `{species_id, count, trend, connectivity_status}` |
 | `entities` | object[] | per entity: `entity_id`, `trust`, `stage`, `partnership` |
-| `information` | object | `areas_revealed[]`, `entities_revealed[]` (ids) |
+| `information` | object | `areas_revealed[]` (sub-area ids as strings, the areas holding any product), `entities_revealed[]` (ids), optional `products_by_area` (object, default `{}`) |
 | `crossings` | object[] | per crossing: `crossing_id`, `segment_id`, `sub_area_id`, `crossing_type`, `covered_tiles` (`[q,r]`[]), `built_on_day`, optional `fragmentation_deficit` (float 0–1, default `0.0`) |
 | `milestones` | object | `reached[]` (ids), `capstone_reached` |
 
@@ -626,6 +626,16 @@ back as stored; a restore never recomputes it, because it replays crossings
 against a partly built graph. A save without the key loads as `0.0` (a 1.0x
 multiplier). It is additive and optional under ADR 0014, so `save_version` is not
 bumped.
+
+`information.products_by_area` maps a sub-area id **written as a string** (JSON turns
+integer keys into floats) to the list of product ids bought for it:
+`habitat_assessment`, `population_survey`, `corridor_study`. A purchase is permanent,
+so entries are only ever added; `areas_revealed[]` is the set of keys that hold at
+least one product. The community liaison briefing is not an area product and writes
+nothing here (`entities_revealed[]` stays unused until Phase 5). Additive and optional
+under ADR 0014, so `save_version` is not bumped; a save without the key loads with
+nothing bought (roadmap Phase 3, second Decision logged 2026-10-15). Unknown product
+ids are skipped on load. The corridor study's route and death tallies are not saved.
 
 Enumerated strings (`season`, `trend`, `connectivity_status`, `stage`) use the
 exact tokens from the population/permissions models. Absent optional keys take

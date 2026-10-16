@@ -213,6 +213,9 @@ func _quick_save() -> void:
 	game_state.active_sub_area_id = int(world_state["active_sub_area_id"])
 	game_state.patches = world_state["patches"]
 	game_state.crossings = world_state["crossings"]
+	var information_state: Dictionary = world_state["information"]
+	game_state.information["areas_revealed"] = information_state["areas_revealed"]
+	game_state.information["products_by_area"] = information_state["products_by_area"]
 	var economy_state: Dictionary = world_state["economy"]
 	game_state.budget = int(economy_state["budget"])
 	game_state.last_donation = int(economy_state["last_donation"])
@@ -243,6 +246,7 @@ func _quick_load() -> void:
 		"patches": game_state.patches,
 		"crossings": game_state.crossings,
 		"economy": { "budget": game_state.budget, "last_donation": game_state.last_donation },
+		"information": game_state.information,
 	}, _registries(), randi())
 	# `restore_state` builds a fresh WorldData and ConnectivityGraph, so anything
 	# holding the previous pair is now pointing at a dead world. The renderer
