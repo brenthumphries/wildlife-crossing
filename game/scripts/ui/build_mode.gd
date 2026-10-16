@@ -63,9 +63,8 @@ func chosen_tiles() -> Array:
 func chosen_count() -> int:
 	return _chosen.size()
 
-## The running cost of the current selection — informational only. No budget
-## is deducted anywhere yet (Phase 3 economy is unwired; ConfirmPanel's own
-## budget gate is display-only for the same reason).
+## The running cost of the current selection. Nothing is deducted here:
+## `Simulation.build_crossing` charges the same figure when the span completes.
 func running_cost() -> int:
 	return _chosen.size() * cost_per_tile
 

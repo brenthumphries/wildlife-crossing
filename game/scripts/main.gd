@@ -210,6 +210,9 @@ func _quick_save() -> void:
 	game_state.active_sub_area_id = int(world_state["active_sub_area_id"])
 	game_state.patches = world_state["patches"]
 	game_state.crossings = world_state["crossings"]
+	var economy_state: Dictionary = world_state["economy"]
+	game_state.budget = int(economy_state["budget"])
+	game_state.last_donation = int(economy_state["last_donation"])
 	var error: String = SaveManager.save(game_state.to_dict())
 	if error.is_empty():
 		_log("Game saved.")
@@ -236,6 +239,7 @@ func _quick_load() -> void:
 		"active_sub_area_id": game_state.active_sub_area_id,
 		"patches": game_state.patches,
 		"crossings": game_state.crossings,
+		"economy": { "budget": game_state.budget, "last_donation": game_state.last_donation },
 	}, _registries(), randi())
 	# `restore_state` builds a fresh WorldData and ConnectivityGraph, so anything
 	# holding the previous pair is now pointing at a dead world. The renderer
@@ -270,11 +274,20 @@ func _try_select_segment() -> void:
 	var bus := get_node_or_null("/root/EventBus")
 	if bus:
 		bus.segment_selected.emit(String(seg["id"]), int(seg["sub_area_id"]))
-	var game_state := get_node_or_null("/root/GameState")
-	var budget: int = game_state.budget if game_state else 0
-	# min_crossing_cost 0: the budget gate is display-only until the Phase 3
-	# economy gives crossings real costs (roadmap Phase 3).
-	_confirm_panel.open(seg, budget, 0)
+	_confirm_panel.open(seg, sim.economy.budget, _cheapest_crossing_tile_cost())
+
+## The cost of one tile of the cheapest crossing type shipped in v0.1.0
+## (`available_in_v1`), read from the registry. The confirm panel's gate asks
+## "can the player afford any crossing at all", so one tile of the cheapest.
+func _cheapest_crossing_tile_cost() -> int:
+	var cheapest := -1
+	for record: Dictionary in _registries()["infrastructure"].values():
+		if not bool(record.get("available_in_v1", false)):
+			continue
+		var cost := int(record["cost_per_tile"])
+		if cheapest < 0 or cost < cheapest:
+			cheapest = cost
+	return maxi(cheapest, 0)
 
 ## Resolve the tile under the cursor to a segment of the loaded sub-area, or {}.
 ## Picking is scoped to the rendered (loaded) sub-area — the placeholder card
@@ -343,6 +356,14 @@ func _confirm_build() -> void:
 		_log("Can't build yet — " + reason)
 		_update_build_status_label()
 		return
+	var cost: int = _build_mode.running_cost()
+	if not sim.economy.can_afford(cost):
+		# Refused in place, like an invalid span: build mode stays open so the
+		# player can trim the selection.
+		_log("Can't build yet — $%d short (costs $%d, budget $%d)." \
+				% [cost - sim.economy.budget, cost, sim.economy.budget])
+		_update_build_status_label()
+		return
 	if sim.build_crossing(_build_mode.segment_id, _build_mode.crossing_type, _build_mode.chosen_tiles()):
 		_log("Overpass complete — the highway is now a safe crossing.")
 	_exit_build_mode()
@@ -362,8 +383,9 @@ func _exit_build_mode() -> void:
 func _update_build_status_label() -> void:
 	if _build_mode == null:
 		return
-	var text := "Build %s — %d tile(s) selected, $%d" % [
-			_build_mode.crossing_type, _build_mode.chosen_count(), _build_mode.running_cost()]
+	var text := "Build %s — %d tile(s) selected, $%d — budget $%d" % [
+			_build_mode.crossing_type, _build_mode.chosen_count(), _build_mode.running_cost(),
+			sim.economy.budget]
 	if _build_mode.chosen_count() > 0 and not _build_mode.is_valid():
 		text += "  (%s)" % _build_mode.rejection_reason()
 	_build_status_label.text = text

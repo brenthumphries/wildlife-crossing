@@ -95,10 +95,30 @@ func tick() -> void:
 func current_day() -> int:
 	return _ticks / TICKS_PER_DAY
 
-## Construction-step action: build a span of `tiles` over a segment (UI confirm).
+## What a span of `tiles` would cost: the registry's `cost_per_tile` times the
+## distinct tiles covered. -1 for a crossing type the registry does not know.
+func crossing_cost(crossing_type: String, tiles: Array) -> int:
+	var record: Dictionary = _registries["infrastructure"].get(crossing_type, {})
+	if record.is_empty():
+		return -1
+	var distinct: Dictionary = {}
+	for t in tiles:
+		distinct[t] = true
+	return int(record["cost_per_tile"]) * distinct.size()
+
+## Construction-step action: build a span of `tiles` over a segment (UI confirm)
+## and charge for it. Returns false, covering nothing and leaving the budget
+## untouched, when the balance is short or the span is invalid; the charge lands
+## only once the span has actually completed.
 func build_crossing(segment_id: String, crossing_type: String, tiles: Array) -> bool:
+	var cost: int = crossing_cost(crossing_type, tiles)
+	if cost < 0 or not economy.can_afford(cost):
+		return false
 	infrastructure.current_day = current_day()
-	return infrastructure.build_span(segment_id, crossing_type, tiles)
+	if not infrastructure.build_span(segment_id, crossing_type, tiles):
+		return false
+	economy.spend(cost)
+	return true
 
 # --- agents ----------------------------------------------------------------
 
@@ -201,8 +221,8 @@ func _step_agent(a: Dictionary) -> void:
 # --- save / load (ADR 0014, data-schemas §14) ------------------------------
 
 ## This simulation's mutable state in the §14 shape: the `patches[]` population
-## records and the `crossings[]` the player has completed, plus the sub-area
-## they belong to. Everything else the simulation holds — the connectivity
+## records, the `crossings[]` the player has completed, the `economy` ledger, plus
+## the sub-area they belong to. Everything else the simulation holds — the connectivity
 ## graph, habitat quality, the agent pool — is derived and deliberately absent,
 ## because ADR 0014 rebuilds it on load rather than trusting a stored copy that
 ## a rebalanced constant would silently invalidate.
@@ -211,6 +231,7 @@ func save_state() -> Dictionary:
 		"active_sub_area_id": active_sub_area_id,
 		"patches": _patches_state(),
 		"crossings": _crossings_state(),
+		"economy": { "budget": economy.budget, "last_donation": economy.last_donation },
 	}
 
 ## Rebuild this simulation from a §14 payload: reload the sub-area from static
@@ -226,6 +247,7 @@ func restore_state(state: Dictionary, registries: Dictionary, seed_value: int) -
 	load_world(int(state.get("active_sub_area_id", active_sub_area_id)), registries, seed_value)
 	_restore_crossings(state.get("crossings", []))
 	_restore_patches(state.get("patches", []))
+	_restore_economy(state.get("economy", {}))
 	_restoring = false
 	resync_agents()
 
@@ -281,6 +303,15 @@ func _restore_crossings(saved: Array) -> void:
 			push_warning("Saved crossing %s no longer forms a valid span — skipped" % String(c.get("crossing_id", "?")))
 	infrastructure.current_day = 0
 	species.set_coverage(infrastructure.coverage())
+
+## Apply the saved ledger over the fresh EconomyManager `load_world` built, so a
+## restored game keeps its balance instead of being refunded to the starting
+## budget. An absent `economy` leaves the starting budget (omit-means-default).
+func _restore_economy(saved: Dictionary) -> void:
+	if saved.is_empty():
+		return
+	economy.restore(int(saved.get("budget", EconomyConstants.STARTING_BUDGET)),
+		int(saved.get("last_donation", 0)))
 
 ## Apply saved population records. A `patch_id` that resolves to nothing is
 ## skipped with a warning rather than dropped silently — ADR 0014's noted risk
