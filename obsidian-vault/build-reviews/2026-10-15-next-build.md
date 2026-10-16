@@ -21,6 +21,16 @@ status: active
 > sync. Both changes are in `docs/plan/week.json`; nothing else in the plan
 > moves.
 
+> [!success] Amendment 2026-10-15 (evening) — **C12, C13, C16 and D3 are closed, and Q4 is decided.**
+> Merged pull requests: C12 in #57, D3 in #58, C13 in #60 (walked windowed by
+> Brent: the budget drops per tile, F5 then F9 keeps it, an over-budget build is
+> refused) and C16 in #61. Q4 was accepted as recommended and recorded in the
+> second Phase 3 Decision logged block of `docs/roadmap.md` (#59). The
+> dispatch still shows C14, C15 and C17 as blocked, because it cannot see a
+> decision as done; the next weekly plan marks Q4 done. C18 also waits on Q5.
+> The suite is now 29 scripts / 335 tests / 6,434 asserts. See
+> [[../daily-logs/2026-10-15]].
+
 > [!info] Snapshot
 > Measured against **`d013c6d`** (*Merge pull request #55 from
 > brenthumphries/docs/log-2026-10-15-q1*, 2026-10-15T21:36:19-05:00) on
