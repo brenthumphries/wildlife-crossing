@@ -10,6 +10,17 @@ status: active
 > [`docs/plan/week.json`](../../docs/plan/week.json); `tools/warden.py day`
 > dispatches from it.
 
+> [!warning] Amendment 2026-10-15 — **Q4's deficit proposal is corrected, and C13 gains the budget save sync.**
+> The proposal below for how a crossing's deficit is measured (one minus the
+> larger network's share of the combined total) tops out at 0.5 for a link
+> between two networks, so the multiplier could never reach 2.0. The plan now
+> proposes the share of the largest network that the link newly joins to it,
+> capped at 1: two equal halves score 1.0, a sliver joined to a large network
+> scores near 0. Separately, C12 (PR #57) added the economy manager without
+> wiring its balance into the save path, so C13's acceptance now requires the
+> sync. Both changes are in `docs/plan/week.json`; nothing else in the plan
+> moves.
+
 > [!info] Snapshot
 > Measured against **`d013c6d`** (*Merge pull request #55 from
 > brenthumphries/docs/log-2026-10-15-q1*, 2026-10-15T21:36:19-05:00) on
