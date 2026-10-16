@@ -14,7 +14,14 @@ var _build: BuildMode
 const SEG_ID := "s7_trans_canada_bow_a"
 ## ADR 0016's own worked minimal example for this segment.
 const BOW_VALLEY_SPAN: Array[Vector2i] = [Vector2i(12, 5), Vector2i(13, 5)]
-const COST_PER_TILE := 5000   # overpass, from infrastructure.json
+## Overpass cost, read from the registry file rather than restated here.
+var COST_PER_TILE: int = _overpass_cost()
+
+static func _overpass_cost() -> int:
+	for c in JSON.parse_string(FileAccess.get_file_as_string("res://data/infrastructure.json"))["infrastructure"]:
+		if c["crossing_type"] == "overpass":
+			return int(c["cost_per_tile"])
+	return -1
 
 func _load_json(path: String) -> Dictionary:
 	return JSON.parse_string(FileAccess.get_file_as_string(path))
@@ -120,3 +127,16 @@ func test_confirmed_valid_selection_completes_via_build_crossing() -> void:
 	assert_true(_infra.build_span(_build.segment_id, _build.crossing_type, _build.chosen_tiles()),
 		"a BuildMode-validated selection is never refused at real completion time")
 	assert_eq(_infra.coverage().size(), 2)
+
+# --- the bill matches what the simulation charges (C13) ----------------------
+
+func test_running_cost_is_the_bill_build_crossing_charges() -> void:
+	for c in BOW_VALLEY_SPAN:
+		_build.toggle(c)
+	var sim := Simulation.new()
+	autofree(sim)
+	var ireg: Dictionary = {}
+	for c in _load_json("res://data/infrastructure.json")["infrastructure"]:
+		ireg[c["crossing_type"]] = c
+	assert_eq(_build.running_cost(), ireg["overpass"]["cost_per_tile"] * BOW_VALLEY_SPAN.size(),
+		"the preview is the registry cost per tile times the selection")

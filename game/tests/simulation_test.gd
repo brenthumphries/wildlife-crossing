@@ -274,8 +274,61 @@ func test_budget_changes_reach_the_event_bus_once() -> void:
 	var bus: Node = get_tree().root.get_node_or_null("EventBus")
 	assert_not_null(bus, "the EventBus autoload is present under GUT")
 	watch_signals(bus)
-	_sim.economy.spend(5000)
+	_sim.economy.spend(EconomyConstants.OVERPASS_COST_PER_TILE)
 	assert_signal_emit_count(bus, "budget_changed", 1, "spend relays once")
 	_sim.economy.credit(1000)
 	assert_signal_emit_count(bus, "budget_changed", 2, "credit relays once")
-	assert_signal_emitted_with_parameters(bus, "budget_changed", [EconomyConstants.STARTING_BUDGET - 4000])
+	assert_signal_emitted_with_parameters(bus, "budget_changed", [EconomyConstants.STARTING_BUDGET - EconomyConstants.OVERPASS_COST_PER_TILE + 1000])
+
+# --- charging for crossings (C13) -------------------------------------------
+
+## The ADR 0016 span plus one more road tile: valid, and three tiles to pay for.
+const THREE_TILE_SPAN: Array[Vector2i] = [Vector2i(12, 5), Vector2i(13, 5), Vector2i(12, 4)]
+
+func _overpass_cost_per_tile() -> int:
+	return int(_registries()["infrastructure"]["overpass"]["cost_per_tile"])
+
+func test_overpass_cost_per_tile() -> void:
+	var before: int = _sim.economy.budget
+	assert_true(_sim.build_crossing(SEG, "overpass", THREE_TILE_SPAN), "the three-tile overpass is built")
+	assert_eq(_sim.economy.budget, before - 3 * _overpass_cost_per_tile(),
+		"the registry's cost_per_tile times the covered tiles is deducted")
+
+func test_an_unaffordable_build_covers_nothing_and_costs_nothing() -> void:
+	_sim.economy.restore(_overpass_cost_per_tile(), 0)   # one tile's worth, span needs two
+	assert_false(_sim.build_crossing(SEG, "overpass", SPAN), "refused for want of budget")
+	assert_eq(_sim.economy.budget, _overpass_cost_per_tile(), "the budget is unchanged")
+	assert_eq(_sim.infrastructure.coverage().size(), 0, "no tile is covered")
+
+func test_an_invalid_span_costs_nothing() -> void:
+	var before: int = _sim.economy.budget
+	assert_false(_sim.build_crossing(SEG, "overpass", [Vector2i(12, 5)] as Array[Vector2i]),
+		"half the corridor width is not a span")
+	assert_eq(_sim.economy.budget, before, "a refused span is free")
+
+func test_an_unknown_crossing_type_costs_nothing() -> void:
+	var before: int = _sim.economy.budget
+	assert_false(_sim.build_crossing(SEG, "moat", SPAN), "no such crossing type")
+	assert_eq(_sim.economy.budget, before, "and it is free")
+
+func test_save_state_carries_the_economy() -> void:
+	_sim.build_crossing(SEG, "overpass", SPAN)
+	var economy: Dictionary = _sim.save_state()["economy"]
+	assert_eq(int(economy["budget"]), _sim.economy.budget, "the live balance is saved")
+	assert_true(economy.has("last_donation"), "§14 economy holds last_donation")
+
+func test_restore_keeps_the_reduced_budget_and_last_donation() -> void:
+	assert_true(_sim.build_crossing(SEG, "overpass", SPAN), "the overpass is built")
+	_sim.economy.last_donation = 750
+	var reduced: int = _sim.economy.budget
+	var other: Simulation = _restored_copy(_sim.save_state())
+	assert_eq(other.economy.budget, reduced, "a load does not refund the crossing")
+	assert_lt(other.economy.budget, EconomyConstants.STARTING_BUDGET, "the balance is below the start")
+	assert_eq(other.economy.last_donation, 750, "last_donation round-trips")
+	assert_eq(other.infrastructure.crossings().size(), 1, "and replaying the crossing charged nothing extra")
+
+func test_restore_without_an_economy_key_starts_at_the_starting_budget() -> void:
+	var state: Dictionary = _sim.save_state()
+	state.erase("economy")
+	var other: Simulation = _restored_copy(state)
+	assert_eq(other.economy.budget, EconomyConstants.STARTING_BUDGET, "omit-means-default")
