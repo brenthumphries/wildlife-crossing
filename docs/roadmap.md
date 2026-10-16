@@ -438,6 +438,53 @@ systems).
 > changes what the player builds. It needs the in-map renderer, so it follows the
 > segment renderer (C1) and hover highlight (C2) from the 2026-09-23 block.
 
+> **Decision logged (2026-10-16, later): the text-size baseline, steps and
+> storage, and the fundraising trickle's threshold.** Resolves Q6 and Q7 from the
+> plan for the week of 2026-10-19. Brent's call; the Q6 numbers are the plan's
+> proposals, confirmed.
+>
+> **Text.** All text is larger by default, on every screen. Baseline sizes at the
+> 1280x720 viewport: body 20, title 36, small 16, against 14, 28 and 12 to 13
+> today. The player steps through 100, 125, 150 and 175 percent of that baseline,
+> default 100, from a title screen option and in play with Ctrl+= to enlarge,
+> Ctrl+- to shrink and Ctrl+0 to reset. The choice is stored in a settings file
+> at `user://settings.cfg`, separate from saves, so a save from another machine
+> never changes the player's text size. The windowed walk (V15) tunes the
+> constants against the real screen. Rejected: a fixed size, and storing the
+> choice in the save.
+>
+> **The trickle.** `FUNDRAISING_TRICKLE` pays when the balance is below the
+> cheapest crossing tile that can be bought, meaning the lowest `cost_per_tile`
+> among crossing types with `available_in_v1` true (5,000 today), not below the
+> cheapest information product. C15 shipped the information-product reading
+> (1,000); C32 changes it. Rejected: the information-product reading.
+
+> **Decision logged (2026-10-16, v0.2.0 scope): v0.2.0 goes big, behind a feature
+> freeze.** Resolves Q8 from the plan for the week of 2026-10-19. Brent's call:
+> include as much as can reasonably fit without risking stability.
+>
+> **In.** Phase 3 as merged; Phase 2 completion (the in-map renderer, hover
+> highlight, toolbar, the P1 extras, and hotspot markers); text size with a player
+> setting; Phase 4 (time controls, seasons and the calendar, seasonal presence and
+> migration, seasonal terrain, autosave and Continue); and Phase 6 (the milestone
+> tracker and track, celebrations, and first-time hints that explain the core loop).
+>
+> **Out.** Phase 5 (permissions, sub-area unlocks and the First Nations narrative
+> content), which the roadmap holds behind the cultural-advisor review. Art and audio
+> assets that cannot be generated here, so the milestone celebration reuses the
+> crossing chime. The Continental Connection capstone is implemented but stays
+> unreachable, because only Bow Valley is playable.
+>
+> **Stability.** One feature freeze, called by Brent when the features are merged and
+> walked (V15 to V18), then one stabilization pass (V19) exercising everything at the
+> default text size and at 175 percent. Only fixes merge until the release is cut.
+> Rejected: a release candidate per phase, which would have kept a last good build to
+> ship if a late phase proved unstable. The accepted risk is that a late problem blocks
+> the whole release. To limit it, seasonal terrain (C39) is narrowed to hazard changes
+> for pathing and mortality, and its ADR records what full re-derivation would need.
+>
+> **B7.** The Windows and Linux checks on v0.1.0 remain a blocker for any release.
+
 ---
 
 ## Phase 4 — Seasons
