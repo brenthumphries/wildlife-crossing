@@ -21,7 +21,7 @@ var day_of_season: int = 0
 var time_speed: float = DEFAULT_TIME_SPEED
 
 # economy
-var budget: int = 0
+var budget: int = EconomyConstants.STARTING_BUDGET
 var last_donation: int = 0
 
 # meta
@@ -91,7 +91,7 @@ func from_dict(data: Dictionary) -> bool:
 	time_speed = float(clock.get("time_speed", DEFAULT_TIME_SPEED))
 
 	var economy: Dictionary = data.get("economy", {})
-	budget = int(economy.get("budget", 0))
+	budget = int(economy.get("budget", EconomyConstants.STARTING_BUDGET))
 	last_donation = int(economy.get("last_donation", 0))
 
 	# Deep copies: the payload belongs to the caller (and may be a parsed file it
@@ -115,7 +115,7 @@ func reset() -> void:
 	season = DEFAULT_SEASON
 	day_of_season = 0
 	time_speed = DEFAULT_TIME_SPEED
-	budget = 0
+	budget = EconomyConstants.STARTING_BUDGET
 	last_donation = 0
 	playtime_seconds = 0
 	last_saved_at_unix = 0
