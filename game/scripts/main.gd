@@ -91,6 +91,7 @@ func _ready() -> void:
 	add_child(hud_layer)
 	_hud = Hud.new()
 	hud_layer.add_child(_hud)
+	_hud.set_budget(sim.economy.budget)
 	_build_status_label = Label.new()
 	_build_status_label.position = Vector2(16.0, 16.0)
 	_build_status_label.add_theme_color_override("font_color", Color.WHITE)
@@ -122,6 +123,8 @@ func _ready() -> void:
 	var bus := get_node_or_null("/root/EventBus")
 	if bus:
 		bus.animal_crossed.connect(_on_animal_crossed)
+		bus.budget_changed.connect(_on_budget_changed)
+		bus.donation_received.connect(_on_donation_received)
 
 	# "Tutorial loaded" is asserted verbatim by tools/smoke_boot.sh — keep it
 	# leading this line.
@@ -246,6 +249,9 @@ func _quick_load() -> void:
 	# reads `sim.world` every frame and needs nothing; the overlay cached both at
 	# setup and has to be re-pointed.
 	_overlay.setup(sim.world, sim.graph, _sub_area_segments(sim.active_sub_area_id))
+	# `restore` announces nothing, so refresh the HUD's ledger labels by hand.
+	_hud.set_budget(sim.economy.budget)
+	_hud.set_last_donation(sim.economy.last_donation)
 	_log("Game loaded.")
 
 ## How forgiving segment picking is: a click within this many hex steps of a
@@ -410,6 +416,12 @@ func _open_world_select() -> void:
 func _on_animal_crossed(_crossing_id: String, _species_id: String) -> void:
 	_crossed_pending += 1
 	_coalesce_timer = SimulationConstants.CROSSING_FEEDBACK_COALESCE_SECONDS
+
+func _on_budget_changed(new_balance: int) -> void:
+	_hud.set_budget(new_balance)
+
+func _on_donation_received(amount: int, _breakdown: Dictionary) -> void:
+	_hud.set_last_donation(amount)
 
 func _process(delta: float) -> void:
 	if _coalesce_timer > 0.0:
