@@ -172,7 +172,7 @@ func test_save_state_matches_the_schema_shape() -> void:
 	assert_eq(crossings.size(), 1, "the completed crossing is saved")
 	var c: Dictionary = crossings[0]
 	for key: String in ["crossing_id", "segment_id", "sub_area_id", "crossing_type",
-			"covered_tiles", "built_on_day"]:
+			"covered_tiles", "built_on_day", "fragmentation_deficit"]:
 		assert_true(c.has(key), "§14 crossings[] requires '%s'" % key)
 	assert_eq(c["covered_tiles"], [[12, 5], [13, 5]],
 		"covered tiles are saved as [q, r] pairs — a Vector2i would stringify into text")
@@ -332,3 +332,37 @@ func test_restore_without_an_economy_key_starts_at_the_starting_budget() -> void
 	state.erase("economy")
 	var other: Simulation = _restored_copy(state)
 	assert_eq(other.economy.budget, EconomyConstants.STARTING_BUDGET, "omit-means-default")
+
+# --- fragmentation deficit in the save (C14, data-schemas §14) --------------
+
+func _saved_deficit(sim: Simulation) -> float:
+	return float((sim.save_state()["crossings"] as Array)[0]["fragmentation_deficit"])
+
+func test_save_writes_the_deficit_measured_at_completion() -> void:
+	var west: int = _sim.graph.patch_at(Vector2i(6, 5))
+	var east: int = _sim.graph.patch_at(Vector2i(20, 5))
+	var expected: float = _sim.graph.fragmentation_deficit([west, east])
+	_sim.build_crossing(SEG, "overpass", SPAN)
+	assert_gt(expected, 0.0, "the highway splits the map before the crossing")
+	assert_almost_eq(_saved_deficit(_sim), expected, 0.0001, "the saved field is the completion-time deficit")
+
+func test_restore_keeps_the_saved_deficit_rather_than_recomputing() -> void:
+	_sim.build_crossing(SEG, "overpass", SPAN)
+	var state: Dictionary = _sim.save_state()
+	((state["crossings"] as Array)[0] as Dictionary)["fragmentation_deficit"] = 0.37
+	assert_almost_eq(_saved_deficit(_restored_copy(state)), 0.37, 0.0001,
+		"the saved value stands; a replay's own measurement would differ")
+
+func test_a_save_written_before_the_field_existed_loads_with_zero() -> void:
+	_sim.build_crossing(SEG, "overpass", SPAN)
+	var state: Dictionary = _sim.save_state()
+	((state["crossings"] as Array)[0] as Dictionary).erase("fragmentation_deficit")
+	var other: Simulation = _restored_copy(state)
+	assert_eq(other.infrastructure.crossings().size(), 1, "the old save still loads its crossing")
+	assert_eq(_saved_deficit(other), 0.0, "the missing key reads as 0.0, a 1.0x multiplier")
+
+func test_the_deficit_survives_a_json_round_trip() -> void:
+	_sim.build_crossing(SEG, "overpass", SPAN)
+	var back: Dictionary = JSON.parse_string(JSON.stringify(_sim.save_state()))
+	assert_almost_eq(_saved_deficit(_restored_copy(back)), _saved_deficit(_sim), 0.0001,
+		"the float survives the disk format")

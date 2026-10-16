@@ -86,11 +86,13 @@ func try_complete(segment_id: String, crossing_type: String) -> bool:
 		_covered[c] = crossing_type
 		_tile_crossing[c] = crossing_id
 		_pending.erase(c)
-	_link_bordering_patches(placed)
+	var bordering: Array = _bordering_patches(placed)
+	var deficit: float = _graph.fragmentation_deficit(bordering)   # before the links below join the networks
+	_link_patches(bordering)
 	_crossings.append({
 		"id": crossing_id, "segment_id": segment_id, "crossing_type": crossing_type,
 		"sub_area_id": int(seg["sub_area_id"]), "covered_tiles": placed,
-		"built_on_day": current_day,
+		"built_on_day": current_day, "fragmentation_deficit": deficit,
 	})
 	crossing_completed.emit(segment_id, crossing_type, int(seg["sub_area_id"]))
 	return true
@@ -248,14 +250,27 @@ static func _core_key(core: Array) -> String:
 		parts.append("%d,%d" % [c.x, c.y])
 	return ",".join(parts)
 
-func _link_bordering_patches(tiles: Array) -> void:
+## Overwrite a crossing's stored deficit with a saved value. A restore replays
+## crossings against a partly built graph, so the freshly measured figure is
+## wrong there and the saved one stands (roadmap Phase 3, Decision logged
+## 2026-10-15). A no-op for an unknown id.
+func restore_fragmentation_deficit(crossing_id: String, deficit: float) -> void:
+	for c: Dictionary in _crossings:
+		if c["id"] == crossing_id:
+			c["fragmentation_deficit"] = deficit
+			return
+
+## Distinct patch indices bordering any of `tiles`.
+func _bordering_patches(tiles: Array) -> Array:
 	var borders: Dictionary = {}
 	for c in tiles:
 		for nb in HexGrid.neighbors(c):
 			var p: int = _graph.patch_at(nb)
 			if p != -1:
 				borders[p] = true
-	var idxs: Array = borders.keys()
+	return borders.keys()
+
+func _link_patches(idxs: Array) -> void:
 	for i in idxs.size():
 		for j in range(i + 1, idxs.size()):
 			_graph.add_safe_link(idxs[i], idxs[j])

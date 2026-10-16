@@ -614,8 +614,18 @@ pool) is **rebuilt on `game_loaded`**, not stored.
 | `patches` | object[] | per patch: `patch_id`, `sub_area_id`, `species[]` of `{species_id, count, trend, connectivity_status}` |
 | `entities` | object[] | per entity: `entity_id`, `trust`, `stage`, `partnership` |
 | `information` | object | `areas_revealed[]`, `entities_revealed[]` (ids) |
-| `crossings` | object[] | per crossing: `crossing_id`, `segment_id`, `sub_area_id`, `crossing_type`, `covered_tiles` (`[q,r]`[]), `built_on_day` |
+| `crossings` | object[] | per crossing: `crossing_id`, `segment_id`, `sub_area_id`, `crossing_type`, `covered_tiles` (`[q,r]`[]), `built_on_day`, optional `fragmentation_deficit` (float 0–1, default `0.0`) |
 | `milestones` | object | `reached[]` (ids), `capstone_reached` |
+
+`crossings[].fragmentation_deficit` is `min(1, (combined - largest) / largest)`,
+where `combined` is the total tile count of the distinct connectivity networks of
+the patches bordering the crossing's covered tiles and `largest` the biggest of
+them, measured when the crossing completes and before its safe links are added
+(roadmap Phase 3, Decision logged 2026-10-15). It is written as stored and read
+back as stored; a restore never recomputes it, because it replays crossings
+against a partly built graph. A save without the key loads as `0.0` (a 1.0x
+multiplier). It is additive and optional under ADR 0014, so `save_version` is not
+bumped.
 
 Enumerated strings (`season`, `trend`, `connectivity_status`, `stage`) use the
 exact tokens from the population/permissions models. Absent optional keys take
