@@ -162,3 +162,26 @@ func test_locked_sub_area_no_ecological_data() -> void:
 func _buy_and_read(product: String) -> Dictionary:
 	_sim.information.purchase(product, AREA)
 	return _sim.information.layer(product, AREA)
+
+func test_patch_overview_is_free_sorted_and_has_no_numeric_quality() -> void:
+	var info: InformationManager = _sim.information
+	var overview: Array = info.patch_overview(AREA)
+	assert_eq(overview.size(), _sim.graph.patches.size(), "every patch is listed with nothing bought")
+	var seen: Dictionary = {}
+	for i in overview.size():
+		var entry: Dictionary = overview[i]
+		assert_eq(entry["number"], i + 1, "numbered in order")
+		assert_false(entry.has("quality"), "the numeric quality is absent before the assessment")
+		for value: Variant in entry.values():
+			assert_ne(typeof(value), TYPE_FLOAT, "no float, so no numeric quality in disguise")
+		assert_true(["Poor", "Fair", "Good", "Excellent"].has(entry["band"]), "the band label is free")
+		assert_false(String(entry["biome"]).is_empty(), "so is the biome")
+		seen[entry["patch_id"]] = true
+		if i > 0:
+			var prev: Dictionary = overview[i - 1]
+			assert_true(int(prev["tile_count"]) > int(entry["tile_count"])
+					or (int(prev["tile_count"]) == int(entry["tile_count"])
+					and String(prev["patch_id"]) < String(entry["patch_id"])),
+					"largest first, ties by patch key")
+	assert_eq(seen.size(), overview.size(), "each patch once")
+	assert_true(info.patch_overview(OTHER_AREA).is_empty(), "an area that is not loaded has none")

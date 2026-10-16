@@ -36,6 +36,9 @@ const TELEMETRY_KEY := KEY_F2
 ## Snowpack Survey, the wolverine den-site minigame (minigame-ideas Batch 2
 ## item 5). Same reasoning: a shortcut until there is a menu. F3 is free.
 const SNOWPACK_KEY := KEY_F3
+## The Info panel, where information products are bought and read (roadmap Phase 3,
+## decision logged 2026-10-16). `I` rather than F4: a Mac laptop needs fn for F-keys.
+const INFO_KEY := KEY_I
 
 var sim: Simulation
 var _renderer: WorldRenderer
@@ -58,6 +61,7 @@ var _hud: Hud
 var _credits: CreditsScreen
 var _telemetry: TelemetryMinigame
 var _snowpack: SnowpackMinigame
+var _info_panel: InformationPanel
 
 func _ready() -> void:
 	_debug = get_node_or_null("/root/Debug")
@@ -120,6 +124,13 @@ func _ready() -> void:
 	_snowpack = SnowpackMinigame.new()
 	snowpack_layer.add_child(_snowpack)
 
+	var info_layer := CanvasLayer.new()
+	info_layer.layer = 5
+	add_child(info_layer)
+	_info_panel = InformationPanel.new()
+	info_layer.add_child(_info_panel)
+	_info_panel.setup(sim.information, sim.economy, sim.active_sub_area_id)
+
 	var bus := get_node_or_null("/root/EventBus")
 	if bus:
 		bus.animal_crossed.connect(_on_animal_crossed)
@@ -130,7 +141,7 @@ func _ready() -> void:
 	# leading this line.
 	_log("Tutorial loaded. Press B to build the Bow Valley overpass. " \
 			+ "Press M for the world map. Press F1 for credits. " \
-			+ "F2 for Signal Chase, F3 for Snowpack Survey. F5 saves, F9 loads.")
+			+ "F2 for Signal Chase, F3 for Snowpack Survey. I for information. F5 saves, F9 loads.")
 
 func _registries() -> Dictionary:
 	var r := get_node_or_null("/root/SpeciesRegistry")
@@ -170,8 +181,17 @@ func _unhandled_input(event: InputEvent) -> void:
 			_snowpack.close()
 		get_viewport().set_input_as_handled()
 		return
+	if _info_panel != null and _info_panel.is_open:
+		if event is InputEventKey and event.pressed \
+				and (event.keycode == KEY_ESCAPE or event.keycode == INFO_KEY):
+			_info_panel.close()
+		get_viewport().set_input_as_handled()
+		return
 	if event is InputEventKey and event.pressed and event.keycode == CREDITS_KEY:
 		_credits.open()
+	elif event is InputEventKey and event.pressed and not event.echo \
+			and event.keycode == INFO_KEY:
+		_info_panel.open()
 	elif event is InputEventKey and event.pressed and event.keycode == TELEMETRY_KEY:
 		_telemetry.start(randi())
 	elif event is InputEventKey and event.pressed and event.keycode == SNOWPACK_KEY:
@@ -256,6 +276,7 @@ func _quick_load() -> void:
 	# `restore` announces nothing, so refresh the HUD's ledger labels by hand.
 	_hud.set_budget(sim.economy.budget)
 	_hud.set_last_donation(sim.economy.last_donation)
+	_info_panel.setup(sim.information, sim.economy, sim.active_sub_area_id)   # new world, new manager
 	_log("Game loaded.")
 
 ## How forgiving segment picking is: a click within this many hex steps of a
