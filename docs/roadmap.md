@@ -355,6 +355,53 @@ systems).
 > (in-map segment renderer, hover highlight, toolbar tool, P1 hover extras) stay
 > as dispositioned on 2026-09-23.
 
+> **Decision logged (2026-10-15, second block): how the fragmentation deficit is
+> measured, that its save field needs no version bump, and how purchased
+> information is recorded.** Resolves Q4 from the 2026-10-15 plan. Brent's call,
+> accepted as the plan proposed it after one correction. C14, C15 and C17 read
+> this block for their acceptance.
+>
+> **The deficit.** When a crossing completes, and before its safe links are
+> added, take the distinct connectivity networks of the patches that border its
+> covered tiles. Let `combined` be their total tile count (sum of
+> `patch_tile_count`, species-agnostic) and `largest` the tile count of the
+> biggest one. `fragmentation_deficit = min(1, (combined - largest) / largest)`.
+> The multiplier is `FRAGMENTATION_MULT_MIN + deficit * (FRAGMENTATION_MULT_MAX -
+> FRAGMENTATION_MULT_MIN)`, computed from the stored deficit at income time. Two
+> equal halves score 1.0 (2.0x), a 10% sliver joined to a large network scores
+> 0.1 (1.1x), and patches already in one network score 0 (1.0x). The first
+> draft used one minus the largest network's share of the total, which tops out
+> at 0.5 for two networks and so never reached the top of the range.
+> Rejected: an absolute isolation measure against the sub-area's total, which
+> pays more for rescuing a tiny pocket but needs a tuning constant. Revisit it if
+> playtest shows small pockets feel under-rewarded.
+>
+> **The stored field.** `crossings[]` gains an optional float
+> `fragmentation_deficit`, default 0.0 on load. A restored crossing keeps its
+> saved value and never recomputes it, because a restore replays crossings
+> against a partly built graph.
+>
+> **No `save_version` bump.** The field is optional with a default, which
+> ADR 0014's omit-means-default rule covers: a save without it loads and pays at
+> 1.0x, and an older build reading a newer save ignores the key. Rejected:
+> bumping the version, which `data-schemas.md` calls MAJOR and which suits an
+> incompatible change, not an additive one.
+>
+> **Information records.** The `information` save object gains an optional
+> `products_by_area` map, default empty: a sub-area id written as a string maps
+> to the list of product ids bought for it (`habitat_assessment`,
+> `population_survey`, `corridor_study`). String keys because JSON turns integer
+> keys into floats, the fault fixed on 2026-09-05 (`species_registry.gd`
+> `_index()`). `areas_revealed[]` stays and lists the areas that hold any
+> product. "Area" in the PRD's per-area prices means sub-area; only sub-area 7
+> is playable in this build. Rejected: encoding `product:area` strings into
+> `areas_revealed[]`, which overloads the key, and renaming it, which is a real
+> format change.
+>
+> **Consequence for the work items.** C14 and C17 document the new keys in
+> `data-schemas.md` §14. The next weekly plan marks Q4 done, which unblocks C14,
+> C15 and C17.
+
 ---
 
 ## Phase 4 — Seasons
