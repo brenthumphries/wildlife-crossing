@@ -13,20 +13,27 @@ var budget: int = EconomyConstants.STARTING_BUDGET
 var last_donation: int = 0
 
 var _status_weights: Dictionary = {}   # species_id -> status_weight
-var _cheapest_action: int = 0          # smallest price of anything the player can buy
+var _trickle_threshold: int = 0        # cheapest crossing tile the player can buy in v1
 ## This month's traversals per crossing: crossing_id -> { "count": int, "weight_sum": int }.
 ## Not saved; a load starts the month's tally afresh.
 var _tally: Dictionary = {}
 
-## Read species status weights and find the cheapest purchase, from the loaded registries.
+## Read species status weights and the trickle threshold from the loaded registries: the
+## cheapest crossing tile with `available_in_v1` true. Information products do not count.
 func setup(species_registry: Dictionary, infrastructure_registry: Dictionary) -> void:
 	_status_weights.clear()
 	for sid: String in species_registry:
 		_status_weights[sid] = int(species_registry[sid].get("status_weight", EconomyConstants.STATUS_WEIGHT_COMMON))
-	_cheapest_action = mini(mini(EconomyConstants.INFO_HABITAT_ASSESSMENT, EconomyConstants.INFO_POPULATION_SURVEY),
-		mini(EconomyConstants.INFO_CORRIDOR_STUDY, EconomyConstants.INFO_LIAISON_BRIEFING))
+	var found_buyable := false
+	_trickle_threshold = 0
 	for crossing_type: String in infrastructure_registry:
-		_cheapest_action = mini(_cheapest_action, int(infrastructure_registry[crossing_type]["cost_per_tile"]))
+		var record: Dictionary = infrastructure_registry[crossing_type]
+		if not bool(record.get("available_in_v1", false)):
+			continue
+		var cost: int = int(record["cost_per_tile"])
+		if not found_buyable or cost < _trickle_threshold:
+			_trickle_threshold = cost
+			found_buyable = true
 
 ## Whether the balance covers `amount`. Negative amounts never affordable.
 func can_afford(amount: int) -> bool:
@@ -76,7 +83,7 @@ func milestone_bonus() -> int:
 ## Pay the month's income for `crossings` (the completed crossing records, each with
 ## `id` and `fragmentation_deficit`): BASE_GRANT plus, per crossing, this month's
 ## traversals x mean status weight x fragmentation multiplier, plus the milestone
-## term, plus FUNDRAISING_TRICKLE when the balance is below the cheapest action.
+## term, plus FUNDRAISING_TRICKLE when the balance is below the trickle threshold.
 ## Credits the budget, records `last_donation`, emits `donation_received`, resets the
 ## tally, and returns the total.
 func run_monthly_income(crossings: Array) -> int:
@@ -91,7 +98,7 @@ func run_monthly_income(crossings: Array) -> int:
 		"base": EconomyConstants.BASE_GRANT,
 		"per_crossing": roundi(per_crossing),
 		"milestone": milestone_bonus(),
-		"trickle": EconomyConstants.FUNDRAISING_TRICKLE if budget < _cheapest_action else 0,
+		"trickle": EconomyConstants.FUNDRAISING_TRICKLE if budget < _trickle_threshold else 0,
 	}
 	var total: int = int(breakdown["base"]) + int(breakdown["per_crossing"]) \
 		+ int(breakdown["milestone"]) + int(breakdown["trickle"])

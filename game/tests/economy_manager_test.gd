@@ -9,8 +9,8 @@ const COMMON := "common_sp"
 const ENDANGERED := "endangered_sp"
 const CROSSING_A := "x_a"
 const CROSSING_B := "x_b"
-const CORRIDOR_TILE := 4000
-const CHEAPEST_ACTION := EconomyConstants.INFO_HABITAT_ASSESSMENT   # cheaper than any crossing tile
+const CORRIDOR_TILE := 4000   # cheaper than the overpass, but not available in v1
+const TRICKLE_THRESHOLD := EconomyConstants.OVERPASS_COST_PER_TILE   # the cheapest buyable crossing tile
 
 var _economy: EconomyManager
 var _emitted: Array[int]
@@ -21,8 +21,7 @@ func before_each() -> void:
 	_economy.budget_changed.connect(func(balance: int) -> void: _emitted.append(balance))
 
 func test_starting_budget() -> void:
-	assert_eq(_economy.budget, 50000, "a new game starts at 50,000")
-	assert_eq(_economy.budget, EconomyConstants.STARTING_BUDGET, "and that is the constant")
+	assert_eq(_economy.budget, EconomyConstants.STARTING_BUDGET, "a new game starts at the starting-budget constant")
 
 func test_spend_deducts_and_returns_true() -> void:
 	assert_true(_economy.spend(SPEND_AMOUNT), "an affordable spend succeeds")
@@ -80,7 +79,10 @@ func _income_economy() -> EconomyManager:
 	var economy := EconomyManager.new()
 	economy.setup(
 		{ COMMON: { "status_weight": 1 }, ENDANGERED: { "status_weight": 3 } },
-		{ "overpass": { "cost_per_tile": EconomyConstants.OVERPASS_COST_PER_TILE }, "corridor": { "cost_per_tile": CORRIDOR_TILE } })
+		{
+			"overpass": { "cost_per_tile": EconomyConstants.OVERPASS_COST_PER_TILE, "available_in_v1": true },
+			"corridor": { "cost_per_tile": CORRIDOR_TILE, "available_in_v1": false },
+		})
 	return economy
 
 func _crossing(id: String, deficit: float) -> Dictionary:
@@ -130,12 +132,48 @@ func test_fragmentation_multiplier_range() -> void:
 
 func test_fundraising_trickle_prevents_deadlock() -> void:
 	var broke := _income_economy()
-	broke.restore(CHEAPEST_ACTION - 1, 0)
+	broke.restore(TRICKLE_THRESHOLD - 1, 0)
 	assert_eq(broke.run_monthly_income([]), EconomyConstants.BASE_GRANT + EconomyConstants.FUNDRAISING_TRICKLE,
-		"below the cheapest action the trickle is added")
+		"below the cheapest buyable crossing tile the trickle is added")
 	var solvent := _income_economy()
-	solvent.restore(CHEAPEST_ACTION, 0)
-	assert_eq(solvent.run_monthly_income([]), EconomyConstants.BASE_GRANT, "at the cheapest action there is no trickle")
+	solvent.restore(TRICKLE_THRESHOLD, 0)
+	assert_eq(solvent.run_monthly_income([]), EconomyConstants.BASE_GRANT, "at the cheapest buyable crossing tile there is no trickle")
+
+## The trickle entry of the breakdown for `economy`'s next monthly income.
+func _trickle_in_breakdown(economy: EconomyManager) -> int:
+	var seen: Array[int] = []
+	economy.donation_received.connect(func(_amount: int, breakdown: Dictionary) -> void:
+		seen.append(int(breakdown["trickle"])))
+	economy.run_monthly_income([])
+	return seen[0]
+
+func test_trickle_shows_one_below_the_threshold_and_not_at_it() -> void:
+	var below := _income_economy()
+	below.restore(TRICKLE_THRESHOLD - 1, 0)
+	assert_eq(_trickle_in_breakdown(below), EconomyConstants.FUNDRAISING_TRICKLE,
+		"one below the threshold, the breakdown shows the trickle")
+	var at := _income_economy()
+	at.restore(TRICKLE_THRESHOLD, 0)
+	assert_eq(_trickle_in_breakdown(at), 0, "at the threshold, the breakdown shows none")
+
+func test_information_prices_do_not_set_the_threshold() -> void:
+	var economy := _income_economy()
+	economy.restore(EconomyConstants.INFO_HABITAT_ASSESSMENT, 0)
+	assert_eq(_trickle_in_breakdown(economy), EconomyConstants.FUNDRAISING_TRICKLE,
+		"a balance at the cheapest information price is still below the crossing threshold")
+
+func test_threshold_reads_the_shipped_registry() -> void:
+	var registry: Variant = autofree(load("res://scripts/systems/species_registry.gd").new())
+	registry.load_all()
+	var overpass_cost: int = int(registry.infrastructure["overpass"]["cost_per_tile"])
+	assert_eq(overpass_cost, TRICKLE_THRESHOLD, "the shipped overpass is the cheapest buyable crossing tile")
+	var economy := EconomyManager.new()
+	economy.setup(registry.species, registry.infrastructure)
+	economy.restore(overpass_cost - 1, 0)
+	assert_eq(_trickle_in_breakdown(economy), EconomyConstants.FUNDRAISING_TRICKLE,
+		"with the shipped registry, one below the overpass shows the trickle")
+	economy.restore(overpass_cost, 0)
+	assert_eq(_trickle_in_breakdown(economy), 0, "and at the overpass price it shows none")
 
 func test_donation_received_carries_the_breakdown() -> void:
 	var economy := _income_economy()
