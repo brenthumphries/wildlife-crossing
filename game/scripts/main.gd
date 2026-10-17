@@ -361,6 +361,8 @@ func _enter_build_mode(segment_id: String, _sub_area_id: int) -> void:
 	_build_mode.setup(sim.world, sim.infrastructure, seg, BUILD_CROSSING_TYPE,
 			int(infra_record.get("cost_per_tile", 0)))
 	_renderer.build_mode = _build_mode
+	_renderer.information = sim.information
+	_renderer.hotspot_area_id = sim.active_sub_area_id
 	_update_build_status_label()
 	_log("Build mode — click tiles across the corridor. Enter to confirm, Escape to cancel.")
 
@@ -399,6 +401,7 @@ func _cancel_build() -> void:
 func _exit_build_mode() -> void:
 	_build_mode = null
 	_renderer.build_mode = null
+	_renderer.information = null
 	_hud.clear_build_status()
 
 ## Refresh the cost/status readout — called on every hover move and toggle

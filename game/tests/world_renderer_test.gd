@@ -2,6 +2,10 @@
 ## placeholder projection so segment-mode pointer-picking lands on the right tile.
 extends GutTest
 
+const HOTSPOT_AREA := 7
+const HOT_TILE := Vector2i(12, 5)
+const OTHER_HOT_TILE := Vector2i(13, 5)
+
 var _r: WorldRenderer
 
 func before_each() -> void:
@@ -74,3 +78,62 @@ func test_coord_at_px_round_trips_through_a_stretched_screen() -> void:
 	assert_eq(
 			_r.coord_at_px(recovered), c,
 			"round-trips through a stretched, letterboxed screen")
+
+func _load_json(path: String) -> Dictionary:
+	return JSON.parse_string(FileAccess.get_file_as_string(path))
+
+func _hotspot_sim() -> Simulation:
+	var tiles: Dictionary = {}
+	for t: Dictionary in _load_json("res://data/tiles.json")["tiles"]:
+		tiles[t["id"]] = t
+	var species: Dictionary = {}
+	for sp: Dictionary in _load_json("res://data/species_stats.json")["species"]:
+		species[sp["id"]] = sp
+	var infra: Dictionary = {}
+	for c: Dictionary in _load_json("res://data/infrastructure.json")["infrastructure"]:
+		infra[c["crossing_type"]] = c
+	var segs: Dictionary = {}
+	for sg: Dictionary in _load_json("res://data/segments.json")["segments"]:
+		segs[sg["id"]] = sg
+	var sim := Simulation.new()
+	autofree(sim)
+	sim.load_world(HOTSPOT_AREA, { "tiles": tiles, "species": species, "infrastructure": infra,
+		"segments": segs, "biome_groups": _load_json("res://data/biome_groups.json") }, 42)
+	return sim
+
+## Corridor-study hotspot markers: with no information manager, or no study held,
+## nothing is marked.
+func test_hotspot_tiles_empty_without_a_corridor_study() -> void:
+	assert_eq(WorldRenderer.hotspot_tiles(null, HOTSPOT_AREA).size(), 0, "no manager, no markers")
+	var sim := _hotspot_sim()
+	sim.information.record_death(HOT_TILE)
+	assert_eq(WorldRenderer.hotspot_tiles(sim.information, HOTSPOT_AREA).size(), 0,
+			"deaths recorded but the study is not held")
+
+func test_hotspot_tiles_marks_tiles_with_deaths_and_updates_as_they_accumulate() -> void:
+	var sim := _hotspot_sim()
+	sim.economy.budget = 1000000
+	sim.information.record_attempt(OTHER_HOT_TILE)
+	assert_true(sim.information.purchase(InformationManager.CORRIDOR_STUDY, HOTSPOT_AREA), "study bought")
+	assert_eq(WorldRenderer.hotspot_tiles(sim.information, HOTSPOT_AREA).size(), 0,
+			"an attempt without a death is a route, not a hotspot")
+	sim.information.record_death(HOT_TILE)
+	assert_eq(WorldRenderer.hotspot_tiles(sim.information, HOTSPOT_AREA), [HOT_TILE] as Array[Vector2i],
+			"the first death marks its tile")
+	sim.information.record_death(OTHER_HOT_TILE)
+	sim.information.record_death(OTHER_HOT_TILE)
+	assert_eq(WorldRenderer.hotspot_tiles(sim.information, HOTSPOT_AREA),
+			[OTHER_HOT_TILE, HOT_TILE] as Array[Vector2i], "more deaths add a marker, deadliest first")
+
+func test_hotspot_tiles_empty_for_an_area_that_is_not_loaded() -> void:
+	var sim := _hotspot_sim()
+	sim.economy.budget = 1000000
+	sim.information.purchase(InformationManager.CORRIDOR_STUDY, HOTSPOT_AREA)
+	sim.information.record_death(HOT_TILE)
+	assert_eq(WorldRenderer.hotspot_tiles(sim.information, HOTSPOT_AREA + 1).size(), 0)
+
+func test_hotspot_colour_is_distinct_from_the_other_build_layers() -> void:
+	var others: Array[Color] = [WorldRenderer.COLOR_BUILD_CHOSEN, WorldRenderer.COLOR_BUILD_HOVER_VALID,
+			WorldRenderer.COLOR_BUILD_HOVER_INVALID, WorldRenderer.COLOR_COMPLETED_CROSSING]
+	for other in others:
+		assert_ne(WorldRenderer.COLOR_HOTSPOT, other)
