@@ -162,9 +162,10 @@ Procedure lives in [signing-runbook.md](../signing-runbook.md).
 
 ### Neutral / Follow-on work
 
-- Build-review **V2** (gate the Windows and macOS packs, not just Linux) should
-  land before or with this. A checksum attests to the integrity of contents
-  that nothing has verified.
+- Build-review **V2** (gate the Windows and macOS packs, not just Linux) closed
+  on 2026-08-10: the pack gate covers Linux and Windows, and macOS has been
+  checked by hand in runbook A6 and A7 since 2026-09-26. The gate matters because
+  a checksum attests to the integrity of contents that nothing else has verified.
 - The `v0.1.0` release note must state which artifacts are signed, which are
   not, how to verify, and what Windows users will see.
 - `README.md` and the website download section need the key fingerprint and the
