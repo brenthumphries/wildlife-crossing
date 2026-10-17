@@ -5,6 +5,11 @@ class_name WorldRenderer
 extends Node2D
 
 const TILE_PX := 24.0
+## A tile's flat-to-flat width in this node's space: neighbouring centres are
+## TILE_PX apart, so the hex width across flats is TILE_PX too. On-screen tile
+## size is this times the camera zoom — the measure WorldSelectController's
+## segment-zoom thresholds use (ADR 0002, ADR 0021).
+const TILE_FLAT_TO_FLAT_PX := TILE_PX
 ## Ghost-preview colors (build-review B4): a chosen-but-uncompleted span tile,
 ## a hovered tile the player could add, and a hovered tile that is not part
 ## of the segment / not coverable by the current crossing type. Distinct from
@@ -80,6 +85,17 @@ static func hotspot_tiles(info: InformationManager, area_id: int) -> Array[Vecto
 ## grows.
 static func px_at_coord(c: Vector2i) -> Vector2:
 	return Vector2(c.x * TILE_PX + c.y * TILE_PX * 0.5, c.y * TILE_PX * 0.87)
+
+## The centre of the projected bounding box of `coords`, in this node's local
+## space: where to point a camera to frame a whole sub-area. ZERO when empty.
+static func centre_px(coords: Array) -> Vector2:
+	if coords.is_empty():
+		return Vector2.ZERO
+	var first := px_at_coord(coords[0])
+	var bounds := Rect2(first, Vector2.ZERO)
+	for c: Vector2i in coords:
+		bounds = bounds.expand(px_at_coord(c))
+	return bounds.get_center()
 
 ## Inverse of `px_at_coord`: the tile coordinate under a point in this node's
 ## local space (pass `get_global_mouse_position()` — a Node2D reports it

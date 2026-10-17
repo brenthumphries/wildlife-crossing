@@ -42,6 +42,9 @@ const INFO_KEY := KEY_I
 
 var sim: Simulation
 var _renderer: WorldRenderer
+## The player's world camera. The world-select controller drives it at segment
+## zoom and hands it back unchanged on the way out (ADR 0021).
+var _camera: Camera2D
 var _world_select: WorldSelectController
 var _overlay: ConnectivityOverlay
 var _confirm_panel: ConfirmPanel
@@ -77,12 +80,12 @@ func _ready() -> void:
 	_overlay.setup(sim.world, sim.graph, _sub_area_segments(TUTORIAL_SUB_AREA))
 	add_child(_overlay)   # draws over the renderer; hidden until segment mode
 
-	var cam := Camera2D.new()
+	_camera = Camera2D.new()
 	# Must go through the renderer's projection: the hex basis is sheared, so
 	# raw `coord * TILE_PX` frames the wrong place (fixed 2026-07-19).
-	cam.position = WorldRenderer.px_at_coord(CAMERA_FOCUS_COORD)
-	cam.zoom = Vector2(CAMERA_ZOOM, CAMERA_ZOOM)
-	add_child(cam)
+	_camera.position = WorldRenderer.px_at_coord(CAMERA_FOCUS_COORD)
+	_camera.zoom = Vector2(CAMERA_ZOOM, CAMERA_ZOOM)
+	add_child(_camera)
 
 	_cue_player = AudioStreamPlayer.new()
 	_cue_player.stream = CROSSING_CUE
@@ -283,11 +286,10 @@ const SEGMENT_PICK_RADIUS := 1
 ##
 ## **Unreachable from the map screen in v0.1.0.** Roadmap Phase 2, decision
 ## logged 2026-08-06: the world map ships look-only, and `WorldSelectMap.tscn`
-## now stops mouse events (see `WorldSelectController._gui_input`), so this is
-## only reached once the in-map segment renderer lands (build-review C1). Until
-## then `B` is the placement path. Kept wired rather than deleted because the
-## logic is correct and covered — what was wrong was the coordinate space it
-## picked in, not the picking.
+## stops mouse events (see `WorldSelectController._gui_input`). Since ADR 0021
+## segment mode shows the live world this picks in, through the same camera, so
+## the coordinate space is right; routing the click here is C25. Until then `B`
+## is the placement path.
 func _try_select_segment() -> void:
 	if _world_select == null or _world_select.mode != WorldSelectController.Mode.SEGMENT:
 		return
@@ -426,6 +428,7 @@ func _open_world_select() -> void:
 		layer.add_child(_world_select)
 		add_child(layer)
 		_overlay.attach(_world_select)
+		_world_select.attach_world_camera(_camera, _sub_area_centre_px)
 		_confirm_panel = ConfirmPanel.new()
 		_confirm_panel.attach(_world_select)
 		_confirm_panel.confirmed.connect(_on_confirm_panel_confirmed)
@@ -433,6 +436,12 @@ func _open_world_select() -> void:
 	if _world_select.mode == WorldSelectController.Mode.INACTIVE:
 		_world_select.enter_selection_mode()
 		_log("Crossing location selection — scroll to zoom, Escape to exit.")
+
+## World-space centre of a sub-area for the world-select camera. Only the loaded
+## sub-area exists as a live world — v0.1.0 is Bow Valley only, the one sub-area
+## that starts unlocked — so every id frames the loaded world.
+func _sub_area_centre_px(_sub_area_id: int) -> Vector2:
+	return WorldRenderer.centre_px(sim.world.all_coords())
 
 func _on_animal_crossed(_crossing_id: String, _species_id: String) -> void:
 	_crossed_pending += 1

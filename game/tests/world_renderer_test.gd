@@ -137,3 +137,19 @@ func test_hotspot_colour_is_distinct_from_the_other_build_layers() -> void:
 			WorldRenderer.COLOR_BUILD_HOVER_INVALID, WorldRenderer.COLOR_COMPLETED_CROSSING]
 	for other in others:
 		assert_ne(WorldRenderer.COLOR_HOTSPOT, other)
+
+# --- world-select camera framing (ADR 0021) ---
+
+func test_tile_flat_to_flat_is_the_neighbour_spacing() -> void:
+	var step := WorldRenderer.px_at_coord(Vector2i(1, 0)) - WorldRenderer.px_at_coord(Vector2i(0, 0))
+	assert_almost_eq(step.length(), WorldRenderer.TILE_FLAT_TO_FLAT_PX, 0.001,
+			"a hex's width across flats is the distance between neighbouring centres")
+
+func test_centre_px_is_the_projected_bounds_centre() -> void:
+	var coords: Array = [Vector2i(0, 0), Vector2i(4, 0), Vector2i(0, 2)]
+	var lo := Vector2(0.0, 0.0)
+	var hi := Vector2(4.0 * WorldRenderer.TILE_PX, 2.0 * WorldRenderer.TILE_PX * 0.87)
+	assert_almost_eq(WorldRenderer.centre_px(coords), (lo + hi) / 2.0, Vector2(0.001, 0.001))
+
+func test_centre_px_of_nothing_is_the_origin() -> void:
+	assert_eq(WorldRenderer.centre_px([]), Vector2.ZERO)

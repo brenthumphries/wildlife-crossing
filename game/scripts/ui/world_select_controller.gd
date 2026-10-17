@@ -1,7 +1,9 @@
 ## Crossing-location-selection controller for the Y2Y world-select map:
 ## selection-mode lifecycle, continuous world→segment zoom with hysteresis,
 ## locked sub-area gating, and Escape exit (crossing-location-selection PRD P0;
-## roadmap Phase 2; ADR 0013 naming; ADR 0002 flat-to-flat zoom measure).
+## roadmap Phase 2; ADR 0013 naming; ADR 0002 flat-to-flat zoom measure). At
+## segment zoom the card grid gives way to the live world: this controller
+## drives the world camera and draws nothing over it (ADR 0021).
 class_name WorldSelectController
 extends Control
 
@@ -27,7 +29,8 @@ const LOCKED_MAX_TILE_PX := float(SimulationConstants.SEGMENT_ZOOM_DEACTIVATE_PX
 
 # --- world-map card layout: color-fill placeholder, or real art where a
 # sub-area's `card_image` is set (roadmap decision logged 2026-09-15 — see
-# roadmap.md; still look-only, no in-map segment renderer) ---
+# roadmap.md). Drawn at world zoom only; it fades out across the hysteresis
+# band and segment mode shows the live world instead (ADR 0021) ---
 const CARD_SIZE := Vector2(170.0, 84.0)
 const CARD_GAP := 12.0
 const GRID_COLS := 3
@@ -40,6 +43,8 @@ const COLOR_TEXT := Color(0.92, 0.92, 0.88)
 const COLOR_TEXT_DIM := Color(0.70, 0.70, 0.70)
 const COLOR_LABEL_SCRIM := Color(0.0, 0.0, 0.0, 0.45)   # legibility backing over card art
 const LABEL_FONT_SIZE := 12
+const HEADER_OUTLINE_PX := 4                      # header legibility over the live world
+const COLOR_HEADER_OUTLINE := Color(0.0, 0.0, 0.0, 0.85)
 
 var mode := Mode.INACTIVE
 var zoom := ZOOM_MIN
@@ -47,6 +52,15 @@ var focused_sub_area_id := 0
 
 var _sub_areas: Dictionary = {}
 var _unlocked: Dictionary = {}
+
+# The world camera this controller drives while the live world shows through
+# (ADR 0021), the sub-area id → world-space centre resolver Main supplies, and
+# the player's own framing, saved on reveal and restored when it ends.
+var _world_camera: Camera2D = null
+var _world_centre_of: Callable
+var _camera_saved := false
+var _saved_camera_position := Vector2.ZERO
+var _saved_camera_zoom := Vector2.ONE
 
 func _ready() -> void:
 	var bus := get_node_or_null("/root/EventBus")
@@ -94,6 +108,7 @@ func exit_selection_mode(cancelled: bool = true) -> void:
 	if mode == Mode.SEGMENT:
 		segment_mode_exited.emit()
 	mode = Mode.INACTIVE
+	_sync_world_camera()   # restores the player's camera before anyone hears of the exit
 	hide()
 	selection_mode_exited.emit()
 	if cancelled and is_inside_tree():
@@ -119,6 +134,7 @@ func set_zoom(value: float) -> void:
 			zoom_blocked.emit(focused_sub_area_id)
 	zoom = clamped
 	_update_mode()
+	_sync_world_camera()
 	queue_redraw()
 
 func zoom_in() -> void:
@@ -126,6 +142,38 @@ func zoom_in() -> void:
 
 func zoom_out() -> void:
 	set_zoom(zoom / ZOOM_STEP)
+
+## How far the live world has replaced the card grid, 0..1: 0 at world zoom
+## (below SEGMENT_ZOOM_DEACTIVATE_PX) and whenever focus is locked, rising
+## linearly across the hysteresis band, and 1 throughout segment mode. There is
+## no loading step between the two — the cards fade as the world comes up.
+func world_reveal() -> float:
+	if mode == Mode.SEGMENT:
+		return 1.0
+	if mode != Mode.WORLD or not is_sub_area_unlocked(focused_sub_area_id):
+		return 0.0
+	var band := float(SimulationConstants.SEGMENT_ZOOM_ACTIVATE_PX) \
+			- float(SimulationConstants.SEGMENT_ZOOM_DEACTIVATE_PX)
+	return clampf(
+			(tile_px() - float(SimulationConstants.SEGMENT_ZOOM_DEACTIVATE_PX)) / band, 0.0, 1.0)
+
+## Opacity of this controller's own backdrop and card grid: the complement of
+## `world_reveal()`. 0 in segment mode, so nothing it draws covers the world or
+## the connectivity overlay above it.
+func card_layer_alpha() -> float:
+	if mode == Mode.INACTIVE:
+		return 0.0
+	return 1.0 - world_reveal()
+
+## Hand this controller the world camera to drive while the live world shows
+## through (ADR 0021). `centre_of(sub_area_id) -> Vector2` returns the world-space
+## point to centre on. The camera's own framing is saved when the reveal starts
+## and restored, exactly, when it ends.
+func attach_world_camera(camera: Camera2D, centre_of: Callable) -> void:
+	_world_camera = camera
+	_world_centre_of = centre_of
+	_camera_saved = false
+	_sync_world_camera()
 
 ## Set which sub-area the view is centred on (the scene layer decides this from
 ## camera position); re-applies the lock clamp against the new focus.
@@ -152,6 +200,7 @@ func card_image_path(sub_area_id: int) -> String:
 ## (Phase 5); this controller only reflects it (PRD non-goal).
 func unlock_sub_area(sub_area_id: int) -> void:
 	_unlocked[sub_area_id] = true
+	_sync_world_camera()
 	queue_redraw()
 
 func _on_event_bus_sub_area_unlocked(sub_area_id: int, _entity_id: String) -> void:
@@ -172,6 +221,27 @@ func _update_mode() -> void:
 			mode = Mode.WORLD
 			segment_mode_exited.emit()
 
+# Drive the world camera from this controller's zoom while any of the live
+# world shows: on-screen tile size equals `tile_px()` (the renderer's
+# flat-to-flat tile width times camera zoom), centred on the focused sub-area.
+# When the reveal ends, put back the camera the player had.
+func _sync_world_camera() -> void:
+	if _world_camera == null:
+		return
+	if world_reveal() > 0.0:
+		if not _camera_saved:
+			_saved_camera_position = _world_camera.position
+			_saved_camera_zoom = _world_camera.zoom
+			_camera_saved = true
+		var camera_zoom := tile_px() / WorldRenderer.TILE_FLAT_TO_FLAT_PX
+		_world_camera.zoom = Vector2(camera_zoom, camera_zoom)
+		if _world_centre_of.is_valid():
+			_world_camera.position = _world_centre_of.call(focused_sub_area_id)
+	elif _camera_saved:
+		_world_camera.position = _saved_camera_position
+		_world_camera.zoom = _saved_camera_zoom
+		_camera_saved = false
+
 func _unhandled_input(event: InputEvent) -> void:
 	if mode == Mode.INACTIVE:
 		return
@@ -189,11 +259,12 @@ func _unhandled_input(event: InputEvent) -> void:
 ## ships **look-only** in v0.1.0. Previously this Control was
 ## `MOUSE_FILTER_IGNORE`, so a click on the opaque card grid fell through to
 ## `Main._try_select_segment()`, which resolves the cursor against the *world*
-## camera underneath (`main.gd:154`) — the player picked a hex they could not
-## see, and in segment mode that could open the confirm panel on a Bow Valley
-## segment they never aimed at. Stopping the event is a stopgap; the real fix is
-## the in-map segment renderer (build-review C1, deferred), after which the drawn
-## map and the pick path share a coordinate space and this can route clicks again.
+## camera underneath (`Main._pick_segment_at_mouse`) — the player picked a hex
+## they could not see, and in segment mode that could open the confirm panel on a
+## Bow Valley segment they never aimed at. Since ADR 0021 segment mode shows that
+## very world, driven by this controller's zoom, so the drawn map and the pick
+## path now share one coordinate space; routing clicks to it is C25. Until then
+## presses are still stopped here.
 ##
 ## Scroll-to-zoom is preserved — it is a Phase 2 exit criterion — and every other
 ## mouse button is swallowed. The controller is hidden while `Mode.INACTIVE`, and
@@ -212,18 +283,29 @@ func _gui_input(event: InputEvent) -> void:
 	if is_inside_tree():
 		accept_event()
 
-# --- placeholder rendering (stand-in until real map art / B2 overlay land) ---
+# --- world-zoom card rendering (segment mode draws only the header) ---
 
 func _draw() -> void:
 	if mode == Mode.INACTIVE or _sub_areas.is_empty():
 		return
 	var font := ThemeDB.fallback_font
-	draw_rect(Rect2(Vector2.ZERO, size), COLOR_BACKDROP)
+	var card_alpha := card_layer_alpha()
+	if card_alpha > 0.0:
+		var backdrop := COLOR_BACKDROP
+		backdrop.a *= card_alpha
+		draw_rect(Rect2(Vector2.ZERO, size), backdrop)
+		_draw_card_grid(font, card_alpha)
 	var mode_name := "world view" if mode == Mode.WORLD else "segment mode"
 	var header := "Select a crossing location — %s (%.1f px/tile) · scroll to zoom · Esc to exit" \
 			% [mode_name, tile_px()]
-	draw_string(font, Vector2(GRID_ORIGIN.x, 40.0), header,
+	# Outlined rather than backed: over the live world a scrim would cover it.
+	var header_pos := Vector2(GRID_ORIGIN.x, 40.0)
+	draw_string_outline(font, header_pos, header, HORIZONTAL_ALIGNMENT_LEFT, -1.0,
+			LABEL_FONT_SIZE + 2, HEADER_OUTLINE_PX, COLOR_HEADER_OUTLINE)
+	draw_string(font, header_pos, header,
 			HORIZONTAL_ALIGNMENT_LEFT, -1.0, LABEL_FONT_SIZE + 2, COLOR_TEXT)
+
+func _draw_card_grid(font: Font, alpha: float) -> void:
 	var ids: Array = _sub_areas.keys()
 	ids.sort()
 	var rows := int(ceil(ids.size() / float(GRID_COLS)))
@@ -234,9 +316,9 @@ func _draw() -> void:
 		var row := (rows - 1) - row_from_south   # south at the bottom, north on top
 		var pos := GRID_ORIGIN + Vector2(
 				col * (CARD_SIZE.x + CARD_GAP), row * (CARD_SIZE.y + CARD_GAP))
-		_draw_sub_area_card(font, Rect2(pos, CARD_SIZE), id)
+		_draw_sub_area_card(font, Rect2(pos, CARD_SIZE), id, alpha)
 
-func _draw_sub_area_card(font: Font, rect: Rect2, sub_area_id: int) -> void:
+func _draw_sub_area_card(font: Font, rect: Rect2, sub_area_id: int, alpha: float) -> void:
 	var unlocked := is_sub_area_unlocked(sub_area_id)
 	var image_path := card_image_path(sub_area_id)
 	var has_art := not image_path.is_empty()
@@ -245,21 +327,26 @@ func _draw_sub_area_card(font: Font, rect: Rect2, sub_area_id: int) -> void:
 		# COLOR_LOCKED darkens the art to the same desaturated-lock treatment the
 		# placeholder cards use (PRD rule 5), with no shader needed.
 		draw_texture_rect(load(image_path), rect, false,
-				Color.WHITE if unlocked else COLOR_LOCKED)
+				_faded(Color.WHITE if unlocked else COLOR_LOCKED, alpha))
 	else:
-		draw_rect(rect, COLOR_UNLOCKED if unlocked else COLOR_LOCKED)
+		draw_rect(rect, _faded(COLOR_UNLOCKED if unlocked else COLOR_LOCKED, alpha))
 	if sub_area_id == focused_sub_area_id:
-		draw_rect(rect, Color.WHITE, false, 2.0)
+		draw_rect(rect, _faded(Color.WHITE, alpha), false, 2.0)
 	var label := String(_sub_areas[sub_area_id].get("name", str(sub_area_id)))
 	if has_art:
-		draw_rect(Rect2(rect.position, Vector2(rect.size.x, 28.0)), COLOR_LABEL_SCRIM)
+		draw_rect(Rect2(rect.position, Vector2(rect.size.x, 28.0)), _faded(COLOR_LABEL_SCRIM, alpha))
 	draw_string(font, rect.position + Vector2(8.0, 22.0), label,
 			HORIZONTAL_ALIGNMENT_LEFT, rect.size.x - 16.0, LABEL_FONT_SIZE,
-			COLOR_TEXT if unlocked else COLOR_TEXT_DIM)
+			_faded(COLOR_TEXT if unlocked else COLOR_TEXT_DIM, alpha))
 	if not unlocked:
-		_draw_lock_glyph(rect.position + rect.size - Vector2(24.0, 26.0))
+		_draw_lock_glyph(rect.position + rect.size - Vector2(24.0, 26.0), alpha)
 
 # A small padlock: shackle arc over a body rect (the lock indicator, PRD rule 5).
-func _draw_lock_glyph(at: Vector2) -> void:
-	draw_arc(at + Vector2(8.0, 4.0), 5.0, PI, TAU, 12, COLOR_LOCK_GLYPH, 2.0)
-	draw_rect(Rect2(at + Vector2(1.0, 4.0), Vector2(14.0, 11.0)), COLOR_LOCK_GLYPH)
+func _draw_lock_glyph(at: Vector2, alpha: float) -> void:
+	var color := _faded(COLOR_LOCK_GLYPH, alpha)
+	draw_arc(at + Vector2(8.0, 4.0), 5.0, PI, TAU, 12, color, 2.0)
+	draw_rect(Rect2(at + Vector2(1.0, 4.0), Vector2(14.0, 11.0)), color)
+
+# `color` with its alpha scaled by the card layer's fade.
+static func _faded(color: Color, alpha: float) -> Color:
+	return Color(color, color.a * alpha)

@@ -253,3 +253,151 @@ func test_scroll_wheel_still_zooms_through_gui_input() -> void:
 	var zoomed: float = _c.zoom
 	_c._gui_input(_mouse_button(MOUSE_BUTTON_WHEEL_DOWN))
 	assert_lt(_c.zoom, zoomed, "wheel-down still zooms out")
+
+# --- live world at segment zoom (ADR 0021) ---
+#
+# Segment mode used to draw an opaque card grid over the world. Now the cards
+# fade out across the 12–16 px hysteresis band, the controller drives the world
+# camera so the live world shows at the controller's own tile size, and leaving
+# restores the camera the player had.
+
+const PLAYER_CAMERA_POSITION := Vector2(321.0, 117.0)
+const PLAYER_CAMERA_ZOOM := Vector2(2.0, 2.0)
+const SUB_AREA_CENTRE := Vector2(400.0, 250.0)
+
+var _camera: Camera2D
+
+func _attach_camera() -> void:
+	_camera = Camera2D.new()
+	_camera.position = PLAYER_CAMERA_POSITION
+	_camera.zoom = PLAYER_CAMERA_ZOOM
+	_c.attach_world_camera(_camera,
+			func(id: int) -> Vector2: return SUB_AREA_CENTRE + Vector2(float(id), 0.0))
+
+func _free_camera() -> void:
+	_camera.free()
+	_camera = null
+
+# On-screen flat-to-flat tile size of the live world through the camera.
+func _camera_tile_px() -> float:
+	return WorldRenderer.TILE_FLAT_TO_FLAT_PX * _camera.zoom.x
+
+func _assert_player_camera_restored() -> void:
+	assert_eq(_camera.position, PLAYER_CAMERA_POSITION, "player's camera position restored")
+	assert_eq(_camera.zoom, PLAYER_CAMERA_ZOOM, "player's camera zoom restored")
+
+func test_segment_mode_draws_no_backdrop_or_cards() -> void:
+	_c.enter_selection_mode()
+	_zoom_to_px(ACTIVATE_PX)
+	assert_eq(_c.mode, WorldSelectController.Mode.SEGMENT, "precondition: segment mode")
+	assert_eq(_c.world_reveal(), 1.0, "the live world is fully revealed")
+	assert_eq(_c.card_layer_alpha(), 0.0, "no opaque backdrop and no card grid")
+
+func test_world_view_draws_the_cards_fully_opaque() -> void:
+	_c.enter_selection_mode()
+	assert_eq(_c.card_layer_alpha(), 1.0, "full-Y2Y view is the card grid")
+	assert_eq(_c.world_reveal(), 0.0)
+
+func test_cards_give_way_across_the_hysteresis_band() -> void:
+	_c.enter_selection_mode()
+	_zoom_to_px(DEACTIVATE_PX)
+	assert_eq(_c.card_layer_alpha(), 1.0, "band start: still all cards")
+	_zoom_to_px((ACTIVATE_PX + DEACTIVATE_PX) / 2.0)
+	assert_almost_eq(_c.card_layer_alpha(), 0.5, 0.001, "mid-band: half faded")
+	assert_eq(_c.mode, WorldSelectController.Mode.WORLD, "still world mode inside the band")
+	_zoom_to_px(ACTIVATE_PX)
+	assert_eq(_c.card_layer_alpha(), 0.0, "band end: the live world only")
+
+func test_crossing_the_band_raises_no_prompt_or_extra_event() -> void:
+	_c.enter_selection_mode()
+	_events.clear()
+	for px: float in [DEACTIVATE_PX, 13.0, 14.0, 15.0, ACTIVATE_PX]:
+		_zoom_to_px(px)
+	assert_eq(_events, ["segment_on:7"],
+			"the only thing between world view and segment mode is the mode change itself")
+
+func test_locked_focus_never_reveals_the_world() -> void:
+	_c.enter_selection_mode()
+	_c.set_focused_sub_area(8)
+	_zoom_to_px(ACTIVATE_PX)
+	assert_eq(_c.world_reveal(), 0.0, "clamped at the boundary, the cards stay up")
+	assert_eq(_c.card_layer_alpha(), 1.0)
+
+func test_card_layer_is_not_drawn_while_inactive() -> void:
+	assert_eq(_c.card_layer_alpha(), 0.0)
+
+func test_segment_zoom_drives_the_world_camera() -> void:
+	_attach_camera()
+	_c.enter_selection_mode()
+	_assert_player_camera_restored()   # world view leaves the camera alone
+	_zoom_to_px(ACTIVATE_PX)
+	assert_almost_eq(_camera_tile_px(), _c.tile_px(), 0.001,
+			"on-screen tile size matches the controller's tile_px")
+	assert_eq(_camera.position, SUB_AREA_CENTRE + Vector2(7.0, 0.0),
+			"centred on the focused sub-area")
+	_c.zoom_in()
+	assert_almost_eq(_camera_tile_px(), _c.tile_px(), 0.001, "follows further zoom")
+	_free_camera()
+
+func test_camera_is_driven_inside_the_band_as_the_cards_fade() -> void:
+	_attach_camera()
+	_c.enter_selection_mode()
+	_zoom_to_px((ACTIVATE_PX + DEACTIVATE_PX) / 2.0)
+	assert_almost_eq(_camera_tile_px(), _c.tile_px(), 0.001,
+			"the world behind the fading cards is already at the controller's scale")
+	_free_camera()
+
+func test_zooming_out_of_segment_mode_restores_the_player_camera() -> void:
+	_attach_camera()
+	_c.enter_selection_mode()
+	_zoom_to_px(ACTIVATE_PX)
+	_zoom_to_px(DEACTIVATE_PX - 0.1)
+	assert_eq(_c.mode, WorldSelectController.Mode.WORLD, "precondition: back to world view")
+	_assert_player_camera_restored()
+	_free_camera()
+
+func test_escape_restores_the_player_camera() -> void:
+	_attach_camera()
+	_c.enter_selection_mode()
+	_zoom_to_px(ACTIVATE_PX)
+	_c.zoom_in()
+	var ev := InputEventKey.new()
+	ev.keycode = KEY_ESCAPE
+	ev.pressed = true
+	_c._unhandled_input(ev)
+	_assert_player_camera_restored()
+	_free_camera()
+
+func test_confirm_hand_off_restores_the_player_camera() -> void:
+	_attach_camera()
+	_c.enter_selection_mode()
+	_zoom_to_px(ACTIVATE_PX)
+	_c.exit_selection_mode(false)   # the confirm → construction path
+	_assert_player_camera_restored()
+	_free_camera()
+
+func test_focusing_a_locked_area_restores_the_player_camera() -> void:
+	_attach_camera()
+	_c.enter_selection_mode()
+	_zoom_to_px(ACTIVATE_PX)
+	_c.set_focused_sub_area(9)
+	_assert_player_camera_restored()
+	_free_camera()
+
+func test_camera_restore_is_exact_after_a_second_visit() -> void:
+	_attach_camera()
+	_c.enter_selection_mode()
+	_zoom_to_px(ACTIVATE_PX)
+	_zoom_to_px(DEACTIVATE_PX - 0.1)
+	_zoom_to_px(ACTIVATE_PX)
+	_c.exit_selection_mode()
+	_assert_player_camera_restored()   # the driven framing is never saved as the player's
+	_free_camera()
+
+func test_scroll_wheel_zoom_drives_the_camera_in_segment_mode() -> void:
+	_attach_camera()
+	_c.enter_selection_mode()
+	_zoom_to_px(ACTIVATE_PX)
+	_c._gui_input(_mouse_button(MOUSE_BUTTON_WHEEL_UP))
+	assert_almost_eq(_camera_tile_px(), _c.tile_px(), 0.001, "wheel zoom reaches the world")
+	_free_camera()
