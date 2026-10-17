@@ -16,6 +16,9 @@ signal zoom_blocked(sub_area_id: int)
 ## A left click in segment mode, in screen (viewport) pixels. The controller
 ## does no picking itself: the owner resolves it against the world camera.
 signal segment_clicked(screen_position: Vector2)
+## The hover highlight changed: the tiles of the dangerous segment under the
+## cursor, or empty when it was cleared (PRD rule 9). Hex coordinates.
+signal hover_highlight_changed(tiles: Array)
 
 enum Mode { INACTIVE, WORLD, SEGMENT }
 
@@ -52,6 +55,9 @@ const COLOR_HEADER_OUTLINE := Color(0.0, 0.0, 0.0, 0.85)
 var mode := Mode.INACTIVE
 var zoom := ZOOM_MIN
 var focused_sub_area_id := 0
+## Tiles of the dangerous segment under the cursor; empty when nothing is
+## highlighted. Only ever non-empty in segment mode.
+var hover_tiles: Array[Vector2i] = []
 
 var _sub_areas: Dictionary = {}
 var _unlocked: Dictionary = {}
@@ -61,6 +67,10 @@ var _unlocked: Dictionary = {}
 # the player's own framing, saved on reveal and restored when it ends.
 var _world_camera: Camera2D = null
 var _world_centre_of: Callable
+# Hover picking, supplied by Main: screen position → segment record ({} when
+# none), and tile coordinate → whether that tile is impassable or hazardous.
+var _hover_pick: Callable
+var _tile_is_dangerous: Callable
 var _camera_saved := false
 var _saved_camera_position := Vector2.ZERO
 var _saved_camera_zoom := Vector2.ONE
@@ -111,6 +121,7 @@ func exit_selection_mode(cancelled: bool = true) -> void:
 	if mode == Mode.SEGMENT:
 		segment_mode_exited.emit()
 	mode = Mode.INACTIVE
+	clear_hover()
 	_sync_world_camera()   # restores the player's camera before anyone hears of the exit
 	hide()
 	selection_mode_exited.emit()
@@ -178,6 +189,43 @@ func attach_world_camera(camera: Camera2D, centre_of: Callable) -> void:
 	_camera_saved = false
 	_sync_world_camera()
 
+## Hand this controller the hover resolvers (PRD rules 8–9). `pick(screen_position)
+## -> Dictionary` returns the segment record under a screen point, or {};
+## `is_dangerous(coord: Vector2i) -> bool` is true for an `is_impassable` or
+## `is_hazardous` tile. The controller highlights only segments with at least
+## one such tile, so plain terrain highlights nothing.
+func attach_hover_picker(pick: Callable, is_dangerous: Callable) -> void:
+	_hover_pick = pick
+	_tile_is_dangerous = is_dangerous
+
+## Update the hover highlight for a cursor at `screen_position` (screen pixels).
+## Segment mode only; anywhere else it clears.
+func update_hover(screen_position: Vector2) -> void:
+	if mode != Mode.SEGMENT or not _hover_pick.is_valid() or not _tile_is_dangerous.is_valid():
+		clear_hover()
+		return
+	var seg: Dictionary = _hover_pick.call(screen_position)
+	var tiles: Array[Vector2i] = []
+	var dangerous := false
+	for pair: Array in seg.get("tiles", []):
+		var coord := Vector2i(int(pair[0]), int(pair[1]))
+		tiles.append(coord)
+		dangerous = dangerous or bool(_tile_is_dangerous.call(coord))
+	if not dangerous:
+		tiles.clear()
+	_set_hover_tiles(tiles)
+
+## Drop the hover highlight.
+func clear_hover() -> void:
+	var none: Array[Vector2i] = []
+	_set_hover_tiles(none)
+
+func _set_hover_tiles(tiles: Array[Vector2i]) -> void:
+	if tiles == hover_tiles:
+		return
+	hover_tiles = tiles
+	hover_highlight_changed.emit(hover_tiles)
+
 ## Set which sub-area the view is centred on (the scene layer decides this from
 ## camera position); re-applies the lock clamp against the new focus.
 func set_focused_sub_area(sub_area_id: int) -> void:
@@ -222,6 +270,7 @@ func _update_mode() -> void:
 		if tile_px() < float(SimulationConstants.SEGMENT_ZOOM_DEACTIVATE_PX) \
 				or not is_sub_area_unlocked(focused_sub_area_id):
 			mode = Mode.WORLD
+			clear_hover()
 			segment_mode_exited.emit()
 
 # Drive the world camera from this controller's zoom while any of the live
@@ -270,6 +319,9 @@ func _unhandled_input(event: InputEvent) -> void:
 ## from mouse picking, so normal play (build-mode tile clicks) is unaffected.
 func _gui_input(event: InputEvent) -> void:
 	if mode == Mode.INACTIVE:
+		return
+	if event is InputEventMouseMotion:
+		update_hover(event.position)
 		return
 	if not (event is InputEventMouseButton and event.pressed):
 		return

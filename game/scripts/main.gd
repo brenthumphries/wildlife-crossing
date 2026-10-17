@@ -329,6 +329,13 @@ func _pick_segment_at(screen_position: Vector2) -> Dictionary:
 		return {}
 	return _registries()["segments"].get(id, {})
 
+## True for an impassable or hazardous tile of the loaded world (PRD rule 8).
+func _is_dangerous_tile(coord: Vector2i) -> bool:
+	return sim.world.is_impassable(coord) or sim.world.is_hazardous(coord)
+
+func _on_hover_highlight_changed(tiles: Array) -> void:
+	_renderer.segment_hover_tiles.assign(tiles)
+
 ## The construction step: confirm hands over the exact (segment, sub_area).
 func _on_confirm_panel_confirmed(segment_id: String, sub_area_id: int) -> void:
 	_world_select.exit_selection_mode(false)   # hand-off to construction, not a cancel
@@ -429,6 +436,8 @@ func _open_world_select() -> void:
 		_overlay.attach(_world_select)
 		_world_select.attach_world_camera(_camera, _sub_area_centre_px)
 		_world_select.segment_clicked.connect(_try_select_segment)
+		_world_select.attach_hover_picker(_pick_segment_at, _is_dangerous_tile)
+		_world_select.hover_highlight_changed.connect(_on_hover_highlight_changed)
 		_confirm_panel = ConfirmPanel.new()
 		_confirm_panel.attach(_world_select)
 		_confirm_panel.confirmed.connect(_on_confirm_panel_confirmed)
