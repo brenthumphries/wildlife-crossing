@@ -422,3 +422,72 @@ func test_scroll_wheel_zoom_drives_the_camera_in_segment_mode() -> void:
 	_c._gui_input(_mouse_button(MOUSE_BUTTON_WHEEL_UP))
 	assert_almost_eq(_camera_tile_px(), _c.tile_px(), 0.001, "wheel zoom reaches the world")
 	_free_camera()
+
+# --- segment hover highlight (PRD rules 8-9) ---
+
+const HOVER_ROAD := { "id": "road", "tiles": [[0, 0], [1, 0]] }
+const HOVER_MEADOW := { "id": "meadow", "tiles": [[5, 5], [6, 5]] }
+const HOVER_DANGEROUS_TILES: Array[Vector2i] = [Vector2i(0, 0), Vector2i(1, 0)]
+
+# Hover over `HOVER_ROAD` at x < 100, `HOVER_MEADOW` at x < 200, else nothing.
+func _attach_hover_picker() -> void:
+	_c.attach_hover_picker(
+			func(at: Vector2) -> Dictionary:
+				if at.x < 100.0:
+					return HOVER_ROAD
+				return HOVER_MEADOW if at.x < 200.0 else {},
+			func(coord: Vector2i) -> bool: return HOVER_DANGEROUS_TILES.has(coord))
+
+func _enter_segment_mode_with_picker() -> void:
+	_attach_hover_picker()
+	_c.enter_selection_mode()
+	_zoom_to_px(ACTIVATE_PX)
+
+func _motion(at: Vector2) -> InputEventMouseMotion:
+	var ev := InputEventMouseMotion.new()
+	ev.position = at
+	return ev
+
+func test_hover_highlights_dangerous_only() -> void:
+	_enter_segment_mode_with_picker()
+	var changes: Array = []
+	_c.hover_highlight_changed.connect(func(tiles: Array) -> void: changes.append(tiles.size()))
+	_c._gui_input(_motion(Vector2(50.0, 0.0)))
+	assert_eq(_c.hover_tiles, HOVER_DANGEROUS_TILES, "a dangerous segment's tiles are highlighted")
+	_c._gui_input(_motion(Vector2(150.0, 0.0)))
+	assert_eq(_c.hover_tiles.size(), 0, "a segment of plain terrain highlights nothing")
+	_c._gui_input(_motion(Vector2(50.0, 0.0)))
+	_c._gui_input(_motion(Vector2(300.0, 0.0)))
+	assert_eq(_c.hover_tiles.size(), 0, "no segment under the cursor highlights nothing")
+	assert_eq(changes, [2, 0, 2, 0], "the signal fires on change only")
+
+func test_hover_does_nothing_in_world_view() -> void:
+	_attach_hover_picker()
+	_c.enter_selection_mode()
+	_c._gui_input(_motion(Vector2(50.0, 0.0)))
+	assert_eq(_c.hover_tiles.size(), 0, "world view has no segment highlight")
+
+func test_hover_clears_on_leaving_segment_mode() -> void:
+	_enter_segment_mode_with_picker()
+	_c._gui_input(_motion(Vector2(50.0, 0.0)))
+	_zoom_to_px(DEACTIVATE_PX - 1.0)
+	assert_eq(_c.mode, WorldSelectController.Mode.WORLD, "precondition: left segment mode")
+	assert_eq(_c.hover_tiles.size(), 0, "the highlight clears on exit from segment mode")
+
+func test_hover_clears_on_escape() -> void:
+	_enter_segment_mode_with_picker()
+	_c._gui_input(_motion(Vector2(50.0, 0.0)))
+	var ev := InputEventKey.new()
+	ev.keycode = KEY_ESCAPE
+	ev.pressed = true
+	_c._unhandled_input(ev)
+	assert_eq(_c.hover_tiles.size(), 0, "Escape clears the highlight")
+
+func test_hover_colour_is_distinct_from_overlay_and_ghosts() -> void:
+	var taken: Array[Color] = [
+		ConnectivityOverlay.COLOR_FRAGMENTED, ConnectivityOverlay.COLOR_CONNECTED,
+		WorldRenderer.COLOR_BUILD_CHOSEN, WorldRenderer.COLOR_BUILD_HOVER_VALID,
+		WorldRenderer.COLOR_BUILD_HOVER_INVALID, WorldRenderer.COLOR_HOTSPOT,
+		WorldRenderer.COLOR_COMPLETED_CROSSING]
+	for other: Color in taken:
+		assert_false(WorldRenderer.COLOR_SEGMENT_HOVER.is_equal_approx(other))

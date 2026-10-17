@@ -18,6 +18,10 @@ const TILE_FLAT_TO_FLAT_PX := TILE_PX
 const COLOR_BUILD_CHOSEN := Color(0.35, 0.75, 0.95, 0.85)
 const COLOR_BUILD_HOVER_VALID := Color(0.35, 0.95, 0.45, 0.5)
 const COLOR_BUILD_HOVER_INVALID := Color(0.95, 0.30, 0.30, 0.4)
+## Segment-selection hover highlight (crossing-location-selection PRD rule 9):
+## violet, so it reads apart from the orange/teal connectivity overlay, the
+## blue/green/red build ghost, the gold completed fill and the orange hotspot ring.
+const COLOR_SEGMENT_HOVER := Color(0.70, 0.40, 0.95, 0.65)
 ## Corridor-study hotspot ring (roadmap Phase 3): an orange outline, so it reads
 ## apart from the blue chosen ghost, the green/red hover and the gold completed fill.
 const COLOR_COMPLETED_CROSSING := Color(0.92, 0.80, 0.25)
@@ -30,6 +34,9 @@ var sim: Simulation
 ## Set by Main while a BuildMode is active (build-review B4); null otherwise.
 var build_mode: BuildMode = null
 var build_hover := Vector2i.ZERO
+## Tiles of the segment hovered in selection mode (set by Main from
+## WorldSelectController.hover_highlight_changed); empty draws nothing.
+var segment_hover_tiles: Array[Vector2i] = []
 ## Set by Main with `build_mode`: where corridor-study hotspots are read from, and
 ## the loaded sub-area they belong to. Null information draws no markers.
 var information: InformationManager = null
@@ -45,6 +52,8 @@ func _draw() -> void:
 		draw_circle(px_at_coord(c), TILE_PX * 0.45, _tile_color(c))
 	for c in sim.infrastructure.coverage().keys():
 		draw_circle(px_at_coord(c), TILE_PX * 0.45, COLOR_COMPLETED_CROSSING)
+	for c in segment_hover_tiles:
+		draw_circle(px_at_coord(c), TILE_PX * 0.5, COLOR_SEGMENT_HOVER)
 	if build_mode != null:
 		_draw_build_preview()
 	for a in sim.agents:
