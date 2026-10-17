@@ -8,6 +8,9 @@
 ## reads distinctly even if a mode message lands in the same frame.
 ## C16 adds two persistent labels under the cue: the budget (always shown) and
 ## the last donation (hidden until one arrives).
+## C20 stacks every HUD text in one VBoxContainer (no fixed positions), takes
+## sizes from TextScale, and re-applies them on `text_scale_changed`. The
+## build status readout, formerly a free-floating label in Main, lives here.
 class_name Hud
 extends BaseScreen
 
@@ -17,14 +20,16 @@ const CUE_ICON := preload("res://assets/sprites/crossing_cue.png")
 ## Placeholder art (game/CLAUDE.md asset pipeline: no Aseprite `_src/` --
 ## generated as a flat-colour stand-in, not exported from source art).
 const CUE_COLOR := Color(0.35, 0.85, 0.55)
-## Stacked below the crossing cue (icon spans y 72..96); x matches the other
-## labels, and each box is one line tall so the two never overlap.
-const BUDGET_LABEL_POSITION := Vector2(16.0, 104.0)
-const BUDGET_LABEL_SIZE := Vector2(240.0, 24.0)
-const DONATION_LABEL_POSITION := Vector2(16.0, 132.0)
-const DONATION_LABEL_SIZE := Vector2(240.0, 24.0)
+const STACK_MARGIN := 16.0
+const STACK_SEPARATION := 4
+const CUE_ROW_SEPARATION := 8
+## The cue icon's edge in px at text-scale step 1.0; scaled with the text.
+const CUE_ICON_BASE_SIZE := 24.0
 
+var _stack: VBoxContainer
+var _build_status_label: Label
 var _message_label: Label
+var _cue_row: HBoxContainer
 var _cue_icon: TextureRect
 var _cue_label: Label
 var _budget_label: Label
@@ -35,38 +40,78 @@ var _cue_timer := 0.0
 func _build_ui() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 
-	_message_label = Label.new()
-	_message_label.position = Vector2(16.0, 44.0)   # below Main's build-status label at (16,16)
-	_message_label.add_theme_color_override("font_color", Color.WHITE)
+	_stack = VBoxContainer.new()
+	_stack.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_stack.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT,
+			Control.PRESET_MODE_MINSIZE, int(STACK_MARGIN))
+	_stack.add_theme_constant_override("separation", STACK_SEPARATION)
+	add_child(_stack)
+
+	_build_status_label = _add_label(Color.WHITE)
+	_build_status_label.hide()   # shown only while build mode is open
+
+	_message_label = _add_label(Color.WHITE)
 	_message_label.modulate.a = 0.0
-	add_child(_message_label)
+
+	_cue_row = HBoxContainer.new()
+	_cue_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_cue_row.add_theme_constant_override("separation", CUE_ROW_SEPARATION)
+	_stack.add_child(_cue_row)
 
 	_cue_icon = TextureRect.new()
 	_cue_icon.texture = CUE_ICON
-	_cue_icon.custom_minimum_size = Vector2(24.0, 24.0)
-	_cue_icon.position = Vector2(16.0, 72.0)
+	_cue_icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	_cue_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	_cue_icon.modulate.a = 0.0
-	add_child(_cue_icon)
+	_cue_row.add_child(_cue_icon)
 
 	_cue_label = Label.new()
-	_cue_label.position = Vector2(48.0, 76.0)
 	_cue_label.add_theme_color_override("font_color", CUE_COLOR)
 	_cue_label.modulate.a = 0.0
-	add_child(_cue_label)
+	_cue_row.add_child(_cue_label)
 
-	_budget_label = Label.new()
-	_budget_label.position = BUDGET_LABEL_POSITION
-	_budget_label.size = BUDGET_LABEL_SIZE
-	_budget_label.add_theme_color_override("font_color", Color.WHITE)
-	add_child(_budget_label)
+	_budget_label = _add_label(Color.WHITE)
 	set_budget(EconomyConstants.STARTING_BUDGET)
 
-	_donation_label = Label.new()
-	_donation_label.position = DONATION_LABEL_POSITION
-	_donation_label.size = DONATION_LABEL_SIZE
-	_donation_label.add_theme_color_override("font_color", CUE_COLOR)
+	_donation_label = _add_label(CUE_COLOR)
 	_donation_label.hide()   # nothing to show until a donation arrives
-	add_child(_donation_label)
+
+	apply_text_scale()
+
+func _ready() -> void:
+	var bus := get_node_or_null("/root/EventBus")
+	if bus:
+		bus.text_scale_changed.connect(_on_event_bus_text_scale_changed)
+
+## Re-size every HUD text from TextScale's current step.
+func apply_text_scale() -> void:
+	_set_font_size(_build_status_label, TextScale.SMALL)
+	_set_font_size(_message_label, TextScale.BODY)
+	_set_font_size(_cue_label, TextScale.BODY)
+	_set_font_size(_budget_label, TextScale.BODY)
+	_set_font_size(_donation_label, TextScale.SMALL)
+	_cue_icon.custom_minimum_size = Vector2.ONE * TextScale.size(roundi(CUE_ICON_BASE_SIZE))
+
+## Show the build-mode cost/status readout above the message line.
+func set_build_status(text: String) -> void:
+	_build_status_label.text = text
+	_build_status_label.show()
+
+## Hide the build-mode readout (build mode closed).
+func clear_build_status() -> void:
+	_build_status_label.hide()
+
+func _add_label(color: Color) -> Label:
+	var label := Label.new()
+	label.add_theme_color_override("font_color", color)
+	_stack.add_child(label)
+	return label
+
+func _set_font_size(label: Label, base: int) -> void:
+	label.add_theme_font_size_override("font_size", TextScale.size(base))
+
+func _on_event_bus_text_scale_changed(_factor: float) -> void:
+	apply_text_scale()
 
 ## Mirror a Debug-logged message on screen; fades over MESSAGE_FADE_SECONDS.
 func show_message(text: String) -> void:

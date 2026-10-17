@@ -54,7 +54,6 @@ var _coalesce_timer := 0.0
 ## player is not in build mode. Nothing is written to `sim.infrastructure`
 ## until confirm succeeds — see `build_mode.gd`.
 var _build_mode: BuildMode = null
-var _build_status_label: Label
 ## Build-review C1: the on-screen message channel + crossing-cue flash,
 ## mirroring `_log()` so player feedback is visible in a windowed export.
 var _hud: Hud
@@ -96,11 +95,6 @@ func _ready() -> void:
 	_hud = Hud.new()
 	hud_layer.add_child(_hud)
 	_hud.set_budget(sim.economy.budget)
-	_build_status_label = Label.new()
-	_build_status_label.position = Vector2(16.0, 16.0)
-	_build_status_label.add_theme_color_override("font_color", Color.WHITE)
-	hud_layer.add_child(_build_status_label)
-	_build_status_label.hide()
 
 	# Own CanvasLayer above the HUD's: the credits overlay is a modal that must
 	# cover the message channel and build readout, not sit beside them.
@@ -367,7 +361,6 @@ func _enter_build_mode(segment_id: String, _sub_area_id: int) -> void:
 	_build_mode.setup(sim.world, sim.infrastructure, seg, BUILD_CROSSING_TYPE,
 			int(infra_record.get("cost_per_tile", 0)))
 	_renderer.build_mode = _build_mode
-	_build_status_label.show()
 	_update_build_status_label()
 	_log("Build mode — click tiles across the corridor. Enter to confirm, Escape to cancel.")
 
@@ -406,7 +399,7 @@ func _cancel_build() -> void:
 func _exit_build_mode() -> void:
 	_build_mode = null
 	_renderer.build_mode = null
-	_build_status_label.hide()
+	_hud.clear_build_status()
 
 ## Refresh the cost/status readout — called on every hover move and toggle
 ## so the running cost is never stale (ADR 0016 "Negative": the UI must
@@ -419,7 +412,7 @@ func _update_build_status_label() -> void:
 			sim.economy.budget]
 	if _build_mode.chosen_count() > 0 and not _build_mode.is_valid():
 		text += "  (%s)" % _build_mode.rejection_reason()
-	_build_status_label.text = text
+	_hud.set_build_status(text)
 
 ## Open the crossing-location-selection map (lazily instanced on first use).
 ## Placeholder trigger for the PRD's "Add crossing" toolbar action.
