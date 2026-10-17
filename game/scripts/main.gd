@@ -211,10 +211,10 @@ func _unhandled_input(event: InputEvent) -> void:
 			_cancel_build()
 	elif event is InputEventMouseButton and event.pressed \
 			and event.button_index == MOUSE_BUTTON_LEFT:
+		# Segment picking arrives via the world-select controller's
+		# `segment_clicked`, not here: that screen consumes its own clicks.
 		if _build_mode != null:
 			_try_toggle_build_tile()
-		else:
-			_try_select_segment()
 
 # --- save / load (architecture §7, ADR 0005/0014) ---------------------------
 
@@ -282,20 +282,19 @@ const SEGMENT_PICK_RADIUS := 1
 
 ## Segment-mode click: pick the segment under the cursor and open the
 ## confirmation panel. Real per-segment hit-testing over the loaded sub-area's
-## authored map — the click maps to a tile, the tile resolves to a segment.
+## authored map — the click maps to a world point through the camera the player
+## sees, the point to a tile, the tile to a segment.
 ##
-## **Unreachable from the map screen in v0.1.0.** Roadmap Phase 2, decision
-## logged 2026-08-06: the world map ships look-only, and `WorldSelectMap.tscn`
-## stops mouse events (see `WorldSelectController._gui_input`). Since ADR 0021
-## segment mode shows the live world this picks in, through the same camera, so
-## the coordinate space is right; routing the click here is C25. Until then `B`
-## is the placement path.
-func _try_select_segment() -> void:
+## Reached from `WorldSelectController.segment_clicked`. Roadmap Phase 2,
+## decision logged 2026-08-06 stops all map-screen clicks; that now applies to
+## world view only, because at segment zoom (ADR 0021) the map is the live world
+## and shares this camera's coordinate space.
+func _try_select_segment(screen_position: Vector2) -> void:
 	if _world_select == null or _world_select.mode != WorldSelectController.Mode.SEGMENT:
 		return
 	if _confirm_panel.is_open:
 		return
-	var seg: Dictionary = _pick_segment_at_mouse()
+	var seg: Dictionary = _pick_segment_at(screen_position)
 	if seg.is_empty():
 		return
 	var bus := get_node_or_null("/root/EventBus")
@@ -316,16 +315,16 @@ func _cheapest_crossing_tile_cost() -> int:
 			cheapest = cost
 	return maxi(cheapest, 0)
 
-## Resolve the tile under the cursor to a segment of the loaded sub-area, or {}.
-## Picking is scoped to the rendered (loaded) sub-area — the placeholder card
-## grid can't yet render an unloaded map to pick on.
-func _pick_segment_at_mouse() -> Dictionary:
+## Resolve a screen position to a segment of the loaded sub-area, or {}.
+## Picking is scoped to the rendered (loaded) sub-area. The viewport's canvas
+## transform carries the camera, so this is the point the player is looking at.
+func _pick_segment_at(screen_position: Vector2) -> Dictionary:
 	var segs: Array = _sub_area_segments(sim.active_sub_area_id)
 	if segs.is_empty():
 		return {}
-	var coord: Vector2i = _renderer.coord_at_px(_renderer.get_global_mouse_position())
-	var id: String = SegmentPicker.nearest_segment(
-			segs, coord, SEGMENT_PICK_RADIUS, sim.active_sub_area_id)
+	var world_px: Vector2 = get_viewport().get_canvas_transform().affine_inverse() * screen_position
+	var id: String = SegmentPicker.segment_at_world_point(
+			segs, world_px, SEGMENT_PICK_RADIUS, sim.active_sub_area_id)
 	if id.is_empty():
 		return {}
 	return _registries()["segments"].get(id, {})
@@ -429,6 +428,7 @@ func _open_world_select() -> void:
 		add_child(layer)
 		_overlay.attach(_world_select)
 		_world_select.attach_world_camera(_camera, _sub_area_centre_px)
+		_world_select.segment_clicked.connect(_try_select_segment)
 		_confirm_panel = ConfirmPanel.new()
 		_confirm_panel.attach(_world_select)
 		_confirm_panel.confirmed.connect(_on_confirm_panel_confirmed)
