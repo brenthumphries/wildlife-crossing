@@ -17,8 +17,6 @@ const NO_CORRIDOR_DATA := "no data"
 const SELECTION_MARK := "> "
 const NO_MARK := "  "
 const PANEL_MARGIN := 48.0
-const TITLE_FONT_SIZE := 28
-const BODY_FONT_SIZE := 14
 const DISABLED_COLOR := Color(0.55, 0.55, 0.55)
 const ENABLED_COLOR := Color(1.0, 1.0, 1.0)
 const BACKDROP_COLOR := Color(0.05, 0.08, 0.06, 0.94)
@@ -31,10 +29,12 @@ var status_text := ""
 var _info: InformationManager
 var _economy: EconomyManager
 var _area_id: int = 0
+var _title_label: Label
 var _budget_label: Label
 var _product_labels: Array[Label] = []
 var _status_label: Label
 var _body: RichTextLabel
+var _hint_label: Label
 
 ## Bind the manager and economy of the loaded world. Call again after a load, which
 ## replaces both.
@@ -45,6 +45,21 @@ func setup(info: InformationManager, economy: EconomyManager, area_id: int) -> v
 	selected = 0
 	status_text = ""
 	refresh()
+
+func _ready() -> void:
+	var bus := get_node_or_null("/root/EventBus")
+	if bus:
+		bus.text_scale_changed.connect(_on_event_bus_text_scale_changed)
+
+## Re-size every text in the panel from TextScale's current step.
+func apply_text_scale() -> void:
+	_set_font_size(_title_label, TextScale.TITLE)
+	_set_font_size(_budget_label, TextScale.BODY)
+	for row: Label in _product_labels:
+		_set_font_size(row, TextScale.BODY)
+	_set_font_size(_status_label, TextScale.BODY)
+	_body.add_theme_font_size_override("normal_font_size", TextScale.size(TextScale.BODY))
+	_set_font_size(_hint_label, TextScale.SMALL)
 
 ## Show the panel with the selection back on the first product.
 func open() -> void:
@@ -159,6 +174,12 @@ func _unhandled_input(event: InputEvent) -> void:
 	if is_inside_tree():   # no viewport when built bare in tests
 		get_viewport().set_input_as_handled()
 
+func _set_font_size(label: Label, base: int) -> void:
+	label.add_theme_font_size_override("font_size", TextScale.size(base))
+
+func _on_event_bus_text_scale_changed(_factor: float) -> void:
+	apply_text_scale()
+
 func _can_afford(product: String) -> bool:
 	return _economy.can_afford(_info.cost_of(product))
 
@@ -211,32 +232,34 @@ func _build_ui() -> void:
 	column.add_theme_constant_override("separation", 8)
 	margin.add_child(column)
 
-	var title := Label.new()
-	title.text = TITLE
-	title.add_theme_font_size_override("font_size", TITLE_FONT_SIZE)
-	column.add_child(title)
+	_title_label = Label.new()
+	_title_label.text = TITLE
+	column.add_child(_title_label)
 
 	_budget_label = Label.new()
 	column.add_child(_budget_label)
 
 	for _product in PRODUCTS:
 		var row := Label.new()
-		row.add_theme_font_size_override("font_size", BODY_FONT_SIZE)
 		column.add_child(row)
 		_product_labels.append(row)
 
 	_status_label = Label.new()
+	_status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	column.add_child(_status_label)
 
 	_body = RichTextLabel.new()
 	_body.bbcode_enabled = false
 	_body.scroll_active = true
 	_body.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	_body.add_theme_font_size_override("normal_font_size", BODY_FONT_SIZE)
+	# No minimum height: the body gives way to the rows and hint at large steps.
+	_body.custom_minimum_size = Vector2.ZERO
 	column.add_child(_body)
 
-	var hint := Label.new()
-	hint.text = CLOSE_HINT
-	column.add_child(hint)
+	_hint_label = Label.new()
+	_hint_label.text = CLOSE_HINT
+	_hint_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	column.add_child(_hint_label)
 
+	apply_text_scale()
 	hide()

@@ -42,9 +42,11 @@ const FIXTURE_LICENSES := {
 }
 
 func before_each() -> void:
+	TextScale.set_step(0)
 	_c = CreditsScreen.new()
 
 func after_each() -> void:
+	TextScale.set_step(0)
 	_c.free()
 
 # --- lifecycle ---------------------------------------------------------------
@@ -205,3 +207,28 @@ func test_body_has_bbcode_disabled() -> void:
 	# Licence texts contain square brackets. With BBCode on, Godot would parse
 	# them as markup and silently drop them from the notice.
 	assert_false(_c._body.bbcode_enabled)
+
+func test_font_sizes_follow_the_text_scale_step() -> void:
+	for i in TextScale.STEPS.size():
+		TextScale.set_step(i)
+		_c.apply_text_scale()
+		assert_eq(_c._title_label.get_theme_font_size("font_size"), TextScale.size(TextScale.TITLE))
+		assert_eq(_c._body.get_theme_font_size("normal_font_size"), TextScale.size(TextScale.BODY))
+		assert_eq(_c._hint_label.get_theme_font_size("font_size"), TextScale.size(TextScale.SMALL))
+
+func test_sizes_reapply_live_on_text_scale_changed() -> void:
+	add_child(_c)   # _ready connects the EventBus signal
+	var before: int = _c._body.get_theme_font_size("normal_font_size")
+	TextScale.set_step(2)
+	assert_eq(_c._body.get_theme_font_size("normal_font_size"), TextScale.size(TextScale.BODY))
+	assert_ne(_c._body.get_theme_font_size("normal_font_size"), before)
+
+func test_close_button_stays_in_the_viewport_at_every_text_scale_step() -> void:
+	add_child(_c)
+	_c.open()
+	var view := get_viewport().get_visible_rect()
+	for i in TextScale.STEPS.size():
+		TextScale.set_step(i)
+		await get_tree().process_frame
+		await get_tree().process_frame
+		assert_true(view.encloses(_c._close_button.get_global_rect()), "close button within the viewport at step %d" % i)

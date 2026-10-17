@@ -22,6 +22,7 @@ var _segment_label: Label
 var _budget_label: Label
 var _note_label: Label
 var _gate_label: Label
+var _title_label: Label
 var _confirm_button: Button
 var _cancel_button: Button
 var _can_confirm := false
@@ -29,6 +30,23 @@ var _can_confirm := false
 func _init() -> void:
 	_build_ui()
 	hide()
+
+func _ready() -> void:
+	var bus := get_node_or_null("/root/EventBus")
+	if bus:
+		bus.text_scale_changed.connect(_on_event_bus_text_scale_changed)
+
+## Re-size every text and the box minimum from TextScale's current step. Labels
+## wrap and the box grows about its centre, so the buttons stay on screen.
+func apply_text_scale() -> void:
+	_panel_box.custom_minimum_size = PANEL_MIN_SIZE * TextScale.factor()
+	_set_font_size(_title_label, TextScale.BODY)
+	_set_font_size(_segment_label, TextScale.BODY)
+	_set_font_size(_budget_label, TextScale.BODY)
+	_set_font_size(_note_label, TextScale.SMALL)
+	_set_font_size(_gate_label, TextScale.SMALL)
+	_set_font_size(_confirm_button, TextScale.BODY)
+	_set_font_size(_cancel_button, TextScale.BODY)
 
 ## Present the panel for a selected segment record (segments.json shape),
 ## showing the player's remaining budget. `min_crossing_cost` drives the budget
@@ -103,6 +121,12 @@ func _gui_input(event: InputEvent) -> void:
 			cancel()
 			accept_event()
 
+func _set_font_size(control: Control, base: int) -> void:
+	control.add_theme_font_size_override("font_size", TextScale.size(base))
+
+func _on_event_bus_text_scale_changed(_factor: float) -> void:
+	apply_text_scale()
+
 func _on_confirm_button_pressed() -> void:
 	confirm()
 
@@ -118,20 +142,25 @@ func _build_ui() -> void:
 	_panel_box = PanelContainer.new()
 	_panel_box.custom_minimum_size = PANEL_MIN_SIZE
 	_panel_box.set_anchors_preset(Control.PRESET_CENTER)
+	_panel_box.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	_panel_box.grow_vertical = Control.GROW_DIRECTION_BOTH
 	add_child(_panel_box)
 
 	var column := VBoxContainer.new()
 	column.add_theme_constant_override("separation", 8)
 	_panel_box.add_child(column)
 
-	var title := Label.new()
-	title.text = "Build a crossing here?"
-	column.add_child(title)
+	_title_label = Label.new()
+	_title_label.text = "Build a crossing here?"
+	_title_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	column.add_child(_title_label)
 
 	_segment_label = Label.new()
+	_segment_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	column.add_child(_segment_label)
 
 	_budget_label = Label.new()
+	_budget_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	column.add_child(_budget_label)
 
 	_note_label = Label.new()
@@ -157,3 +186,5 @@ func _build_ui() -> void:
 	_cancel_button.text = "Cancel"
 	_cancel_button.pressed.connect(_on_cancel_button_pressed)
 	buttons.add_child(_cancel_button)
+
+	apply_text_scale()
