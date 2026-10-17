@@ -511,6 +511,33 @@ cadence on `season_changed`).
 - `season_manager_test.gd` / `time_controller_test.gd`, `save_manager_test.gd`
   green.
 
+> **Decision logged (2026-10-16): seasonal presence, migration and terrain
+> rules.** Resolves Q9 from the plan for the week of 2026-10-19. Brent's call;
+> the rules are the plan's proposals with one change: elk and pronghorn are never
+> absent.
+>
+> **Presence.** Only the grizzly (`hibernates`) is absent in a season, and only in
+> winter. Elk and pronghorn (`seasonal_migration`), mountain caribou and bighorn
+> sheep (`elevational_migration`), and wolverine, gray wolf and Canada lynx
+> (`resident`) are present all year. This replaces "migratory species (elk,
+> pronghorn) appear in a patch only in their season" in
+> `docs/simulation-design.md` §6 and "migrators appear seasonally" in the exit
+> criteria above. Rejected: absence in winter for elk and pronghorn, as proposed.
+>
+> **Migration.** Both migration patterns (`seasonal_migration` and
+> `elevational_migration`) migrate in spring and fall. In those seasons
+> goal-distance willingness is multiplied by 1.5, so elk and pronghorn show a
+> crossing-usage spike in spring and fall without ever leaving.
+>
+> **Terrain.** Seasons run spring, summer, fall, winter from year 1 spring. Winter
+> clears `is_hazardous` on river tiles. Spring widens river hazard zones by one
+> tile. Summer and fall use the base terrain. C39 builds this as hazard changes
+> only, per the v0.2.0 scope block in Phase 3.
+>
+> **Effect on the plan.** C37's absence table holds only the grizzly; the
+> `seasonal_migration` pattern has no absence season. C37 follows this
+> block, as its text says, and C38's 1.5 stands. `docs/simulation-design.md` §6 is not yet amended.
+
 ---
 
 ## Phase 5 — Permissions + narrative (post cultural review)
