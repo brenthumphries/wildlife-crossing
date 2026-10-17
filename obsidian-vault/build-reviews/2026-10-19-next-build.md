@@ -10,6 +10,18 @@ status: active
 > [`docs/plan/week.json`](../../docs/plan/week.json); `tools/warden.py day`
 > dispatches from it.
 
+> [!success] Amendment 2026-10-16 (evening) — **Q9 is decided, and Q10 stays open.**
+> Brent accepted the seasonal rules in Q9 with one change: elk and pronghorn are
+> present all year, with migration spikes in spring and fall only. The grizzly is
+> the only species absent in a season (winter). The rest of Q9 stands: both
+> migration patterns migrate in spring and fall at 1.5 times, winter clears river
+> hazard, spring widens it by one tile. The decision is in the Phase 4 Decision
+> logged block of `docs/roadmap.md`. C37 now builds an absence table for the
+> grizzly only. C37 already says to follow the logged answer and C38's 1.5 is unchanged, so
+> `week.json` is unchanged and still lists Q9 as open. Q10 is not decided: Brent
+> will call a fixed freeze date after the features he wants are merged and
+> walked. The plan itself landed as #70 (`49ac737`). See [[../daily-logs/2026-10-16]].
+
 > [!info] Snapshot
 > Measured against **`6ddeb4e`** (*Merge pull request #69 from brenthumphries/docs/log-2026-10-16*,
 > 2026-10-16T16:58:19-05:00) on `main`, via `docs/plan/facts.json`.
