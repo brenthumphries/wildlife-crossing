@@ -20,6 +20,9 @@ signal information_purchased(product: String, area_or_entity_id: String)
 signal season_changed(new_season: String)
 signal time_speed_changed(multiplier: float)
 
+# --- Display ---
+signal text_scale_changed(factor: float)
+
 # --- Permissions & progression ---
 signal trust_changed(entity_id: String, score: int, stage: String)
 signal sub_area_unlocked(sub_area_id: int, entity_id: String)
