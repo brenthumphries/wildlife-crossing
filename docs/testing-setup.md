@@ -67,8 +67,8 @@ godot --headless -s addons/gut/gut_cmdln.gd -gdir=res://tests -ginclude_subdirs 
 Substitute the path to your local binary for `godot` (e.g.
 `../tools/godot/Godot_v4.6.3-stable_linux.arm64`). A clean run ends with
 `---- All tests passed! ----` and a summary; the suite currently reports
-**32 scripts / 388 tests / 6,671 asserts** passing (measured 2026-10-16, after
-C19's `text_scale_test.gd`, on top of C18's `information_panel_test.gd` and the patch-overview accessor tests, on top of C17's `information_manager_test.gd` and the information save coverage, on top of C15's monthly-income tests and C14's fragmentation-deficit tests, on top of C16's HUD budget and donation labels and C13's charging and economy-save tests; the script before C12's `economy_manager_test.gd` was V2's
+**32 scripts / 392 tests / 6,780 asserts** passing (measured 2026-10-16, after
+C20's container-based HUD tests, on top of C19's `text_scale_test.gd`, on top of C18's `information_panel_test.gd` and the patch-overview accessor tests, on top of C17's `information_manager_test.gd` and the information save coverage, on top of C15's monthly-income tests and C14's fragmentation-deficit tests, on top of C16's HUD budget and donation labels and C13's charging and economy-save tests; the script before C12's `economy_manager_test.gd` was V2's
 `constants_test.gd`, pinning EconomyConstants, HabitatConstants and
 SimulationConstants to data-schemas.md §10).
 

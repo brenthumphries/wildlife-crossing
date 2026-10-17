@@ -6,10 +6,12 @@ extends GutTest
 var _h: Hud
 
 func before_each() -> void:
+	TextScale.set_step(0)
 	_h = Hud.new()
 
 func after_each() -> void:
 	_h.free()
+	TextScale.set_step(0)
 
 func test_starts_with_nothing_visible() -> void:
 	assert_eq(_h._message_label.modulate.a, 0.0)
@@ -71,12 +73,51 @@ func test_zero_donation_keeps_the_label_hidden() -> void:
 	_h.set_last_donation(0)
 	assert_false(_h._donation_label.visible)
 
-func test_ledger_labels_do_not_overlap_other_hud_elements() -> void:
-	var budget := Rect2(Hud.BUDGET_LABEL_POSITION, Hud.BUDGET_LABEL_SIZE)
-	var donation := Rect2(Hud.DONATION_LABEL_POSITION, Hud.DONATION_LABEL_SIZE)
-	var cue := Rect2(_h._cue_icon.position, _h._cue_icon.custom_minimum_size)
-	var message := Rect2(_h._message_label.position, Vector2(0.0, 24.0))
-	assert_false(budget.intersects(donation), "budget vs donation")
-	assert_false(budget.intersects(cue), "budget vs cue icon")
-	assert_false(donation.intersects(cue), "donation vs cue icon")
-	assert_true(budget.position.y >= message.end.y, "budget below message line")
+func test_build_status_hidden_until_set_and_cleared_again() -> void:
+	assert_false(_h._build_status_label.visible)
+	_h.set_build_status("Build overpass — 2 tile(s) selected, $100 — budget $900")
+	assert_true(_h._build_status_label.visible)
+	assert_eq(_h._build_status_label.text, "Build overpass — 2 tile(s) selected, $100 — budget $900")
+	_h.clear_build_status()
+	assert_false(_h._build_status_label.visible)
+
+func test_every_text_lives_in_the_one_stack() -> void:
+	for node: Node in [_h._build_status_label, _h._message_label, _h._cue_row,
+			_h._budget_label, _h._donation_label]:
+		assert_eq(node.get_parent(), _h._stack)
+	assert_eq(_h._cue_label.get_parent(), _h._cue_row)
+	assert_eq(_h._cue_icon.get_parent(), _h._cue_row)
+
+func test_font_sizes_follow_the_text_scale_step() -> void:
+	for i in TextScale.STEPS.size():
+		TextScale.set_step(i)
+		_h.apply_text_scale()
+		assert_eq(_h._message_label.get_theme_font_size("font_size"), TextScale.size(TextScale.BODY))
+		assert_eq(_h._budget_label.get_theme_font_size("font_size"), TextScale.size(TextScale.BODY))
+		assert_eq(_h._donation_label.get_theme_font_size("font_size"), TextScale.size(TextScale.SMALL))
+		assert_eq(_h._build_status_label.get_theme_font_size("font_size"), TextScale.size(TextScale.SMALL))
+
+func test_sizes_reapply_live_on_text_scale_changed() -> void:
+	add_child(_h)   # _ready connects the EventBus signal
+	var before: int = _h._message_label.get_theme_font_size("font_size")
+	TextScale.set_step(2)
+	assert_eq(_h._message_label.get_theme_font_size("font_size"), TextScale.size(TextScale.BODY))
+	assert_ne(_h._message_label.get_theme_font_size("font_size"), before)
+
+func test_no_two_visible_elements_overlap_at_any_text_scale_step() -> void:
+	_h.show_message("Overpass complete — the highway is now a safe crossing.")
+	_h.show_crossing_cue(12)
+	_h.set_last_donation(250)
+	_h.set_build_status("Build overpass — 3 tile(s) selected, $300 — budget $9000")
+	add_child(_h)
+	for i in TextScale.STEPS.size():
+		TextScale.set_step(i)
+		await get_tree().process_frame
+		await get_tree().process_frame
+		var elements: Array[Control] = [_h._build_status_label, _h._message_label,
+				_h._cue_icon, _h._cue_label, _h._budget_label, _h._donation_label]
+		for a in elements.size():
+			assert_true(elements[a].visible, "element %d visible at step %d" % [a, i])
+			for b in range(a + 1, elements.size()):
+				assert_false(elements[a].get_global_rect().intersects(elements[b].get_global_rect()),
+						"elements %d and %d overlap at step %d" % [a, b, i])
