@@ -142,7 +142,8 @@ stops it, and how it fails.
   invoking the build-review skill.
 - **Reads.** `docs/roadmap.md`, the most recent
   `obsidian-vault/build-reviews/` note, `docs/test-plan.md`,
-  `docs/pre-build-checklist.md`, actual repo state, and open Issues.
+  `docs/plan/week.json` (which replaced the archived
+  `docs/pre-build-checklist.md`), actual repo state, and open Issues.
 - **Writes.** The dated build-review note exactly as today, **plus** one GitHub
   Issue per work item that is (a) not already an open Issue and (b) has no
   unmet dependency.
