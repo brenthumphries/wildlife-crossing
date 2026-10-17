@@ -10,9 +10,11 @@ extends GutTest
 var _m: MainMenu
 
 func before_each() -> void:
+	TextScale.set_step(0)
 	_m = MainMenu.new()
 
 func after_each() -> void:
+	TextScale.set_step(0)
 	_m.free()
 
 # --- menu --------------------------------------------------------------------
@@ -54,6 +56,36 @@ func test_version_line_is_settable() -> void:
 
 func test_version_line_starts_empty() -> void:
 	assert_eq(_m._version_label.text, "")
+
+# --- text scale --------------------------------------------------------------
+
+func test_font_sizes_follow_the_text_scale_step() -> void:
+	for i in TextScale.STEPS.size():
+		TextScale.set_step(i)
+		_m.apply_text_scale()
+		assert_eq(_m._title_label.get_theme_font_size("font_size"), TextScale.size(TextScale.TITLE))
+		assert_eq(_m._tagline_label.get_theme_font_size("font_size"), TextScale.size(TextScale.BODY))
+		assert_eq(_m._version_label.get_theme_font_size("font_size"), TextScale.size(TextScale.SMALL))
+		assert_eq(_m._play_button.get_theme_font_size("font_size"), TextScale.size(TextScale.BODY))
+
+func test_sizes_reapply_live_on_text_scale_changed() -> void:
+	add_child(_m)
+	var before: int = _m._title_label.get_theme_font_size("font_size")
+	TextScale.set_step(2)
+	assert_eq(_m._title_label.get_theme_font_size("font_size"), TextScale.size(TextScale.TITLE))
+	assert_ne(_m._title_label.get_theme_font_size("font_size"), before)
+
+func test_buttons_stay_in_the_viewport_at_every_text_scale_step() -> void:
+	add_child(_m)
+	_m.set_version_line("v0.1.0  ·  Godot 4.6.3-stable")
+	var view := get_viewport().get_visible_rect()
+	for i in TextScale.STEPS.size():
+		TextScale.set_step(i)
+		await get_tree().process_frame
+		await get_tree().process_frame
+		for button: Button in [_m._play_button, _m._credits_button, _m._quit_button]:
+			assert_true(view.encloses(button.get_global_rect()), "%s within the viewport at step %d" % [button.text, i])
+		assert_true(view.encloses(_m._version_label.get_global_rect()), "version line within the viewport at step %d" % i)
 
 # --- boot path ---------------------------------------------------------------
 

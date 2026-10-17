@@ -58,9 +58,6 @@ const PIT_STRETCH := 0.55
 const SIDEBAR_STRETCH := 0.45
 const SIDEBAR_SEPARATION := 10
 const BUTTON_SEPARATION := 8
-const TITLE_FONT_SIZE := 24
-const BODY_FONT_SIZE := 14
-const LABEL_FONT_SIZE := 12
 const PIT_PADDING := 20.0
 const RULER_WIDTH := 44.0
 const RULER_TICK_MINOR_CM := 10.0
@@ -83,7 +80,6 @@ const LEGEND_TEXT_OFFSET := Vector2(24.0, 4.0)
 const LEGEND_COLUMNS := 2
 const BANNER_HEIGHT := 30.0
 const BANNER_TEXT_OFFSET := Vector2(10.0, 0.0)
-const BANNER_FONT_SIZE := 16
 const CIRCLE_SEGMENTS := 12
 
 # --- copy --------------------------------------------------------------------------------------
@@ -128,6 +124,9 @@ var hardness_known: Array[bool] = []
 var submitted := false
 var player_verdict: SnowpackProfile.Verdict = SnowpackProfile.Verdict.MARGINAL
 
+## Label -> base size in px; apply_text_scale() re-sizes each from TextScale.
+var _label_bases: Dictionary = {}
+var _scroll: ScrollContainer
 var _seed_value: int = 0
 var _debug: Node
 var _pit_area: Control
@@ -147,6 +146,27 @@ var _verdict_buttons: Dictionary = {}
 ## also parses under `--check-only`, where autoloads are absent.
 func _ready() -> void:
 	_debug = get_node_or_null("/root/Debug")
+	var bus := get_node_or_null("/root/EventBus")
+	if bus:
+		bus.text_scale_changed.connect(_on_event_bus_text_scale_changed)
+
+## Re-size every Label, button and the fixed-height drawn areas from
+## TextScale's current step, then redraw the custom-drawn text.
+func apply_text_scale() -> void:
+	for label: Label in _label_bases:
+		label.add_theme_font_size_override("font_size", TextScale.size(_label_bases[label]))
+	for button: Button in _verdict_buttons.values():
+		button.add_theme_font_size_override("font_size", TextScale.size(TextScale.BODY))
+	_legend_area.custom_minimum_size = Vector2(0.0, LEGEND_HEIGHT * TextScale.factor())
+	_banner_area.custom_minimum_size = Vector2(0.0, BANNER_HEIGHT * TextScale.factor())
+	queue_redraw()
+
+## The size of the custom-drawn labels (ruler, legend, banner) at this step.
+func _small_px() -> int:
+	return TextScale.size(TextScale.SMALL)
+
+func _on_event_bus_text_scale_changed(_factor: float) -> void:
+	apply_text_scale()
 
 func _log(msg: String) -> void:
 	if _debug:
@@ -312,8 +332,9 @@ func _draw() -> void:
 	if _pit_area == null:
 		return
 	_draw_pit(_local_rect_of(_pit_area))
-	_draw_legend(_local_rect_of(_legend_area))
-	if submitted:
+	if _is_visible_in_scroll(_legend_area):
+		_draw_legend(_local_rect_of(_legend_area))
+	if submitted and _is_visible_in_scroll(_banner_area):
 		_draw_banner(_local_rect_of(_banner_area))
 
 ## The pit wall: a parchment page, the ruler down the left, layers stacked
@@ -323,6 +344,7 @@ func _draw_pit(area: Rect2) -> void:
 	draw_rect(area, PARCHMENT)
 	var pit := _pit_rect()
 	var font := get_theme_default_font()
+	var f := TextScale.factor()
 	var total := profile.total_depth_cm()
 	if total <= 0.0:
 		return
@@ -347,13 +369,13 @@ func _draw_pit(area: Rect2) -> void:
 			_draw_hatch(rect, layer[SnowpackProfile.KEY_GRAIN])
 		if hardness_known[i]:
 			var code := SnowpackProfile.hardness_code(layer[SnowpackProfile.KEY_HARDNESS])
-			draw_string(font, Vector2(rect.end.x, rect.get_center().y) + HARDNESS_CODE_INSET
-					+ Vector2(0.0, LABEL_FONT_SIZE * 0.4), code,
-					HORIZONTAL_ALIGNMENT_LEFT, -1, LABEL_FONT_SIZE, INK)
+			draw_string(font, Vector2(rect.end.x, rect.get_center().y) + HARDNESS_CODE_INSET * f * f
+					+ Vector2(0.0, _small_px() * 0.4), code,
+					HORIZONTAL_ALIGNMENT_LEFT, -1, _small_px(), INK)
 		if examined and depth_known:
-			draw_string(font, Vector2(rect.position.x, rect.get_center().y) + THICKNESS_LABEL_INSET
-					+ Vector2(0.0, LABEL_FONT_SIZE * 0.4), "%.0f cm" % thickness,
-					HORIZONTAL_ALIGNMENT_LEFT, -1, LABEL_FONT_SIZE, ALPINE_ROCK)
+			draw_string(font, Vector2(rect.position.x, rect.get_center().y) + THICKNESS_LABEL_INSET * f
+					+ Vector2(0.0, _small_px() * 0.4), "%.0f cm" % thickness,
+					HORIZONTAL_ALIGNMENT_LEFT, -1, _small_px(), ALPINE_ROCK)
 		top_cm += thickness
 
 	# Pit wall and the ground beneath.
@@ -374,15 +396,15 @@ func _draw_pit(area: Rect2) -> void:
 			draw_line(Vector2(pit.position.x - tick, y), Vector2(pit.position.x, y),
 					INK, LAYER_BOUNDARY_WIDTH)
 			if is_major:
-				draw_string(font, Vector2(ruler_x, y) + RULER_LABEL_OFFSET, "%d" % int(cm),
-						HORIZONTAL_ALIGNMENT_LEFT, -1, LABEL_FONT_SIZE, INK)
+				draw_string(font, Vector2(ruler_x, y) + RULER_LABEL_OFFSET * f, "%d" % int(cm),
+						HORIZONTAL_ALIGNMENT_LEFT, -1, _small_px(), INK)
 			cm += RULER_TICK_MINOR_CM
-		draw_string(font, Vector2(pit.position.x - RULER_WIDTH, pit.end.y + GROUND_BAR_HEIGHT
-				+ LABEL_FONT_SIZE), "%.0f cm total" % total,
-				HORIZONTAL_ALIGNMENT_LEFT, -1, LABEL_FONT_SIZE, INK)
+		draw_string(font, Vector2(pit.position.x - RULER_WIDTH * f, pit.end.y + GROUND_BAR_HEIGHT
+				+ _small_px()), "%.0f cm total" % total,
+				HORIZONTAL_ALIGNMENT_LEFT, -1, _small_px(), INK)
 	else:
-		draw_string(font, Vector2(ruler_x, pit.get_center().y) + RULER_LABEL_OFFSET, "?",
-				HORIZONTAL_ALIGNMENT_LEFT, -1, LABEL_FONT_SIZE, INK)
+		draw_string(font, Vector2(ruler_x, pit.get_center().y) + RULER_LABEL_OFFSET * f, "?",
+				HORIZONTAL_ALIGNMENT_LEFT, -1, _small_px(), INK)
 
 ## The field-book symbol for `grain`, tiled across `rect` on a regular grid;
 ## an ice lens is one solid bar the width of the pit, because that is what
@@ -430,12 +452,13 @@ func _draw_symbol(c: Vector2, grain: SnowpackProfile.Grain, half: float) -> void
 func _draw_legend(area: Rect2) -> void:
 	draw_rect(area, PARCHMENT)
 	var font := get_theme_default_font()
+	var f := TextScale.factor()
 	var grains: Array = SnowpackProfile.Grain.values()
 	for i: int in range(grains.size()):
 		var column := i % LEGEND_COLUMNS
 		var row := floori(float(i) / float(LEGEND_COLUMNS))
-		var origin := area.position + Vector2(column * LEGEND_COLUMN_WIDTH,
-				(row + 0.5) * LEGEND_ROW_HEIGHT)
+		var origin := area.position + Vector2(column * LEGEND_COLUMN_WIDTH * f,
+				(row + 0.5) * LEGEND_ROW_HEIGHT * f)
 		var grain: SnowpackProfile.Grain = grains[i]
 		if grain == SnowpackProfile.Grain.ICE_LENS:
 			draw_rect(Rect2(origin + LEGEND_SYMBOL_OFFSET - Vector2(hatch_symbol_half_px * 1.5,
@@ -443,12 +466,12 @@ func _draw_legend(area: Rect2) -> void:
 					ICE_LENS_BAR_MAX_PX)), INK)
 		else:
 			_draw_symbol(origin + LEGEND_SYMBOL_OFFSET, grain, hatch_symbol_half_px)
-		draw_string(font, origin + LEGEND_TEXT_OFFSET, SnowpackProfile.grain_name(grain),
-				HORIZONTAL_ALIGNMENT_LEFT, -1, LABEL_FONT_SIZE, INK)
+		draw_string(font, origin + LEGEND_TEXT_OFFSET * f, SnowpackProfile.grain_name(grain),
+				HORIZONTAL_ALIGNMENT_LEFT, -1, _small_px(), INK)
 	var rows := ceili(float(grains.size()) / float(LEGEND_COLUMNS))
 	draw_string(font, area.position + Vector2(LEGEND_SYMBOL_OFFSET.x * 0.5,
-			(rows + 1) * LEGEND_ROW_HEIGHT), HARDNESS_LEGEND,
-			HORIZONTAL_ALIGNMENT_LEFT, -1, LABEL_FONT_SIZE, INK)
+			(rows + 1) * LEGEND_ROW_HEIGHT * f), HARDNESS_LEGEND,
+			HORIZONTAL_ALIGNMENT_LEFT, -1, _small_px(), INK)
 
 ## The result band: the true verdict's position on the data axis.
 func _draw_banner(area: Rect2) -> void:
@@ -456,9 +479,9 @@ func _draw_banner(area: Rect2) -> void:
 	draw_rect(area, ramp_color(float(VERDICT_RAMP_POSITION[truth])))
 	var font := get_theme_default_font()
 	draw_string(font, area.position + BANNER_TEXT_OFFSET
-			+ Vector2(0.0, area.size.y * 0.5 + BANNER_FONT_SIZE * 0.35),
+			+ Vector2(0.0, area.size.y * 0.5 + _small_px() * 0.35),
 			"Site verdict: %s" % SnowpackProfile.verdict_name(truth),
-			HORIZONTAL_ALIGNMENT_LEFT, -1, BANNER_FONT_SIZE, PARCHMENT)
+			HORIZONTAL_ALIGNMENT_LEFT, -1, _small_px(), PARCHMENT)
 
 ## A colour along the orange→teal data axis for `t` in 0..1.
 static func ramp_color(t: float) -> Color:
@@ -473,9 +496,10 @@ static func ramp_color(t: float) -> Color:
 func _pit_rect() -> Rect2:
 	var area := _local_rect_of(_pit_area)
 	var inner := area.grow(-PIT_PADDING)
-	return Rect2(inner.position.x + RULER_WIDTH, inner.position.y,
-			inner.size.x - RULER_WIDTH,
-			inner.size.y - GROUND_BAR_HEIGHT - LABEL_FONT_SIZE * 2.0)
+	var f := TextScale.factor()
+	return Rect2(inner.position.x + RULER_WIDTH * f, inner.position.y,
+			inner.size.x - RULER_WIDTH * f,
+			inner.size.y - GROUND_BAR_HEIGHT - _small_px() * 2.0)
 
 ## A child Control's rect in this Control's own drawing space.
 func _local_rect_of(child: Control) -> Rect2:
@@ -532,20 +556,35 @@ func _build_ui() -> void:
 	sidebar.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	row.add_child(sidebar)
 
-	_title_label = _make_label(TITLE_TEXT, TITLE_FONT_SIZE)
-	sidebar.add_child(_title_label)
-	_intro_label = _make_label(INTRO_TEXT, BODY_FONT_SIZE)
-	sidebar.add_child(_intro_label)
-	_date_label = _make_label("", BODY_FONT_SIZE)
-	sidebar.add_child(_date_label)
-	_tool_label = _make_label("", BODY_FONT_SIZE)
+	# The sidebar scrolls so a large text step never pushes copy off screen; the
+	# controls line stays pinned below it, always visible.
+	_scroll = ScrollContainer.new()
+	_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	_scroll.get_v_scroll_bar().value_changed.connect(_on_scroll_changed)
+	sidebar.add_child(_scroll)
+
+	var content := VBoxContainer.new()
+	content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	content.add_theme_constant_override("separation", SIDEBAR_SEPARATION)
+	content.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_scroll.add_child(content)
+
+
+	_title_label = _make_label(TITLE_TEXT, TextScale.TITLE)
+	content.add_child(_title_label)
+	_intro_label = _make_label(INTRO_TEXT, TextScale.BODY)
+	content.add_child(_intro_label)
+	_date_label = _make_label("", TextScale.BODY)
+	content.add_child(_date_label)
+	_tool_label = _make_label("", TextScale.BODY)
 	_tool_label.add_theme_color_override("font_color", GOLD)
-	sidebar.add_child(_tool_label)
+	content.add_child(_tool_label)
 
 	var buttons := HBoxContainer.new()
 	buttons.add_theme_constant_override("separation", BUTTON_SEPARATION)
 	buttons.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	sidebar.add_child(buttons)
+	content.add_child(buttons)
 	for verdict: SnowpackProfile.Verdict in [SnowpackProfile.Verdict.VIABLE,
 			SnowpackProfile.Verdict.MARGINAL, SnowpackProfile.Verdict.NOT_VIABLE]:
 		var button := Button.new()
@@ -559,29 +598,39 @@ func _build_ui() -> void:
 	_banner_area.custom_minimum_size = Vector2(0.0, BANNER_HEIGHT)
 	_banner_area.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_banner_area.resized.connect(_on_area_resized)
-	sidebar.add_child(_banner_area)
+	content.add_child(_banner_area)
 
-	_result_label = _make_label("", BODY_FONT_SIZE)
+	_result_label = _make_label("", TextScale.BODY)
 	_result_label.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	sidebar.add_child(_result_label)
+	content.add_child(_result_label)
 
 	_legend_area = Control.new()
 	_legend_area.custom_minimum_size = Vector2(0.0, LEGEND_HEIGHT)
 	_legend_area.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_legend_area.resized.connect(_on_area_resized)
-	sidebar.add_child(_legend_area)
+	content.add_child(_legend_area)
 
-	_controls_label = _make_label(CONTROLS_TEXT, BODY_FONT_SIZE)
+	_controls_label = _make_label(CONTROLS_TEXT, TextScale.BODY)
 	_controls_label.add_theme_color_override("font_color", ALPINE_ROCK)
 	sidebar.add_child(_controls_label)
 
+	apply_text_scale()
 	hide()
 
-func _make_label(text: String, font_size: int) -> Label:
+func _on_scroll_changed(_value: float) -> void:
+	queue_redraw()
+
+## Whether a drawn area sits wholly inside the scrolled sidebar's visible
+## window. Drawing is not clipped to the ScrollContainer, so an area that is
+## scrolled partly out of view is skipped rather than painted over its edge.
+func _is_visible_in_scroll(child: Control) -> bool:
+	return _scroll.get_global_rect().encloses(child.get_global_rect())
+
+func _make_label(text: String, base_size: int) -> Label:
 	var label := Label.new()
 	label.text = text
 	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	label.add_theme_font_size_override("font_size", font_size)
+	_label_bases[label] = base_size
 	label.add_theme_color_override("font_color", PARCHMENT)
 	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	return label
