@@ -1009,13 +1009,72 @@ def cmd_checks(runner: Runner, root: pathlib.Path, ref: str, *, attempts: int = 
     return 1
 
 
+def pr_head_branch(runner: Runner, root: pathlib.Path, ref: str) -> str:
+    """The pull request's head branch, or "" when gh cannot say."""
+    try:
+        return runner.query(["gh", "pr", "view", ref, "--json", "headRefName", "-q", ".headRefName"],
+                            cwd=root).strip()
+    except WardenError:
+        return ""
+
+
+def worktree_for_branch(runner: Runner, root: pathlib.Path, branch: str) -> pathlib.Path | None:
+    """The linked worktree (never the main checkout) that has ``branch`` checked out."""
+    path = None
+    for line in git_query(runner, root, "worktree", "list", "--porcelain").splitlines() + [""]:
+        if line.startswith("worktree "):
+            path = pathlib.Path(line[len("worktree "):])
+        elif line == f"branch refs/heads/{branch}" and path and path != root:
+            return path
+        elif not line:
+            path = None
+    return None
+
+
+def pr_is_merged(runner: Runner, root: pathlib.Path, ref: str) -> bool:
+    try:
+        return runner.query(["gh", "pr", "view", ref, "--json", "state", "-q", ".state"],
+                            cwd=root).strip() == "MERGED"
+    except WardenError:
+        return False
+
+
 def cmd_merge(runner: Runner, root: pathlib.Path, ref: str) -> int:
+    """Merge the pull request. A worktree on its branch is removed first, because
+    ``gh pr merge --delete-branch`` cannot delete a local branch that is checked out."""
+    branch = pr_head_branch(runner, root, ref)
+    wt = worktree_for_branch(runner, root, branch) if branch else None
+    if wt:
+        print(f"removing worktree {wt} ({branch}) so the branch can be deleted…")
+        try:
+            git(runner, root, "worktree", "remove", str(wt))
+        except WardenError as exc:
+            raise WardenError(f"{exc}\n  the worktree has uncommitted work; commit or discard it, "
+                              f"then merge again") from exc
     print(f"merging {ref}…")
-    runner.run(["gh", "pr", "merge", ref, "--merge", "--delete-branch"], cwd=root, capture=False)
-    if current_branch(runner, root) != "main":
-        git(runner, root, "checkout", "main")
-    git(runner, root, "pull", "--ff-only")
+    problems: list[str] = []
+    try:
+        runner.run(["gh", "pr", "merge", ref, "--merge", "--delete-branch"], cwd=root, capture=False)
+    except WardenError as exc:
+        # gh merges first and cleans up after, so a nonzero exit is ambiguous.
+        if not pr_is_merged(runner, root, ref):
+            raise
+        problems.append(f"gh merged the pull request but a cleanup step failed: {exc}")
+    try:
+        if current_branch(runner, root) != "main":
+            git(runner, root, "checkout", "main")
+        git(runner, root, "pull", "--ff-only")
+    except WardenError as exc:
+        problems.append(f"could not update main: {exc}")
     append_log(root, {"at": utc_now().isoformat(), "action": "merge", "ref": ref})
+    if problems:
+        print(f"{ref} IS MERGED on GitHub, but cleanup was incomplete:")
+        for problem in problems:
+            print(f"  - {problem}")
+        if branch:
+            print(f"  finish by hand if needed: `git push origin --delete {branch}`, "
+                  f"`tools/warden clean`, `git pull`")
+        return 0
     print("merged; refreshing state…")
     return cmd_sync(runner, root, fetch=True)
 

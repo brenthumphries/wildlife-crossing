@@ -438,6 +438,92 @@ class LandCommandTestCase(RepoFixture):
         self.assertFalse(any(c[:3] == ["gh", "pr", "merge"] for c in runner.calls))
 
 
+class ScriptedRunner(warden.Runner):
+    """A Runner that answers from a table instead of running anything.
+
+    ``answers`` maps a command prefix to its output, or to an Exception to
+    raise; any command not listed succeeds with no output."""
+
+    def __init__(self, answers: dict[str, object]) -> None:
+        super().__init__(quiet=True)
+        self.answers = answers
+
+    def _answer(self, argv: list[str]) -> str:
+        self.calls.append(list(argv))
+        line = " ".join(argv)
+        for prefix, result in self.answers.items():
+            if prefix in line:
+                if isinstance(result, Exception):
+                    raise result
+                return result
+        return ""
+
+    def run(self, argv, **kwargs) -> str:
+        return self._answer(argv)
+
+    def query(self, argv, **kwargs) -> str:
+        return self._answer(argv)
+
+
+class MergeCommandTestCase(RepoFixture):
+    BRANCH = "feat/v13-x"
+
+    def runner(self, **overrides) -> ScriptedRunner:
+        answers = {
+            "headRefName": self.BRANCH + "\n",
+            "worktree list": f"worktree {self.repo}\nbranch refs/heads/main\n\n"
+                             f"worktree /elsewhere/wt\nbranch refs/heads/{self.BRANCH}\n",
+            "rev-parse --abbrev-ref": "main\n",
+        }
+        answers.update(overrides)
+        return ScriptedRunner(answers)
+
+    def merge(self, runner: ScriptedRunner) -> tuple[int, str]:
+        out = io.StringIO()
+        with redirect_stdout(out), mock.patch.object(warden, "cmd_sync", lambda *a, **k: 0):
+            code = warden.cmd_merge(runner, self.repo, "57")
+        return code, out.getvalue()
+
+    def logged(self) -> list[dict]:
+        path = self.repo / warden.QUEUE_LOG
+        return [json.loads(l) for l in path.read_text().splitlines()] if path.exists() else []
+
+    def test_merge_removes_the_branchs_worktree_before_gh_merges(self) -> None:
+        runner = self.runner()
+        code, _ = self.merge(runner)
+        flat = [" ".join(c) for c in runner.calls]
+        removed = next(i for i, c in enumerate(flat) if "worktree remove /elsewhere/wt" in c)
+        merged = next(i for i, c in enumerate(flat) if c.startswith("gh pr merge"))
+        self.assertEqual(code, 0)
+        self.assertLess(removed, merged)
+        self.assertEqual(len(self.logged()), 1)
+
+    def test_merge_without_a_worktree_removes_nothing(self) -> None:
+        runner = self.runner(**{"worktree list": f"worktree {self.repo}\nbranch refs/heads/main\n"})
+        self.merge(runner)
+        self.assertFalse(any("worktree remove" in " ".join(c) for c in runner.calls))
+
+    def test_cleanup_failure_after_a_real_merge_exits_zero_and_logs(self) -> None:
+        runner = self.runner(**{
+            "gh pr merge": warden.WardenError("failed to delete local branch"),
+            "--json state": "MERGED\n",
+        })
+        code, out = self.merge(runner)
+        self.assertEqual(code, 0)
+        self.assertIn("IS MERGED", out)
+        self.assertIn("cleanup", out)
+        self.assertEqual([r["action"] for r in self.logged()], ["merge"])
+
+    def test_a_merge_that_did_not_happen_still_fails(self) -> None:
+        runner = self.runner(**{
+            "gh pr merge": warden.WardenError("checks failing"),
+            "--json state": "OPEN\n",
+        })
+        with redirect_stdout(io.StringIO()), self.assertRaises(warden.WardenError):
+            warden.cmd_merge(runner, self.repo, "57")
+        self.assertEqual(self.logged(), [])
+
+
 class LockTestCase(RepoFixture):
     def test_fresh_locks_are_kept_and_stale_ones_removed(self) -> None:
         stale = self.repo / ".git" / "index.lock"
