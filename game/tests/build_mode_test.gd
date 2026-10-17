@@ -138,5 +138,5 @@ func test_running_cost_is_the_bill_build_crossing_charges() -> void:
 	var ireg: Dictionary = {}
 	for c in _load_json("res://data/infrastructure.json")["infrastructure"]:
 		ireg[c["crossing_type"]] = c
-	assert_eq(_build.running_cost(), ireg["overpass"]["cost_per_tile"] * BOW_VALLEY_SPAN.size(),
+	assert_eq(_build.running_cost(), int(ireg["overpass"]["cost_per_tile"]) * BOW_VALLEY_SPAN.size(),
 		"the preview is the registry cost per tile times the selection")
