@@ -22,6 +22,21 @@ status: active
 > will call a fixed freeze date after the features he wants are merged and
 > walked. The plan itself landed as #70 (`49ac737`). See [[../daily-logs/2026-10-16]].
 
+> [!success] Amendment 2026-10-17 — **C19 to C22, C24, C25, C28, C32 and V12 to V14 are closed.**
+> Eleven pull requests merged, #72 to #82, between 2026-10-16 19:30 and
+> 2026-10-17 09:57 (-0500). `TextScale` and the HUD, Info panel, credits, confirm
+> panel, title menu and both minigames moved onto it (C19 to C22). The live world
+> renders at segment zoom and takes segment clicks (C24, C25), corridor-study
+> hotspots are ringed in build mode (C28), and the trickle pays below the
+> cheapest buyable crossing tile (C32). The two minigame scripts have named tests
+> (V12), `build_mode_test.gd` casts the registry cost to int (V14; the warning's
+> removal is unconfirmed in CI), and `warden merge` removes the item's worktree
+> first (V13). Suite 31 / 379 / 6,629 to 34 / 475 / 7,092. `week.json` is
+> unchanged; `warden status` derives 26 done, 15 open and 20 blocked. The
+> dispatch's only code pick is C26; C23, C27, C33, C41, C29 and C30 queue behind it
+> on the suite-figure line. Q9 still shows open in `week.json`. See
+> [[../daily-logs/2026-10-17]].
+
 > [!info] Snapshot
 > Measured against **`6ddeb4e`** (*Merge pull request #69 from brenthumphries/docs/log-2026-10-16*,
 > 2026-10-16T16:58:19-05:00) on `main`, via `docs/plan/facts.json`.
