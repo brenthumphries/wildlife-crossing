@@ -27,12 +27,16 @@ func _registries() -> Dictionary:
 		"biome_groups": _load_json("res://data/biome_groups.json") }
 
 func before_each() -> void:
+	TextScale.set_step(0)
 	_sim = Simulation.new()
 	autofree(_sim)
 	_sim.load_world(AREA, _registries(), 42)
 	_panel = InformationPanel.new()
 	autofree(_panel)
 	_panel.setup(_sim.information, _sim.economy, AREA)
+
+func after_each() -> void:
+	TextScale.set_step(0)
 
 func _select(index: int) -> void:
 	_panel.selected = index
@@ -172,3 +176,38 @@ func _patch_headings(text: String) -> PackedStringArray:
 		if line.begins_with("Patch "):
 			out.append(line)
 	return out
+
+func test_font_sizes_follow_the_text_scale_step() -> void:
+	for i in TextScale.STEPS.size():
+		TextScale.set_step(i)
+		_panel.apply_text_scale()
+		assert_eq(_panel._title_label.get_theme_font_size("font_size"), TextScale.size(TextScale.TITLE))
+		assert_eq(_panel._budget_label.get_theme_font_size("font_size"), TextScale.size(TextScale.BODY))
+		for row: Label in _panel._product_labels:
+			assert_eq(row.get_theme_font_size("font_size"), TextScale.size(TextScale.BODY))
+		assert_eq(_panel._body.get_theme_font_size("normal_font_size"), TextScale.size(TextScale.BODY))
+		assert_eq(_panel._hint_label.get_theme_font_size("font_size"), TextScale.size(TextScale.SMALL))
+
+func test_sizes_reapply_live_on_text_scale_changed() -> void:
+	add_child_autofree(_panel)   # _ready connects the EventBus signal
+	var before: int = _panel._title_label.get_theme_font_size("font_size")
+	TextScale.set_step(2)
+	assert_eq(_panel._title_label.get_theme_font_size("font_size"), TextScale.size(TextScale.TITLE))
+	assert_ne(_panel._title_label.get_theme_font_size("font_size"), before)
+
+func test_rows_and_hint_stay_in_the_viewport_at_every_text_scale_step() -> void:
+	_panel.status_text = "Not enough budget for Population survey."
+	add_child_autofree(_panel)
+	_panel.open()
+	var view := get_viewport().get_visible_rect()
+	for i in TextScale.STEPS.size():
+		TextScale.set_step(i)
+		await get_tree().process_frame
+		await get_tree().process_frame
+		var shown: Array[Control] = [_panel._title_label, _panel._budget_label,
+				_panel._status_label, _panel._hint_label]
+		shown.append_array(_panel._product_labels)
+		for c in shown.size():
+			assert_true(view.encloses(shown[c].get_global_rect()),
+					"element %d within the viewport at step %d" % [c, i])
+		assert_gt(_panel._body.size.y, 0.0, "body keeps room to scroll at step %d" % i)

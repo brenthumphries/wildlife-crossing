@@ -21,6 +21,7 @@ var _confirmed: Array = []
 var _cancelled := 0
 
 func before_each() -> void:
+	TextScale.set_step(0)
 	_p = ConfirmPanel.new()
 	_confirmed = []
 	_cancelled = 0
@@ -29,6 +30,7 @@ func before_each() -> void:
 	_p.cancelled.connect(func() -> void: _cancelled += 1)
 
 func after_each() -> void:
+	TextScale.set_step(0)
 	_p.free()
 	if _c != null:
 		_c.free()
@@ -129,3 +131,29 @@ func test_zooming_out_of_segment_mode_closes_panel() -> void:
 	_c.set_zoom((float(SimulationConstants.SEGMENT_ZOOM_DEACTIVATE_PX) - 0.1)
 			/ WorldSelectController.BASE_TILE_FLAT_TO_FLAT_PX)
 	assert_false(_p.is_open)
+
+func test_font_sizes_follow_the_text_scale_step() -> void:
+	for i in TextScale.STEPS.size():
+		TextScale.set_step(i)
+		_p.apply_text_scale()
+		assert_eq(_p._title_label.get_theme_font_size("font_size"), TextScale.size(TextScale.BODY))
+		assert_eq(_p._note_label.get_theme_font_size("font_size"), TextScale.size(TextScale.SMALL))
+		assert_eq(_p._confirm_button.get_theme_font_size("font_size"), TextScale.size(TextScale.BODY))
+
+func test_sizes_reapply_live_on_text_scale_changed() -> void:
+	add_child(_p)   # _ready connects the EventBus signal
+	var before: int = _p._title_label.get_theme_font_size("font_size")
+	TextScale.set_step(2)
+	assert_eq(_p._title_label.get_theme_font_size("font_size"), TextScale.size(TextScale.BODY))
+	assert_ne(_p._title_label.get_theme_font_size("font_size"), before)
+
+func test_buttons_stay_in_the_viewport_at_every_text_scale_step() -> void:
+	add_child(_p)
+	_p.open(SEGMENT, 0, 500)   # budget gate on: the longest label set
+	var view := get_viewport().get_visible_rect()
+	for i in TextScale.STEPS.size():
+		TextScale.set_step(i)
+		await get_tree().process_frame
+		await get_tree().process_frame
+		assert_true(view.encloses(_p._confirm_button.get_global_rect()), "Confirm within the viewport at step %d" % i)
+		assert_true(view.encloses(_p._cancel_button.get_global_rect()), "Cancel within the viewport at step %d" % i)

@@ -49,13 +49,13 @@ const CLOSE_HINT := "Escape or Close to return"
 const SECTION_RULE := "────────────────────────────────────────"
 
 const PANEL_MARGIN := 48.0
-const TITLE_FONT_SIZE := 28
-const BODY_FONT_SIZE := 13
 const BACKDROP_COLOR := Color(0.05, 0.08, 0.06, 0.94)
 
 var is_open := false
 
+var _title_label: Label
 var _body: RichTextLabel
+var _hint_label: Label
 var _close_button: Button
 
 # --- text construction -------------------------------------------------------
@@ -165,6 +165,18 @@ static func license_text_section(license_info: Dictionary) -> String:
 
 # --- lifecycle ---------------------------------------------------------------
 
+func _ready() -> void:
+	var bus := get_node_or_null("/root/EventBus")
+	if bus:
+		bus.text_scale_changed.connect(_on_event_bus_text_scale_changed)
+
+## Re-size every text in the screen from TextScale's current step.
+func apply_text_scale() -> void:
+	_title_label.add_theme_font_size_override("font_size", TextScale.size(TextScale.TITLE))
+	_body.add_theme_font_size_override("normal_font_size", TextScale.size(TextScale.BODY))
+	_hint_label.add_theme_font_size_override("font_size", TextScale.size(TextScale.SMALL))
+	_close_button.add_theme_font_size_override("font_size", TextScale.size(TextScale.SMALL))
+
 ## Show the credits. Idempotent: opening an already-open screen is a no-op
 ## rather than a rebuild, so a repeated keypress cannot reset the scroll.
 func open() -> void:
@@ -192,6 +204,9 @@ func _unhandled_input(event: InputEvent) -> void:
 		close()
 		get_viewport().set_input_as_handled()
 
+func _on_event_bus_text_scale_changed(_factor: float) -> void:
+	apply_text_scale()
+
 func _on_close_button_pressed() -> void:
 	close()
 
@@ -217,10 +232,9 @@ func _build_ui() -> void:
 	column.add_theme_constant_override("separation", 12)
 	margin.add_child(column)
 
-	var title := Label.new()
-	title.text = "Credits & Licences"
-	title.add_theme_font_size_override("font_size", TITLE_FONT_SIZE)
-	column.add_child(title)
+	_title_label = Label.new()
+	_title_label.text = "Credits & Licences"
+	column.add_child(_title_label)
 
 	# RichTextLabel rather than a Label in a ScrollContainer: the document is
 	# ~100 KB of licence text on a stock engine, and RichTextLabel scrolls it
@@ -233,7 +247,6 @@ func _build_ui() -> void:
 	_body.selection_enabled = true
 	_body.focus_mode = Control.FOCUS_CLICK
 	_body.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	_body.add_theme_font_size_override("normal_font_size", BODY_FONT_SIZE)
 	_body.text = build_document()
 	column.add_child(_body)
 
@@ -241,14 +254,16 @@ func _build_ui() -> void:
 	footer.add_theme_constant_override("separation", 12)
 	column.add_child(footer)
 
-	var hint := Label.new()
-	hint.text = CLOSE_HINT
-	hint.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	footer.add_child(hint)
+	_hint_label = Label.new()
+	_hint_label.text = CLOSE_HINT
+	_hint_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_hint_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	footer.add_child(_hint_label)
 
 	_close_button = Button.new()
 	_close_button.text = "Close"
 	_close_button.pressed.connect(_on_close_button_pressed)
 	footer.add_child(_close_button)
 
+	apply_text_scale()
 	hide()
