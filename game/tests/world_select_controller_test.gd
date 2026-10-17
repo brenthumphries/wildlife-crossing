@@ -218,7 +218,8 @@ func test_focus_change_emits_and_ignores_unknown_ids() -> void:
 # Regression cover for the blind world-map click found by the 2026-08-04 build
 # review. The scene used to be MOUSE_FILTER_IGNORE, so clicks fell through to
 # Main._try_select_segment() and resolved against the world camera hidden under
-# the opaque card grid. These three tests are the guard on that staying fixed.
+# the opaque card grid. World view still swallows clicks; segment mode (ADR 0021)
+# hands a left click to its owner as `segment_clicked`, resolved on the live camera.
 
 func _mouse_button(button: int) -> InputEventMouseButton:
 	var ev := InputEventMouseButton.new()
@@ -235,15 +236,35 @@ func test_world_select_map_scene_stops_mouse_events() -> void:
 			+ "lets them fall through to the world camera underneath")
 	node.free()
 
-func test_left_click_in_segment_mode_selects_nothing() -> void:
+func test_left_click_in_segment_mode_emits_segment_clicked() -> void:
 	_c.enter_selection_mode()
 	_zoom_to_px(ACTIVATE_PX)
 	assert_eq(_c.mode, WorldSelectController.Mode.SEGMENT, "precondition: segment mode")
+	var clicks: Array = []
+	_c.segment_clicked.connect(func(at: Vector2) -> void: clicks.append(at))
+	var ev := _mouse_button(MOUSE_BUTTON_LEFT)
+	ev.position = Vector2(300.0, 200.0)
+	_c._gui_input(ev)
+	assert_eq(clicks, [Vector2(300.0, 200.0)], "the click is handed to the owner, in screen pixels")
+	assert_eq(_c.mode, WorldSelectController.Mode.SEGMENT, "a click does not change mode")
+
+func test_left_click_in_world_view_is_swallowed() -> void:
+	_c.enter_selection_mode()
+	assert_eq(_c.mode, WorldSelectController.Mode.WORLD, "precondition: world view")
+	var clicks: Array = []
+	_c.segment_clicked.connect(func(at: Vector2) -> void: clicks.append(at))
 	var before: int = _events.size()
 	_c._gui_input(_mouse_button(MOUSE_BUTTON_LEFT))
-	assert_eq(_c.mode, WorldSelectController.Mode.SEGMENT, "a click does not change mode")
-	assert_eq(_events.size(), before,
-			"a click on the look-only map emits nothing — no segment is picked")
+	assert_eq(clicks.size(), 0, "world view is look-only: no pick is requested")
+	assert_eq(_events.size(), before, "and nothing else happens")
+
+func test_right_click_in_segment_mode_is_swallowed() -> void:
+	_c.enter_selection_mode()
+	_zoom_to_px(ACTIVATE_PX)
+	var clicks: Array = []
+	_c.segment_clicked.connect(func(at: Vector2) -> void: clicks.append(at))
+	_c._gui_input(_mouse_button(MOUSE_BUTTON_RIGHT))
+	assert_eq(clicks.size(), 0, "only the left button picks")
 
 func test_scroll_wheel_still_zooms_through_gui_input() -> void:
 	_c.enter_selection_mode()

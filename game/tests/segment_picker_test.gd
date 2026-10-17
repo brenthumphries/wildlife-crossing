@@ -35,3 +35,17 @@ func test_nearest_returns_empty_beyond_the_radius() -> void:
 func test_nearest_picks_the_closer_of_two_segments() -> void:
 	# (20,4) is adjacent to river_b (20,5) but far from road_a.
 	assert_eq(SegmentPicker.nearest_segment(_segments(), Vector2i(20, 4), 2, 7), "river_b")
+
+# --- world point -> segment (segment-mode click routing, C25) ---
+
+func test_world_point_on_a_segment_tile_picks_that_segment() -> void:
+	var px := WorldRenderer.px_at_coord(Vector2i(13, 1))
+	assert_eq(SegmentPicker.segment_at_world_point(_segments(), px, 1, 7), "road_a")
+
+func test_world_point_on_plain_terrain_picks_nothing() -> void:
+	var px := WorldRenderer.px_at_coord(Vector2i(40, 30))
+	assert_eq(SegmentPicker.segment_at_world_point(_segments(), px, 1, 7), "")
+
+func test_world_point_ignores_other_sub_areas() -> void:
+	var px := WorldRenderer.px_at_coord(Vector2i(12, 0))
+	assert_eq(SegmentPicker.segment_at_world_point(_segments(), px, 0, 3), "other_sa")

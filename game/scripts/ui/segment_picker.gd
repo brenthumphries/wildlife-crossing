@@ -36,3 +36,11 @@ static func nearest_segment(
 				if d == 0:
 					return best_id
 	return best_id
+
+## The id of the segment nearest a world-space point (the projected pixels the
+## world camera shows), within `max_dist` hex steps, or "". Composes the
+## renderer's pixel→tile inverse with `nearest_segment`; still pure.
+static func segment_at_world_point(
+		segments: Array, world_px: Vector2, max_dist: int = 1,
+		sub_area_id: int = -1) -> String:
+	return nearest_segment(segments, WorldRenderer.coord_at_px(world_px), max_dist, sub_area_id)

@@ -13,6 +13,9 @@ signal segment_mode_entered(sub_area_id: int)
 signal segment_mode_exited()
 signal sub_area_focused(sub_area_id: int)
 signal zoom_blocked(sub_area_id: int)
+## A left click in segment mode, in screen (viewport) pixels. The controller
+## does no picking itself: the owner resolves it against the world camera.
+signal segment_clicked(screen_position: Vector2)
 
 enum Mode { INACTIVE, WORLD, SEGMENT }
 
@@ -255,21 +258,16 @@ func _unhandled_input(event: InputEvent) -> void:
 ## screen is visible it consumes its own mouse events, so they never reach
 ## `Main._unhandled_input()`.
 ##
-## That is the point. Roadmap Phase 2, decision logged 2026-08-06: the world map
-## ships **look-only** in v0.1.0. Previously this Control was
-## `MOUSE_FILTER_IGNORE`, so a click on the opaque card grid fell through to
-## `Main._try_select_segment()`, which resolves the cursor against the *world*
-## camera underneath (`Main._pick_segment_at_mouse`) — the player picked a hex
-## they could not see, and in segment mode that could open the confirm panel on a
-## Bow Valley segment they never aimed at. Since ADR 0021 segment mode shows that
-## very world, driven by this controller's zoom, so the drawn map and the pick
-## path now share one coordinate space; routing clicks to it is C25. Until then
-## presses are still stopped here.
+## Roadmap Phase 2, decision logged 2026-08-06: the world map ships look-only,
+## so a click on the opaque card grid must not fall through to a world camera
+## the player cannot see. That stop-all-clicks behaviour now applies to world
+## view only. Since ADR 0021 segment mode shows the live world, driven by this
+## controller's zoom, so the drawn map and the camera agree: a left click there
+## is announced as `segment_clicked` for the owner to pick against that camera.
 ##
-## Scroll-to-zoom is preserved — it is a Phase 2 exit criterion — and every other
-## mouse button is swallowed. The controller is hidden while `Mode.INACTIVE`, and
-## a hidden Control is excluded from mouse picking, so normal play (build-mode
-## tile clicks, segment picking from the tutorial) is unaffected.
+## Scroll-to-zoom works in both modes and every other press is swallowed. The
+## controller is hidden while `Mode.INACTIVE`, and a hidden Control is excluded
+## from mouse picking, so normal play (build-mode tile clicks) is unaffected.
 func _gui_input(event: InputEvent) -> void:
 	if mode == Mode.INACTIVE:
 		return
@@ -279,6 +277,8 @@ func _gui_input(event: InputEvent) -> void:
 		zoom_in()
 	elif event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
 		zoom_out()
+	elif event.button_index == MOUSE_BUTTON_LEFT and mode == Mode.SEGMENT:
+		segment_clicked.emit(event.position)
 	# Every press, wheel or not, stops here — nothing falls through to the world.
 	if is_inside_tree():
 		accept_event()
