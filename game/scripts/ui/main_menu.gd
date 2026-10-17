@@ -15,21 +15,39 @@ signal quit_pressed()
 
 const TITLE_TEXT := "Wildlife Crossing"
 const TAGLINE_TEXT := "Build habitats, open corridors, help species thrive."
-const TITLE_FONT_SIZE := 44
-const TAGLINE_FONT_SIZE := 15
 const BUTTON_MIN_SIZE := Vector2(220.0, 40.0)
 const BACKGROUND_COLOR := Color(0.09, 0.15, 0.11)
 
 var _play_button: Button
 var _credits_button: Button
 var _quit_button: Button
+var _title_label: Label
+var _tagline_label: Label
 var _version_label: Label
+
+func _ready() -> void:
+	var bus := get_node_or_null("/root/EventBus")
+	if bus:
+		bus.text_scale_changed.connect(_on_event_bus_text_scale_changed)
+
+## Re-size every text on the menu from TextScale's current step. The column is
+## centred, so larger text and buttons grow outward and stay on screen.
+func apply_text_scale() -> void:
+	_title_label.add_theme_font_size_override("font_size", TextScale.size(TextScale.TITLE))
+	_tagline_label.add_theme_font_size_override("font_size", TextScale.size(TextScale.BODY))
+	_version_label.add_theme_font_size_override("font_size", TextScale.size(TextScale.SMALL))
+	for button: Button in [_play_button, _credits_button, _quit_button]:
+		button.add_theme_font_size_override("font_size", TextScale.size(TextScale.BODY))
+		button.custom_minimum_size = BUTTON_MIN_SIZE * TextScale.factor()
 
 ## Stamp the build's own version into the corner. Sourced from the engine at
 ## runtime rather than a constant, for the same reason the credits screen
 ## generates its attributions: a hardcoded version is wrong after one bump.
 func set_version_line(text: String) -> void:
 	_version_label.text = text
+
+func _on_event_bus_text_scale_changed(_factor: float) -> void:
+	apply_text_scale()
 
 func _on_play_button_pressed() -> void:
 	play_pressed.emit()
@@ -59,17 +77,15 @@ func _build_ui() -> void:
 	column.alignment = BoxContainer.ALIGNMENT_CENTER
 	centre.add_child(column)
 
-	var title := Label.new()
-	title.text = TITLE_TEXT
-	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title.add_theme_font_size_override("font_size", TITLE_FONT_SIZE)
-	column.add_child(title)
+	_title_label = Label.new()
+	_title_label.text = TITLE_TEXT
+	_title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	column.add_child(_title_label)
 
-	var tagline := Label.new()
-	tagline.text = TAGLINE_TEXT
-	tagline.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	tagline.add_theme_font_size_override("font_size", TAGLINE_FONT_SIZE)
-	column.add_child(tagline)
+	_tagline_label = Label.new()
+	_tagline_label.text = TAGLINE_TEXT
+	_tagline_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	column.add_child(_tagline_label)
 
 	var spacer := Control.new()
 	spacer.custom_minimum_size = Vector2(0.0, 24.0)
@@ -86,12 +102,12 @@ func _build_ui() -> void:
 
 	_version_label = Label.new()
 	_version_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_version_label.add_theme_font_size_override("font_size", TAGLINE_FONT_SIZE)
 	column.add_child(_version_label)
+
+	apply_text_scale()
 
 func _make_button(text: String, handler: Callable) -> Button:
 	var button := Button.new()
 	button.text = text
-	button.custom_minimum_size = BUTTON_MIN_SIZE
 	button.pressed.connect(handler)
 	return button

@@ -9,6 +9,7 @@ var _closed_count := 0
 var _fixes: Array = []
 
 func before_each() -> void:
+	TextScale.set_step(0)
 	_closed_count = 0
 	_fixes = []
 	_m = TelemetryMinigame.new()
@@ -17,6 +18,9 @@ func before_each() -> void:
 	_m.fix_completed.connect(
 			func(band: String, error_metres: float) -> void:
 				_fixes.append([band, error_metres]))
+
+func after_each() -> void:
+	TextScale.set_step(0)
 
 func _key(keycode: Key, shift: bool = false) -> InputEventKey:
 	var event := InputEventKey.new()
@@ -135,3 +139,28 @@ func test_escape_closes_and_r_restarts() -> void:
 func test_keys_are_ignored_while_closed() -> void:
 	_m._unhandled_input(_key(KEY_ENTER))
 	assert_eq(_m.bearings.size(), 0)
+
+# --- text scale --------------------------------------------------------------
+
+func test_label_sizes_follow_the_text_scale_step() -> void:
+	for i in TextScale.STEPS.size():
+		TextScale.set_step(i)
+		_m.apply_text_scale()
+		assert_eq(_m._title_label.get_theme_font_size("font_size"), TextScale.size(TextScale.TITLE))
+		assert_eq(_m._controls_label.get_theme_font_size("font_size"), TextScale.size(TextScale.BODY))
+
+func test_label_sizes_reapply_live_on_text_scale_changed() -> void:
+	var before: int = _m._controls_label.get_theme_font_size("font_size")
+	TextScale.set_step(3)
+	assert_eq(_m._controls_label.get_theme_font_size("font_size"), TextScale.size(TextScale.BODY))
+	assert_ne(_m._controls_label.get_theme_font_size("font_size"), before)
+
+func test_controls_text_fits_the_viewport_at_every_text_scale_step() -> void:
+	_m.start(SEED)
+	var view := get_viewport().get_visible_rect()
+	for i in TextScale.STEPS.size():
+		TextScale.set_step(i)
+		await get_tree().process_frame
+		await get_tree().process_frame
+		assert_true(view.encloses(_m._controls_label.get_global_rect()),
+				"controls text within the viewport at step %d: %s" % [i, _m._controls_label.get_global_rect()])

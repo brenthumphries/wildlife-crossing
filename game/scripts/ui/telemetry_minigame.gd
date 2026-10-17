@@ -50,8 +50,6 @@ const SIDEBAR_STRETCH := 0.38
 const SIDEBAR_SEPARATION := 10
 const METER_HEIGHT := 26.0
 const METER_BORDER := 2.0
-const TITLE_FONT_SIZE := 24
-const BODY_FONT_SIZE := 14
 const PLAN_BORDER_WIDTH := 3.0
 const PLAN_PADDING := 24.0
 const STATION_RADIUS := 7.0
@@ -64,7 +62,6 @@ const COLLAR_RING_RADIUS := 10.0
 const LINE_WIDTH := 2.0
 const ANTENNA_RAY_WIDTH := 2.5
 const MARKER_LABEL_OFFSET := Vector2(10.0, -10.0)
-const LABEL_FONT_SIZE := 13
 const SQUARE_METRES_PER_HECTARE := 10000.0
 
 const TITLE_TEXT := "Signal Chase — radio telemetry"
@@ -113,6 +110,9 @@ var active_station := 0
 var bearings: Array[float] = []
 var fix: Dictionary = {}
 
+## Label -> base size in px; apply_text_scale() re-sizes each from TextScale.
+var _label_bases: Dictionary = {}
+var _scroll: ScrollContainer
 var _seed_value: int = 0
 var _debug: Node
 var _hold_seconds := 0.0
@@ -131,6 +131,20 @@ var _controls_label: Label
 ## also parses under `--check-only`, where autoloads are absent.
 func _ready() -> void:
 	_debug = get_node_or_null("/root/Debug")
+	var bus := get_node_or_null("/root/EventBus")
+	if bus:
+		bus.text_scale_changed.connect(_on_event_bus_text_scale_changed)
+
+## Re-size every Label and the meter bar from TextScale's current step, then
+## redraw the custom-drawn text.
+func apply_text_scale() -> void:
+	for label: Label in _label_bases:
+		label.add_theme_font_size_override("font_size", TextScale.size(_label_bases[label]))
+	_meter_area.custom_minimum_size = Vector2(0.0, METER_HEIGHT * TextScale.factor())
+	queue_redraw()
+
+func _on_event_bus_text_scale_changed(_factor: float) -> void:
+	apply_text_scale()
 
 func _log(msg: String) -> void:
 	if _debug:
@@ -263,7 +277,8 @@ func _draw() -> void:
 	if _plan_area == null:
 		return
 	_draw_plan(_local_rect_of(_plan_area))
-	_draw_meter(_local_rect_of(_meter_area))
+	if _is_visible_in_scroll(_meter_area):
+		_draw_meter(_local_rect_of(_meter_area))
 
 func _draw_plan(area: Rect2) -> void:
 	var inner := area.grow(-PLAN_PADDING)
@@ -296,7 +311,7 @@ func _draw_plan(area: Rect2) -> void:
 		if i == active_station and not is_resolved():
 			draw_arc(p, ACTIVE_RING_RADIUS, 0.0, TAU, 32, TEAL, ACTIVE_RING_WIDTH)
 		draw_string(font, p + MARKER_LABEL_OFFSET, "S%d" % (i + 1),
-				HORIZONTAL_ALIGNMENT_LEFT, -1, LABEL_FONT_SIZE, FOREST_DEEP)
+				HORIZONTAL_ALIGNMENT_LEFT, -1, TextScale.size(TextScale.SMALL), FOREST_DEEP)
 
 	# Only once the third bearing is in: the error polygon, its centroid and
 	# the truth. Before that the wolf stays hidden — that is the whole game.
@@ -322,7 +337,7 @@ func _draw_plan(area: Rect2) -> void:
 		draw_circle(t, COLLAR_RADIUS, FOREST_MID)
 		draw_arc(t, COLLAR_RING_RADIUS, 0.0, TAU, 32, GOLD, ACTIVE_RING_WIDTH)
 		draw_string(font, t + MARKER_LABEL_OFFSET, "wolf", HORIZONTAL_ALIGNMENT_LEFT, -1,
-				LABEL_FONT_SIZE, FOREST_MID)
+				TextScale.size(TextScale.SMALL), FOREST_MID)
 
 func _draw_meter(area: Rect2) -> void:
 	draw_rect(area, LOCKED_GREY)
@@ -398,35 +413,60 @@ func _build_ui() -> void:
 	sidebar.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	row.add_child(sidebar)
 
-	_title_label = _make_label(TITLE_TEXT, TITLE_FONT_SIZE)
-	sidebar.add_child(_title_label)
-	_intro_label = _make_label(INTRO_TEXT, BODY_FONT_SIZE)
-	sidebar.add_child(_intro_label)
-	_station_label = _make_label("", BODY_FONT_SIZE)
-	sidebar.add_child(_station_label)
-	_meter_label = _make_label("", BODY_FONT_SIZE)
-	sidebar.add_child(_meter_label)
+	# The sidebar scrolls so a large text step never pushes copy off screen; the
+	# controls line stays pinned below it, always visible.
+	_scroll = ScrollContainer.new()
+	_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	_scroll.get_v_scroll_bar().value_changed.connect(_on_scroll_changed)
+	sidebar.add_child(_scroll)
+
+	var content := VBoxContainer.new()
+	content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	content.add_theme_constant_override("separation", SIDEBAR_SEPARATION)
+	content.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_scroll.add_child(content)
+
+
+	_title_label = _make_label(TITLE_TEXT, TextScale.TITLE)
+	content.add_child(_title_label)
+	_intro_label = _make_label(INTRO_TEXT, TextScale.BODY)
+	content.add_child(_intro_label)
+	_station_label = _make_label("", TextScale.BODY)
+	content.add_child(_station_label)
+	_meter_label = _make_label("", TextScale.BODY)
+	content.add_child(_meter_label)
 
 	_meter_area = Control.new()
 	_meter_area.custom_minimum_size = Vector2(0.0, METER_HEIGHT)
 	_meter_area.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_meter_area.resized.connect(_on_plan_area_resized)
-	sidebar.add_child(_meter_area)
+	content.add_child(_meter_area)
 
-	_result_label = _make_label("", BODY_FONT_SIZE)
+	_result_label = _make_label("", TextScale.BODY)
 	_result_label.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	sidebar.add_child(_result_label)
-	_controls_label = _make_label(CONTROLS_TEXT, BODY_FONT_SIZE)
+	content.add_child(_result_label)
+	_controls_label = _make_label(CONTROLS_TEXT, TextScale.BODY)
 	_controls_label.add_theme_color_override("font_color", ALPINE_ROCK)
 	sidebar.add_child(_controls_label)
 
+	apply_text_scale()
 	hide()
 
-func _make_label(text: String, font_size: int) -> Label:
+func _on_scroll_changed(_value: float) -> void:
+	queue_redraw()
+
+## Whether a drawn area sits wholly inside the scrolled sidebar's visible
+## window. Drawing is not clipped to the ScrollContainer, so an area that is
+## scrolled partly out of view is skipped rather than painted over its edge.
+func _is_visible_in_scroll(child: Control) -> bool:
+	return _scroll.get_global_rect().encloses(child.get_global_rect())
+
+func _make_label(text: String, base_size: int) -> Label:
 	var label := Label.new()
 	label.text = text
 	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	label.add_theme_font_size_override("font_size", font_size)
+	_label_bases[label] = base_size
 	label.add_theme_color_override("font_color", PARCHMENT)
 	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	return label
