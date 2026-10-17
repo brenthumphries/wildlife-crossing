@@ -29,6 +29,16 @@ status: active
 > open. The dispatch shows the Phase 3 items as done. The suite is now 31
 > scripts / 379 tests / 6,629 asserts. See [[../daily-logs/2026-10-16]].
 
+> [!success] Amendment 2026-10-16 (late) — **Q6 is fully decided, and Q7 and Q8 are decided.**
+> The steps and storage left open above are settled. Baseline sizes are body 20,
+> title 36 and small 16. The player steps through 100, 125, 150 and 175 percent
+> from a title screen option and with Ctrl+=, Ctrl+- and Ctrl+0, stored in
+> `user://settings.cfg`, separate from saves. Q7: the fundraising trickle applies
+> below the cheapest crossing tile that can be bought, not the cheapest
+> information product (item C32). Q8: v0.2.0 goes big behind a feature freeze.
+> The calls are in the Phase 3 Decision logged blocks of `docs/roadmap.md`, and
+> the work is routed in [[2026-10-19-next-build]]. See [[../daily-logs/2026-10-16]].
+
 > [!info] Snapshot
 > Measured against **`3f3d227`** (*Merge pull request #62 from
 > brenthumphries/docs/log-2026-10-15-evening*, 2026-10-16T09:59:41-05:00) on
