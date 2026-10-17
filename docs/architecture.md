@@ -226,6 +226,7 @@ named signal below.
 | `budget_changed` | `economy_manager` | `budget_hud`, `confirm_panel`, `build_palette` | `new_balance` |
 | `season_changed` | `season_manager` | `species_manager`, `world_data` (terrain shifts), `connectivity_graph`, `population_model`, `season_calendar` | `new_season` |
 | `time_speed_changed` | `time_controller` | `season_manager`, `time_controls` | `multiplier` |
+| `text_scale_changed` | `TextScale` (`ui/text_scale.gd`, static) | every screen that sets a font size, to re-apply `TextScale.size()` live | `factor` |
 | `information_purchased` | `information_manager` | `inspect_panel`, `connectivity_overlay`, `entity_profile`, `permissions_manager` | `product`, `area_or_entity_id` |
 | `trust_changed` | `permissions_manager` | `entity_profile` | `entity_id`, `score`, `stage` |
 | `sub_area_unlocked` | `permissions_manager` | `world_select_controller`, `economy_manager` (bonus), `narrative_manager`, `milestone_tracker` | `sub_area_id`, `entity_id` |
