@@ -159,3 +159,41 @@ func test_deactivate_hides_the_layer() -> void:
 	assert_true(_o.visible)
 	_o.deactivate()
 	assert_false(_o.visible)
+
+# --- over the live world in segment mode (ADR 0021) -----------------------------
+
+func _enter_segment_mode() -> void:
+	_c.enter_selection_mode()
+	_zoom_to_px(float(SimulationConstants.SEGMENT_ZOOM_ACTIVATE_PX))
+
+func test_overlay_is_not_covered_by_the_controller_in_segment_mode() -> void:
+	_make_overlay(["forest", "road", "forest"], [])
+	_attach_controller()
+	_enter_segment_mode()
+	assert_true(_o.active, "precondition: overlay up in segment mode")
+	assert_eq(_c.card_layer_alpha(), 0.0,
+			"the controller draws no backdrop or cards over the overlay")
+	assert_eq(_c.world_reveal(), 1.0, "the live world it lies on is fully revealed")
+
+func test_overlay_draws_above_the_world_renderer() -> void:
+	_make_overlay(["forest", "road", "forest"], [])
+	var renderer := WorldRenderer.new()
+	assert_gt(_o.z_index, renderer.z_index, "the heatmap is drawn over the terrain")
+	renderer.free()
+
+func test_overlay_clears_on_confirm_hand_off() -> void:
+	_make_overlay(["forest", "road", "forest"], [])
+	_attach_controller()
+	_enter_segment_mode()
+	_c.exit_selection_mode(false)   # Main._on_confirm_panel_confirmed
+	assert_false(_o.active, "clears on confirm")
+
+func test_overlay_clears_on_escape_key() -> void:
+	_make_overlay(["forest", "road", "forest"], [])
+	_attach_controller()
+	_enter_segment_mode()
+	var ev := InputEventKey.new()
+	ev.keycode = KEY_ESCAPE
+	ev.pressed = true
+	_c._unhandled_input(ev)
+	assert_false(_o.active, "clears on Escape")

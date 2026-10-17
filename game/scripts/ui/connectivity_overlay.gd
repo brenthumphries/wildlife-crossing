@@ -3,7 +3,9 @@
 ## slow pulse on the three most fragmented segments. Visible only in segment
 ## mode; clears on confirm, cancel, or Escape. Reads *cached* patch-adjacency
 ## values — never recomputed per frame (crossing-location-selection PRD resolved
-## decisions; ADR 0004).
+## decisions; ADR 0004). Lives in world space under the world camera, so in
+## segment mode it lies over the live world the world-select controller reveals
+## (ADR 0021).
 class_name ConnectivityOverlay
 extends Node2D
 
@@ -13,6 +15,9 @@ const COLOR_CONNECTED := Color(0.00, 0.62, 0.45)    # Okabe–Ito teal (colorbli
 const PULSE_SEGMENT_COUNT := 3                  # PRD: pulse the worst three
 const PULSE_PERIOD_SECONDS := 2.4               # subtle slow pulse
 const PULSE_ALPHA_SPAN := 0.15                  # alpha swing around the base opacity
+## Above the world renderer's default 0, so the heatmap draws over the terrain
+## whatever order the two are added in.
+const OVERLAY_Z_INDEX := 1
 
 var active := false
 
@@ -24,6 +29,9 @@ var _segment_score: Dictionary = {}             # segment id -> 0..1
 var _worst_segments: Array = []                 # up to three ids, most fragmented first
 var _pulse_tiles: Dictionary = {}               # Vector2i -> true (tiles of worst segments)
 var _pulse_elapsed := 0.0
+
+func _init() -> void:
+	z_index = OVERLAY_Z_INDEX
 
 func _ready() -> void:
 	var bus := get_node_or_null("/root/EventBus")
