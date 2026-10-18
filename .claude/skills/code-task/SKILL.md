@@ -52,9 +52,12 @@ human review it in five minutes, or an honest statement of why not.
   is the test signal and the pull request will show it.
 - Python tools get a test in `tools/tests/`; run
   `python3 -m unittest discover -s tools/tests -b` before pushing.
-- Any figure the docs state and CI checks — `docs/testing-setup.md`'s suite
-  size — is updated in the same commit that changes it, or the check goes
-  red on arrival.
+- **Do not edit the suite figure in `docs/testing-setup.md`.** Items leave it
+  alone; `tools/suite_figures.py --print` refreshes it once per batch of
+  merged items, from a run's `gut_results.xml`, so a figure that trails your
+  new tests is expected. An acceptance line that asks for the figure is
+  satisfied by that batch step: say so in the brief rather than editing the
+  file.
 
 ## Commit
 

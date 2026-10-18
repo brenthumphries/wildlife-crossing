@@ -78,11 +78,15 @@ C25's segment-mode click routing tests, on top of C24's live-world segment-mode 
 `constants_test.gd`, pinning EconomyConstants, HabitatConstants and
 SimulationConstants to data-schemas.md §10).
 
-This figure is checked, not maintained. `tools/suite_figures.py` reads the
-JUnit XML the run writes and CI fails the `test` job when this line and the
-run disagree, so correct it with `tools/suite_figures.py --print` rather than
-by hand. It was stale at eight consecutive build reviews before the check
-existed.
+This figure is checked, not maintained, and it moves once per batch, not once
+per item. `tools/suite_figures.py` reads the JUnit XML the run writes and
+compares this line with it. Work items do not touch the figure. After each
+wave of items merges, it is refreshed once, from a run's `gut_results.xml`,
+with `tools/suite_figures.py --print`, on a `docs/suite-figure-<date>` branch;
+paste the printed line rather than typing it. Between batches the line trails
+the run, which `--check --warn-only` reports as a warning; a run *below* the
+stated figures is a dropped suite and still fails. It was stale at eight
+consecutive build reviews before the check existed.
 
 The `ObjectDB instances leaked at exit` warning on shutdown is benign Godot
 teardown noise and can be ignored (or filtered with `grep -v`).

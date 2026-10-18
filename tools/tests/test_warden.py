@@ -191,6 +191,33 @@ class DispatchTestCase(unittest.TestCase):
         self.assertEqual([i["id"] for i in buckets["code"]], ["A"])
         self.assertEqual([i["id"] for i in buckets["waiting"]], ["B"])
 
+    def test_items_sharing_only_the_suite_figure_file_both_run(self) -> None:
+        shared = sorted(warden.SHARED_FILES)
+        self.assertIn("docs/testing-setup.md", shared)
+        p = plan(item("A", files=["a.gd", *shared]),
+                 item("B", files=["b.gd", *shared], priority=2))
+        buckets = warden.dispatch(p, warden.derive_statuses(p, None))
+        self.assertEqual([i["id"] for i in buckets["code"]], ["A", "B"])
+        self.assertEqual(buckets["waiting"], [])
+
+    def test_a_shared_file_in_a_pull_request_in_flight_holds_nothing_back(self) -> None:
+        shared = sorted(warden.SHARED_FILES)
+        p = plan(item("A", files=["a.gd", *shared]),
+                 item("B", files=["b.gd", *shared], priority=2))
+        st = warden.derive_statuses(p, state(open_prs=[{"number": 5, "head": "feat/a-x"}]))
+        buckets = warden.dispatch(p, st)
+        self.assertEqual([i["id"] for i in buckets["in_review"]], ["A"])
+        self.assertEqual([i["id"] for i in buckets["code"]], ["B"])
+
+    def test_items_sharing_a_real_file_still_wait_beside_the_shared_one(self) -> None:
+        shared = sorted(warden.SHARED_FILES)
+        p = plan(item("A", files=["game/scripts/main.gd", *shared]),
+                 item("B", files=["game/scripts/main.gd", *shared], priority=2))
+        buckets = warden.dispatch(p, warden.derive_statuses(p, None))
+        self.assertEqual([i["id"] for i in buckets["code"]], ["A"])
+        self.assertEqual([i["id"] for i in buckets["waiting"]], ["B"])
+        self.assertIn("shares a file", buckets["waiting"][0]["_waiting_reason"])
+
     def test_supervised_items_take_no_unattended_slot(self) -> None:
         p = plan(item("C3", mode="supervised", priority=1), item("A", priority=2), item("B", priority=3))
         buckets = warden.dispatch(p, warden.derive_statuses(p, None), max_code=2)
@@ -218,6 +245,13 @@ class PromptTestCase(unittest.TestCase):
         self.assertIn("feat/c5-do-c5", text)
         self.assertIn("[display] section present", text)
         self.assertIn("docs/plan/facts.json", text)
+
+    def test_code_prompt_says_the_batch_step_owns_the_suite_figure(self) -> None:
+        p = plan(item("C5"))
+        text = warden.code_prompt(p["items"][0], p)
+        self.assertIn("Do not edit the suite figure in docs/testing-setup.md", text)
+        self.assertIn("The batch step owns it", text)
+        self.assertIn("satisfied by that step", text)
 
     def test_cowork_prompt_forbids_git_writes_and_asks_for_a_commit_plan(self) -> None:
         p = plan(item("C8", lane="docs", files=["docs/pipeline-design.md"]))

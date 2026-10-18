@@ -75,6 +75,12 @@ ROUTING = pathlib.Path("docs/plan/routing.md")
 # branches. Raise it once the queue is being kept up with.
 DEFAULT_MAX_CODE = 2
 
+# Files nearly every code item lists but none may edit for itself, so they never
+# count as an overlap. The suite figure in docs/testing-setup.md is refreshed
+# once per batch of merged items (tools/suite_figures.py --print), not per item;
+# treating the file as a lock serialised the whole code lane behind it.
+SHARED_FILES = frozenset({"docs/testing-setup.md"})
+
 # Lanes and where they run. `code` and `verify` go to Claude Code; `docs` goes
 # to Cowork by Brent's rule (non-code work stays in Cowork); `decision` and
 # `mac` are his. A planner may override with an explicit `surface`.
@@ -380,11 +386,18 @@ def derive_statuses(plan: dict, state: dict | None) -> dict[str, dict]:
     return result
 
 
+def claimable_files(item: dict) -> set[str]:
+    """The item's files that can make it wait on, or hold back, another item:
+    everything except the shared files no item edits for itself."""
+    return set(item.get("files", [])) - SHARED_FILES
+
+
 def dispatch(plan: dict, statuses: dict[str, dict], *,
              max_code: int = DEFAULT_MAX_CODE) -> dict[str, list[dict]]:
     """Today's queue. Open items only, in plan order, capped for the code lane,
     and file-disjoint: an item whose files overlap something already in review
-    or already picked today waits, so two branches never fight over one file."""
+    or already picked today waits, so two branches never fight over one file.
+    SHARED_FILES are ignored both ways: they claim nothing and wait on nothing."""
     picked_code: list[dict] = []
     buckets: dict[str, list[dict]] = {
         "code": [], "supervised": [], "cowork": [], "yours": [], "in_review": [],
@@ -393,7 +406,7 @@ def dispatch(plan: dict, statuses: dict[str, dict], *,
     busy_files: set[str] = set()
     for item in plan["items"]:
         if statuses[item["id"]]["status"] == "in-review":
-            busy_files.update(item.get("files", []))
+            busy_files.update(claimable_files(item))
 
     ordered = sorted(plan["items"], key=lambda i: (i.get("priority", 999), i["id"]))
     for item in ordered:
@@ -409,7 +422,7 @@ def dispatch(plan: dict, statuses: dict[str, dict], *,
             buckets["blocked"].append(item)
         elif st == "open":
             surface = item_surface(item)
-            files = set(item.get("files", []))
+            files = claimable_files(item)
             if surface == "human":
                 buckets["yours"].append(item)
             elif files & busy_files:
@@ -462,6 +475,10 @@ def code_prompt(item: dict, plan: dict) -> str:
         f"You are already on branch `{item_branch(item)}` in a dedicated worktree "
         f"whose base is origin/main. Do not switch branches. Do not touch main.\n\n"
         f"The item, verbatim from docs/plan/week.json:\n\n```json\n{item_block(item, plan)}\n```\n\n"
+        f"Do not edit the suite figure in docs/testing-setup.md. The batch step "
+        f"owns it (tools/suite_figures.py --print, once after each wave merges), "
+        f"and any acceptance line that asks for the figure is satisfied by that "
+        f"step, not by this branch.\n\n"
         f"Facts about the tree are in docs/plan/facts.json (regenerate with "
         f"`python3 tools/facts.py` if you need them fresh). Cite them; do not "
         f"recount. When the acceptance criteria are met, push the branch and open "

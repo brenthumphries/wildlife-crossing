@@ -148,7 +148,12 @@ jobs:
       # was stale at eight consecutive build reviews, corrected seven times. The
       # figures are already in the XML above, so the document is now checked
       # against them rather than maintained against memory.
-      - name: Check documented suite figures against the run
+      - name: Check documented suite figures against the run (warn only)
+        if: ${{ !startsWith(github.head_ref, 'docs/suite-figure-') }}
+        run: python3 tools/suite_figures.py --check docs/testing-setup.md --warn-only
+
+      - name: Check documented suite figures against the run (strict, batch refresh)
+        if: ${{ startsWith(github.head_ref, 'docs/suite-figure-') }}
         run: python3 tools/suite_figures.py --check docs/testing-setup.md
 
   export:
