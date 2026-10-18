@@ -156,6 +156,12 @@ func _sub_area_segments(sub_area_id: int) -> Array:
 	return out
 
 func _unhandled_input(event: InputEvent) -> void:
+	# Text size works everywhere, so it is checked before the modal guards: the
+	# Info panel, credits and minigames each pass keys they do not own through.
+	if event is InputEventKey and event.pressed and not event.echo \
+			and _apply_text_size_key(event):
+		get_viewport().set_input_as_handled()
+		return
 	# The credits overlay is modal. Swallow everything while it is up rather
 	# than relying on _unhandled_input ordering between it and this node —
 	# otherwise Escape would cancel a build behind the screen the player is
@@ -215,6 +221,26 @@ func _unhandled_input(event: InputEvent) -> void:
 		# `segment_clicked`, not here: that screen consumes its own clicks.
 		if _build_mode != null:
 			_try_toggle_build_tile()
+
+# --- text size ---------------------------------------------------------------
+
+## Step the text size for a Ctrl+= / Ctrl+- / Ctrl+0 press, save it and say so on
+## the HUD. Returns true if the key was a text-size shortcut (even at the end of
+## the range, where the step does not move).
+func _apply_text_size_key(event: InputEventKey) -> bool:
+	var action := GameSettings.text_size_action(event.keycode, event.ctrl_pressed)
+	match action:
+		GameSettings.TextSizeAction.LARGER:
+			TextScale.step_up()
+		GameSettings.TextSizeAction.SMALLER:
+			TextScale.step_down()
+		GameSettings.TextSizeAction.RESET:
+			TextScale.set_step(GameSettings.RESET_STEP)
+		_:
+			return false
+	GameSettings.new().save_text_scale_step(TextScale.step())
+	_hud.show_message(GameSettings.text_size_label(TextScale.factor()))
+	return true
 
 # --- save / load (architecture §7, ADR 0005/0014) ---------------------------
 

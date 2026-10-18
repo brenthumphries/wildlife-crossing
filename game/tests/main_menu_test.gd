@@ -87,6 +87,41 @@ func test_buttons_stay_in_the_viewport_at_every_text_scale_step() -> void:
 			assert_true(view.encloses(button.get_global_rect()), "%s within the viewport at step %d" % [button.text, i])
 		assert_true(view.encloses(_m._version_label.get_global_rect()), "version line within the viewport at step %d" % i)
 
+# --- text size row -----------------------------------------------------------
+
+func test_text_size_row_shows_the_current_percentage() -> void:
+	assert_eq(_m._text_size_label.text, "Text size 100%")
+	TextScale.set_step(1)
+	_m.apply_text_scale()
+	assert_eq(_m._text_size_label.text, "Text size 125%")
+
+func test_larger_button_steps_up_and_emits_the_new_step() -> void:
+	watch_signals(_m)
+	_m._text_larger_button.pressed.emit()
+	assert_eq(TextScale.step(), 1)
+	assert_signal_emitted_with_parameters(_m, "text_size_changed", [1])
+	assert_eq(_m._text_size_label.text, "Text size 125%")
+
+func test_smaller_button_steps_down_and_emits_the_new_step() -> void:
+	TextScale.set_step(2)
+	watch_signals(_m)
+	_m._text_smaller_button.pressed.emit()
+	assert_eq(TextScale.step(), 1)
+	assert_signal_emitted_with_parameters(_m, "text_size_changed", [1])
+
+func test_buttons_disable_at_the_ends_of_the_range() -> void:
+	assert_true(_m._text_smaller_button.disabled)
+	assert_false(_m._text_larger_button.disabled)
+	TextScale.set_step(TextScale.STEPS.size() - 1)
+	_m.apply_text_scale()
+	assert_false(_m._text_smaller_button.disabled)
+	assert_true(_m._text_larger_button.disabled)
+
+func test_no_signal_when_the_step_cannot_move() -> void:
+	watch_signals(_m)
+	_m._text_smaller_button.pressed.emit()
+	assert_signal_not_emitted(_m, "text_size_changed")
+
 # --- boot path ---------------------------------------------------------------
 
 func test_skip_menu_arg_is_recognised() -> void:
