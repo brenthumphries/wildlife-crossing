@@ -12,15 +12,23 @@ extends BaseScreen
 signal play_pressed()
 signal credits_pressed()
 signal quit_pressed()
+## The player changed the text size from the menu; `step` is the new TextScale
+## step, for the owner to persist.
+signal text_size_changed(step: int)
 
 const TITLE_TEXT := "Wildlife Crossing"
 const TAGLINE_TEXT := "Build habitats, open corridors, help species thrive."
 const BUTTON_MIN_SIZE := Vector2(220.0, 40.0)
+const TEXT_SIZE_BUTTON_MIN_SIZE := Vector2(40.0, 40.0)
+const TEXT_SIZE_ROW_SEPARATION := 8
 const BACKGROUND_COLOR := Color(0.09, 0.15, 0.11)
 
 var _play_button: Button
 var _credits_button: Button
 var _quit_button: Button
+var _text_size_label: Label
+var _text_smaller_button: Button
+var _text_larger_button: Button
 var _title_label: Label
 var _tagline_label: Label
 var _version_label: Label
@@ -39,12 +47,29 @@ func apply_text_scale() -> void:
 	for button: Button in [_play_button, _credits_button, _quit_button]:
 		button.add_theme_font_size_override("font_size", TextScale.size(TextScale.BODY))
 		button.custom_minimum_size = BUTTON_MIN_SIZE * TextScale.factor()
+	_text_size_label.add_theme_font_size_override("font_size", TextScale.size(TextScale.BODY))
+	_text_size_label.text = GameSettings.text_size_label(TextScale.factor())
+	for button: Button in [_text_smaller_button, _text_larger_button]:
+		button.add_theme_font_size_override("font_size", TextScale.size(TextScale.BODY))
+		button.custom_minimum_size = TEXT_SIZE_BUTTON_MIN_SIZE * TextScale.factor()
+	_text_smaller_button.disabled = TextScale.step() <= 0
+	_text_larger_button.disabled = TextScale.step() >= TextScale.STEPS.size() - 1
 
 ## Stamp the build's own version into the corner. Sourced from the engine at
 ## runtime rather than a constant, for the same reason the credits screen
 ## generates its attributions: a hardcoded version is wrong after one bump.
 func set_version_line(text: String) -> void:
 	_version_label.text = text
+
+func _on_text_smaller_button_pressed() -> void:
+	if TextScale.step_down():
+		text_size_changed.emit(TextScale.step())
+	apply_text_scale()
+
+func _on_text_larger_button_pressed() -> void:
+	if TextScale.step_up():
+		text_size_changed.emit(TextScale.step())
+	apply_text_scale()
 
 func _on_event_bus_text_scale_changed(_factor: float) -> void:
 	apply_text_scale()
@@ -96,6 +121,21 @@ func _build_ui() -> void:
 
 	_credits_button = _make_button("Credits & Licences", _on_credits_button_pressed)
 	column.add_child(_credits_button)
+
+	var text_size_row := HBoxContainer.new()
+	text_size_row.add_theme_constant_override("separation", TEXT_SIZE_ROW_SEPARATION)
+	text_size_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	column.add_child(text_size_row)
+
+	_text_smaller_button = _make_button("A-", _on_text_smaller_button_pressed)
+	text_size_row.add_child(_text_smaller_button)
+
+	_text_size_label = Label.new()
+	_text_size_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	text_size_row.add_child(_text_size_label)
+
+	_text_larger_button = _make_button("A+", _on_text_larger_button_pressed)
+	text_size_row.add_child(_text_larger_button)
 
 	_quit_button = _make_button("Quit", _on_quit_button_pressed)
 	column.add_child(_quit_button)

@@ -55,6 +55,7 @@ table when implemented.
 | Seasons & time: clock, season cycle, modifiers | `systems/season_manager.gd`, `systems/time_controller.gd` | — | 1 season = 15 min at 1×; pause/1×/2×/4× |
 | Milestones: per-sub-area + capstone | `systems/milestone_tracker.gd` | — | Continental Connection reachability check |
 | Save/load | `systems/save_manager.gd` | — | JSON, versioned, atomic ([ADR 0005](adr/0005-save-file-format.md)) |
+| Player settings | `systems/game_settings.gd` | — | `user://settings.cfg` (ConfigFile); text size today. Not part of the save |
 | Narrative/cultural content surfacing | `systems/narrative_manager.gd` | — | Unlock beats, land acknowledgment, entity briefs (data-driven) |
 | UI: world map + selection mode | `ui/world_select_controller.gd` | `ui/WorldSelectMap.tscn` (selection mode) | Continuous zoom; locked-area treatment. Renamed from `WorldMap.tscn` to avoid the collision with the simulated `world/WorldMap.tscn` ([ADR 0013](adr/0013-scaffolding-conventions.md)) |
 | UI: connectivity overlay | `ui/connectivity_overlay.gd` | `ui/ConnectivityOverlay.tscn` | Orange→teal heatmap, 40% opacity |
@@ -305,6 +306,15 @@ Writes are atomic (temp file then rename) to the user data directory. `GameState
 emits nothing on save; on load it repopulates and emits a single
 `game_loaded` signal that systems use to rebuild derived state (the connectivity
 graph is rebuilt from saved crossings, not stored).
+
+**Settings are not saves.** `game_settings.gd` keeps player preferences (today
+the text-size step, `ui/text_scale_step`) in a `ConfigFile` at
+`user://settings.cfg`, beside but apart from `user://saves/`. Nothing in
+`GameState` or a save slot refers to it, so loading a save never changes how
+the game looks and a settings change never rewrites a slot. A missing,
+unreadable or out-of-range file loads the defaults. `TitleScreen` applies the
+saved step at boot, before the menu is built and before `--skip-menu`
+branches.
 
 > Decision logged: **autosave fires on `season_changed`** (every 15 minutes) and
 > on manual save; this aligns save points with the natural simulation rhythm and

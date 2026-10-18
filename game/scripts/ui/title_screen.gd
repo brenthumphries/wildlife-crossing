@@ -26,9 +26,14 @@ var menu: MainMenu
 var credits: CreditsScreen
 
 var _debug: Node
+var _settings := GameSettings.new()
 
 func _ready() -> void:
 	_debug = get_node_or_null("/root/Debug")
+
+	# Before the menu is built, and before the --skip-menu branch, so the saved
+	# size is in force for whichever scene draws first.
+	_settings.apply_saved_text_scale()
 
 	if should_skip_menu(OS.get_cmdline_user_args()):
 		# Deferred: changing scene during another node's _ready() frees this
@@ -42,6 +47,7 @@ func _ready() -> void:
 	menu.play_pressed.connect(_on_menu_play_pressed)
 	menu.credits_pressed.connect(_on_menu_credits_pressed)
 	menu.quit_pressed.connect(_on_menu_quit_pressed)
+	menu.text_size_changed.connect(_on_menu_text_size_changed)
 	add_child(menu)
 
 	credits = CreditsScreen.new()
@@ -62,6 +68,9 @@ func _on_menu_credits_pressed() -> void:
 
 func _on_menu_quit_pressed() -> void:
 	get_tree().quit()
+
+func _on_menu_text_size_changed(step: int) -> void:
+	_settings.save_text_scale_step(step)
 
 func _project_version() -> String:
 	var v: Variant = ProjectSettings.get_setting("application/config/version", "")
