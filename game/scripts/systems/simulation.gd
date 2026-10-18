@@ -9,7 +9,7 @@ class_name Simulation
 extends Node
 
 # tick cadence (architecture §4): 0.1 s/tick → ~100 ticks/in-game day, 30-day month.
-const TICKS_PER_DAY := 100
+const TICKS_PER_DAY := SimulationConstants.TICKS_PER_DAY
 const TICKS_PER_MONTH := TICKS_PER_DAY * 30
 
 # systems
@@ -22,6 +22,7 @@ var species: SpeciesManager
 var economy: EconomyManager
 var information: InformationManager
 var milestones: MilestoneTracker
+var seasons: SeasonManager = SeasonManager.new()
 var env: EnvConfig
 var rng: RandomNumberGenerator
 
@@ -109,6 +110,8 @@ func tick() -> void:
 		population.monthly_step()
 		resync_agents()
 		economy.run_monthly_income(infrastructure.crossings())
+	# Last, so this tick's movement and monthly work all used one season.
+	seasons.advance_to(_ticks)
 
 ## Current in-game day, derived from the tick counter (architecture §4).
 func current_day() -> int:
@@ -257,16 +260,16 @@ func save_state() -> Dictionary:
 		"information": information.save_state(),
 		"milestones": _milestones_state(),
 		"time_speed": time.multiplier,
+		"clock": seasons.save_state(),
 	}
 
 ## Rebuild this simulation from a §14 payload: reload the sub-area from static
 ## data, replay the saved crossings so the graph re-derives its safe links, then
 ## apply the saved population records and re-render the agent pool from them.
 ##
-## The tick counter restarts at zero. `_ticks` only drives the monthly boundary,
-## and §14 stores the clock on GameState rather than a tick count, so a loaded
-## game waits a full month for its first demographic step. Revisit when
-## `time_controller`/`season_manager` land (Phase 3) and the clock has one owner.
+## The tick counter resumes from the saved clock (`SeasonManager.restore`), which
+## lands on a day boundary, so the monthly step stays on the 30-day boundary. A
+## save with no `clock` loads as year 1 spring day 0.
 func restore_state(state: Dictionary, registries: Dictionary, seed_value: int) -> void:
 	_restoring = true
 	load_world(int(state.get("active_sub_area_id", active_sub_area_id)), registries, seed_value)
@@ -275,6 +278,9 @@ func restore_state(state: Dictionary, registries: Dictionary, seed_value: int) -
 	_restore_economy(state.get("economy", {}))
 	information.restore(state.get("information", {}))
 	_restore_milestones(state.get("milestones", {}))
+	var clock: Dictionary = state.get("clock", {})
+	_ticks = seasons.restore(int(clock.get("year", SeasonManager.FIRST_YEAR)),
+		String(clock.get("season", SeasonManager.SPRING)), int(clock.get("day_of_season", 0)))
 	# An absent or unusable speed loads at 1x (omit-means-default, ADR 0014).
 	var saved_speed: float = float(state.get("time_speed", TimeController.SPEED_1X))
 	time.set_speed(saved_speed if TimeController.STEPS.has(saved_speed) else TimeController.SPEED_1X)
@@ -387,6 +393,8 @@ func _wire_signals() -> void:
 	species.animal_died.connect(_on_animal_died_record)
 	information.information_purchased.connect(_on_information_purchased)
 	milestones.milestone_reached.connect(_on_milestone_reached)
+	if not seasons.season_changed.is_connected(_on_season_changed):
+		seasons.season_changed.connect(_on_season_changed)
 
 func _on_animal_crossed(crossing_id: String, species_id: String) -> void:
 	infrastructure.on_animal_crossed(crossing_id)
@@ -423,6 +431,11 @@ func _on_milestone_reached(milestone_id: String, is_capstone: bool) -> void:
 	var bus := _event_bus()
 	if bus:
 		bus.milestone_reached.emit(milestone_id, is_capstone)
+
+func _on_season_changed(new_season: String) -> void:
+	var bus := _event_bus()
+	if bus:
+		bus.season_changed.emit(new_season)
 
 func _on_time_speed_changed(multiplier: float) -> void:
 	var bus := _event_bus()

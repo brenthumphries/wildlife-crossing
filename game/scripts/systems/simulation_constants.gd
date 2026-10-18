@@ -8,6 +8,7 @@ extends RefCounted
 const SIM_TICK_SECONDS := 0.1              # real seconds per sim tick at 1x
 const SEASON_REAL_MINUTES := 15            # real minutes per season at 1x
 const DAYS_PER_SEASON := 90                # in-game days per season
+const TICKS_PER_DAY := 100                 # sim ticks per in-game day (0.1 s/tick, architecture §4)
 
 # --- zoom / feedback ---
 const SEGMENT_ZOOM_ACTIVATE_PX := 16       # tile flat-to-flat px to enter segment mode

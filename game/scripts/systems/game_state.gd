@@ -87,6 +87,9 @@ func from_dict(data: Dictionary) -> bool:
 	var clock: Dictionary = data.get("clock", {})
 	year = int(clock.get("year", DEFAULT_YEAR))
 	season = String(clock.get("season", DEFAULT_SEASON))
+	if not SeasonManager.is_season(season):
+		push_warning("Save season '%s' is not a season — using %s" % [season, DEFAULT_SEASON])
+		season = DEFAULT_SEASON
 	day_of_season = int(clock.get("day_of_season", 0))
 	time_speed = float(clock.get("time_speed", DEFAULT_TIME_SPEED))
 

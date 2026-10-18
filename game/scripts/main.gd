@@ -279,6 +279,10 @@ func _quick_save() -> void:
 	game_state.budget = int(economy_state["budget"])
 	game_state.last_donation = int(economy_state["last_donation"])
 	game_state.time_speed = float(world_state["time_speed"])
+	var clock_state: Dictionary = world_state["clock"]
+	game_state.year = int(clock_state["year"])
+	game_state.season = String(clock_state["season"])
+	game_state.day_of_season = int(clock_state["day_of_season"])
 	var error: String = SaveManager.save(game_state.to_dict())
 	if error.is_empty():
 		_log("Game saved.")
@@ -309,6 +313,7 @@ func _quick_load() -> void:
 		"information": game_state.information,
 		"milestones": game_state.milestones,
 		"time_speed": game_state.time_speed,
+		"clock": { "year": game_state.year, "season": game_state.season, "day_of_season": game_state.day_of_season },
 	}, _registries(), randi())
 	# `restore_state` builds a fresh WorldData and ConnectivityGraph, so anything
 	# holding the previous pair is now pointing at a dead world. The renderer
