@@ -29,7 +29,14 @@ func _registries() -> Dictionary:
 	for s in _load_json("res://data/segments.json")["segments"]:
 		seg[s["id"]] = s
 	return { "tiles": treg, "species": sreg, "infrastructure": ireg, "segments": seg,
-		"biome_groups": _load_json("res://data/biome_groups.json") }
+		"biome_groups": _load_json("res://data/biome_groups.json"),
+		"milestones": _milestones_registry() }
+
+func _milestones_registry() -> Dictionary:
+	var out: Dictionary = {}
+	for m in _load_json("res://data/milestones.json")["milestones"]:
+		out[m["id"]] = m
+	return out
 
 func before_each() -> void:
 	_sim = Simulation.new()
@@ -389,8 +396,44 @@ func test_a_traversal_is_tallied_for_the_month() -> void:
 	var weight: int = int(_registries()["species"][species_id]["status_weight"])
 	var deficit: float = float(_sim.infrastructure.crossings()[0]["fragmentation_deficit"])
 	var expected_extra: int = roundi(weight * _sim.economy.fragmentation_multiplier(deficit))
+	var milestone: int = _sim.economy.milestone_bonus()   # the build itself earned the first-crossing reward
 	var paid: int = _sim.economy.run_monthly_income(_sim.infrastructure.crossings())
-	assert_eq(paid, EconomyConstants.BASE_GRANT + expected_extra, "the traversal pays weight x multiplier on top of the grant")
+	assert_eq(paid, EconomyConstants.BASE_GRANT + expected_extra + milestone, "the traversal pays weight x multiplier on top of the grant")
+
+# --- milestones (C41) -------------------------------------------------------
+
+func test_first_crossing_in_bow_valley_fires_and_pays_2000_once() -> void:
+	var bus: Node = get_tree().root.get_node_or_null("EventBus")
+	watch_signals(bus)
+	assert_true(_sim.build_crossing(SEG, "overpass", SPAN), "the overpass is built")
+	assert_signal_emit_count(bus, "milestone_reached", 1, "one milestone")
+	assert_signal_emitted_with_parameters(bus, "milestone_reached", ["first_crossing_sub7", false])
+	assert_eq(_sim.economy.milestone_bonus(), 2000, "its reward waits for the next income")
+	var breakdown: Array = []
+	_sim.economy.donation_received.connect(func(_a: int, parts: Dictionary) -> void: breakdown.append(parts))
+	_sim.economy.run_monthly_income(_sim.infrastructure.crossings())
+	assert_eq(breakdown[0]["milestone"], 2000, "the donation breakdown shows it")
+	_sim.economy.run_monthly_income(_sim.infrastructure.crossings())
+	assert_eq(breakdown[1]["milestone"], 0, "and it is not paid twice")
+
+func test_milestones_survive_save_and_load_without_refiring_or_repaying() -> void:
+	_sim.build_crossing(SEG, "overpass", SPAN)
+	var state: Dictionary = JSON.parse_string(JSON.stringify(_sim.save_state()))
+	assert_eq(state["milestones"]["reached"], ["first_crossing_sub7"], "reached ids are saved")
+	var bus: Node = get_tree().root.get_node_or_null("EventBus")
+	watch_signals(bus)
+	var other: Simulation = _restored_copy(state)
+	assert_signal_not_emitted(bus, "milestone_reached", "a load announces nothing")
+	assert_eq(other.milestones.reached, ["first_crossing_sub7"] as Array[String], "the milestone is still reached")
+	assert_eq(other.economy.milestone_bonus(), 2000, "an unpaid bonus is still owed, once")
+	other.economy.run_monthly_income(other.infrastructure.crossings())
+	assert_eq(other.economy.milestone_bonus(), 0, "paid")
+	var paid_state: Dictionary = other.save_state()
+	assert_eq(int(paid_state["milestones"]["unpaid_bonus"]), 0, "a save after payment owes nothing")
+
+func test_the_capstone_is_false_in_the_one_sub_area_world() -> void:
+	_sim.build_crossing(SEG, "overpass", SPAN)
+	assert_false(_sim.milestones.capstone_reached, "no chain exists in the shipped world")
 
 # --- time controls (C33) ----------------------------------------------------
 

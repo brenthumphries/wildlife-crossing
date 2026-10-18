@@ -615,7 +615,7 @@ pool) is **rebuilt on `game_loaded`**, not stored.
 | `entities` | object[] | per entity: `entity_id`, `trust`, `stage`, `partnership` |
 | `information` | object | `areas_revealed[]` (sub-area ids as strings, the areas holding any product), `entities_revealed[]` (ids), optional `products_by_area` (object, default `{}`) |
 | `crossings` | object[] | per crossing: `crossing_id`, `segment_id`, `sub_area_id`, `crossing_type`, `covered_tiles` (`[q,r]`[]), `built_on_day`, optional `fragmentation_deficit` (float 0–1, default `0.0`) |
-| `milestones` | object | `reached[]` (ids), `capstone_reached` |
+| `milestones` | object | `reached[]` (ids), `capstone_reached`, optional `unpaid_bonus` (int, default `0`: rewards earned but not yet added to a monthly income) |
 
 `crossings[].fragmentation_deficit` is `min(1, (combined - largest) / largest)`,
 where `combined` is the total tile count of the distinct connectivity networks of
