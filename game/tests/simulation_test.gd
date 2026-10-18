@@ -391,3 +391,63 @@ func test_a_traversal_is_tallied_for_the_month() -> void:
 	var expected_extra: int = roundi(weight * _sim.economy.fragmentation_multiplier(deficit))
 	var paid: int = _sim.economy.run_monthly_income(_sim.infrastructure.crossings())
 	assert_eq(paid, EconomyConstants.BASE_GRANT + expected_extra, "the traversal pays weight x multiplier on top of the grant")
+
+# --- time controls (C33) ----------------------------------------------------
+
+## Ticks run by `seconds` of `_process` at one-second-fraction frames, counted
+## through the monthly-independent tick counter.
+func _ticks_over(seconds: float) -> int:
+	var before: int = _sim._ticks
+	var frame: float = 0.05
+	for i in roundi(seconds / frame):
+		_sim._process(frame)
+	return _sim._ticks - before
+
+func test_pause_halts_sim_not_ui() -> void:
+	_sim.time.set_speed(0.0)
+	assert_eq(_sim.time_scale, 0.0, "time_scale follows the controller")
+	assert_eq(_ticks_over(5.0), 0, "no tick runs while paused")
+	assert_true(_sim.build_crossing(SEG, "overpass", SPAN), "a build still succeeds while paused")
+	var area: int = _sim.active_sub_area_id
+	assert_true(_sim.information.purchase(InformationManager.HABITAT_ASSESSMENT, area),
+		"an information purchase still succeeds while paused")
+	assert_eq(_ticks_over(5.0), 0, "and the sim is still halted afterwards")
+
+func test_speed_multipliers() -> void:
+	var base: int = _ticks_over(10.0)
+	assert_gt(base, 0, "1x runs ticks")
+	_sim.time.set_speed(2.0)
+	assert_eq(_ticks_over(10.0), base * 2, "2x runs twice the ticks per second")
+	_sim.time.set_speed(4.0)
+	assert_eq(_ticks_over(10.0), base * 4, "4x runs four times the ticks per second")
+
+func test_speed_change_is_relayed_to_the_event_bus() -> void:
+	var bus: Node = get_tree().root.get_node_or_null("EventBus")
+	watch_signals(bus)
+	_sim.time.set_speed(2.0)
+	assert_signal_emit_count(bus, "time_speed_changed", 1)
+	assert_signal_emitted_with_parameters(bus, "time_speed_changed", [2.0])
+
+func test_the_speed_survives_a_save_round_trip() -> void:
+	_sim.time.set_speed(4.0)
+	var back: Dictionary = JSON.parse_string(JSON.stringify(_sim.save_state()))
+	var fresh := Simulation.new()
+	autofree(fresh)
+	fresh.restore_state(back, _registries(), 42)
+	assert_eq(fresh.time.multiplier, 4.0)
+
+func test_a_paused_save_loads_paused() -> void:
+	_sim.time.set_speed(0.0)
+	var fresh := Simulation.new()
+	autofree(fresh)
+	fresh.restore_state(_sim.save_state(), _registries(), 42)
+	assert_true(fresh.time.is_paused())
+
+func test_a_save_with_no_time_speed_loads_at_1x() -> void:
+	var state: Dictionary = _sim.save_state()
+	state.erase("time_speed")
+	var fresh := Simulation.new()
+	autofree(fresh)
+	fresh.time.set_speed(4.0)
+	fresh.restore_state(state, _registries(), 42)
+	assert_eq(fresh.time.multiplier, 1.0)
