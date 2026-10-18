@@ -11,8 +11,11 @@
 ## C20 stacks every HUD text in one VBoxContainer (no fixed positions), takes
 ## sizes from TextScale, and re-applies them on `text_scale_changed`. The
 ## build status readout, formerly a free-floating label in Main, lives here.
+## C43 adds a dismissible hint banner at the foot of the stack for HintCoach.
 class_name Hud
 extends BaseScreen
+
+signal hint_dismissed()
 
 const MESSAGE_FADE_SECONDS := 4.0
 const CUE_FLASH_SECONDS := 1.2
@@ -25,6 +28,9 @@ const STACK_SEPARATION := 4
 const CUE_ROW_SEPARATION := 8
 ## The cue icon's edge in px at text-scale step 1.0; scaled with the text.
 const CUE_ICON_BASE_SIZE := 24.0
+## The hint banner's text width in px at text-scale step 1.0; scaled with the text.
+const HINT_WIDTH_BASE := 420
+const HINT_DISMISS_TEXT := "Got it"
 
 var _stack: VBoxContainer
 var _build_status_label: Label
@@ -34,6 +40,9 @@ var _cue_icon: TextureRect
 var _cue_label: Label
 var _budget_label: Label
 var _donation_label: Label
+var _hint_panel: PanelContainer
+var _hint_label: Label
+var _hint_button: Button
 var _message_timer := 0.0
 var _cue_timer := 0.0
 
@@ -76,6 +85,8 @@ func _build_ui() -> void:
 	_donation_label = _add_label(CUE_COLOR)
 	_donation_label.hide()   # nothing to show until a donation arrives
 
+	_build_hint_banner()
+
 	apply_text_scale()
 
 func _ready() -> void:
@@ -90,6 +101,9 @@ func apply_text_scale() -> void:
 	_set_font_size(_cue_label, TextScale.BODY)
 	_set_font_size(_budget_label, TextScale.BODY)
 	_set_font_size(_donation_label, TextScale.SMALL)
+	_set_font_size(_hint_label, TextScale.BODY)
+	_hint_button.add_theme_font_size_override("font_size", TextScale.size(TextScale.BODY))
+	_hint_label.custom_minimum_size.x = TextScale.size(HINT_WIDTH_BASE)
 	_cue_icon.custom_minimum_size = Vector2.ONE * TextScale.size(roundi(CUE_ICON_BASE_SIZE))
 
 ## Show the build-mode cost/status readout above the message line.
@@ -100,6 +114,47 @@ func set_build_status(text: String) -> void:
 ## Hide the build-mode readout (build mode closed).
 func clear_build_status() -> void:
 	_build_status_label.hide()
+
+## Show a first-time hint in the banner until the player dismisses it.
+func show_hint(text: String) -> void:
+	_hint_label.text = text
+	_hint_panel.show()
+
+## Hide the hint banner.
+func clear_hint() -> void:
+	_hint_panel.hide()
+
+## Whether the hint banner is up.
+func is_hint_visible() -> bool:
+	return _hint_panel.visible
+
+# The banner and its text ignore the mouse so play continues underneath;
+# only the button takes clicks.
+func _build_hint_banner() -> void:
+	_hint_panel = PanelContainer.new()
+	_hint_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_hint_panel.hide()
+	_stack.add_child(_hint_panel)
+
+	var column := VBoxContainer.new()
+	column.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_hint_panel.add_child(column)
+
+	_hint_label = Label.new()
+	_hint_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_hint_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	column.add_child(_hint_label)
+
+	_hint_button = Button.new()
+	_hint_button.text = HINT_DISMISS_TEXT
+	_hint_button.size_flags_horizontal = Control.SIZE_SHRINK_END
+	_hint_button.focus_mode = Control.FOCUS_NONE   # Enter confirms a build; the button must not steal it
+	_hint_button.pressed.connect(_on_hint_button_pressed)
+	column.add_child(_hint_button)
+
+func _on_hint_button_pressed() -> void:
+	clear_hint()
+	hint_dismissed.emit()
 
 func _add_label(color: Color) -> Label:
 	var label := Label.new()

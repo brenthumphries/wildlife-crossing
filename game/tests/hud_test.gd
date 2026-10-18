@@ -121,3 +121,25 @@ func test_no_two_visible_elements_overlap_at_any_text_scale_step() -> void:
 			for b in range(a + 1, elements.size()):
 				assert_false(elements[a].get_global_rect().intersects(elements[b].get_global_rect()),
 						"elements %d and %d overlap at step %d" % [a, b, i])
+
+func test_hint_banner_starts_hidden() -> void:
+	assert_false(_h.is_hint_visible())
+
+func test_show_hint_displays_text_and_dismiss_hides_and_signals() -> void:
+	watch_signals(_h)
+	_h.show_hint("Click tiles across the highway.")
+	assert_true(_h.is_hint_visible())
+	assert_eq(_h._hint_label.text, "Click tiles across the highway.")
+	_h._hint_button.pressed.emit()
+	assert_false(_h.is_hint_visible())
+	assert_signal_emitted(_h, "hint_dismissed")
+
+func test_hint_banner_never_blocks_the_mouse() -> void:
+	assert_eq(_h._hint_panel.mouse_filter, Control.MOUSE_FILTER_IGNORE)
+	assert_eq(_h._hint_label.mouse_filter, Control.MOUSE_FILTER_IGNORE)
+
+func test_hint_banner_follows_text_scale() -> void:
+	TextScale.set_step(3)
+	_h.apply_text_scale()
+	assert_eq(_h._hint_label.get_theme_font_size("font_size"), TextScale.size(TextScale.BODY))
+	assert_eq(_h._hint_label.custom_minimum_size.x, float(TextScale.size(Hud.HINT_WIDTH_BASE)))

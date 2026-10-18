@@ -9,6 +9,10 @@ const SECTION := "ui"
 const KEY_TEXT_SCALE_STEP := "text_scale_step"
 const DEFAULT_TEXT_SCALE_STEP := 0
 const RESET_STEP := DEFAULT_TEXT_SCALE_STEP
+## First-time hints already shown, kept here and not in a save: a hint is about
+## the player, not the world, so a new game or a loaded slot never replays one.
+const SECTION_HINTS := "hints"
+const KEY_SEEN_HINTS := "seen"
 
 ## What a text-size shortcut asks for.
 enum TextSizeAction { NONE, LARGER, SMALLER, RESET }
@@ -39,6 +43,32 @@ func save_text_scale_step(step: int) -> bool:
 	var config := ConfigFile.new()
 	config.load(path)   # a missing or broken file just starts empty
 	config.set_value(SECTION, KEY_TEXT_SCALE_STEP, step)
+	return config.save(path) == OK
+
+## Ids of the first-time hints already shown; empty when the file is missing,
+## unreadable, or holds anything but a list of strings.
+func load_seen_hints() -> Array[String]:
+	var seen: Array[String] = []
+	var config := ConfigFile.new()
+	if config.load(path) != OK:
+		return seen
+	var value: Variant = config.get_value(SECTION_HINTS, KEY_SEEN_HINTS, [])
+	if typeof(value) != TYPE_ARRAY:
+		return seen
+	for item: Variant in value:
+		if typeof(item) == TYPE_STRING and not seen.has(item):
+			seen.append(item)
+	return seen
+
+## Record a hint as shown, keeping any other keys already in the file.
+## Returns true on success.
+func mark_hint_seen(hint_id: String) -> bool:
+	var seen := load_seen_hints()
+	if not seen.has(hint_id):
+		seen.append(hint_id)
+	var config := ConfigFile.new()
+	config.load(path)   # a missing or broken file just starts empty
+	config.set_value(SECTION_HINTS, KEY_SEEN_HINTS, seen)
 	return config.save(path) == OK
 
 ## Apply the saved step to TextScale. Call before the first screen is built.

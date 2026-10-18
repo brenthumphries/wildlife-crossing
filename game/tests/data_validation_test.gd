@@ -156,6 +156,18 @@ func test_milestones_schema() -> void:
 			capstones += 1
 	assert_eq(capstones, 1, "exactly one capstone milestone")
 
+# --- §15 hints -------------------------------------------------------------
+
+func test_hints_schema() -> void:
+	var hints := _records("hints.json", "hints")
+	var ids := {}
+	for h in hints:
+		var ctx := "hint " + str(h.get("id", "?"))
+		_has_fields(h, ["id", "event", "text"], ctx)
+		assert_false(ids.has(h["id"]), ctx + " id is unique")
+		ids[h["id"]] = true
+		assert_ne(str(h["text"]).strip_edges(), "", ctx + " has text")
+
 # --- §13 biome groups ------------------------------------------------------
 
 func test_biome_groups_schema() -> void:

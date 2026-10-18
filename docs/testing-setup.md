@@ -67,7 +67,8 @@ godot --headless -s addons/gut/gut_cmdln.gd -gdir=res://tests -ginclude_subdirs 
 Substitute the path to your local binary for `godot` (e.g.
 `../tools/godot/Godot_v4.6.3-stable_linux.arm64`). A clean run ends with
 `---- All tests passed! ----` and a summary; the suite currently reports
-**38 scripts / 544 tests / 7,266 asserts** passing (measured 2026-10-18, after
+**39 scripts / 560 tests / 7,328 asserts** passing (measured 2026-10-18, after
+C43's `hint_coach_test.gd` and the hint tests in `game_settings_test.gd`, `hud_test.gd` and `data_validation_test.gd`, on top of
 C41's `milestone_tracker_test.gd` and the milestone-bonus tests in `economy_manager_test.gd` and `simulation_test.gd`, on top of
 C27's `toolbar_test.gd`, on top of C33's `time_controller_test.gd` and time-control tests in `simulation_test.gd`, on top of
 C23's `game_settings_test.gd` and text-size row tests in `main_menu_test.gd`, on top of
