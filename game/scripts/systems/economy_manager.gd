@@ -11,6 +11,8 @@ signal donation_received(amount: int, breakdown: Dictionary)
 var budget: int = EconomyConstants.STARTING_BUDGET
 ## The most recent donation credited; saved alongside the budget (data-schemas §14).
 var last_donation: int = 0
+## Milestone bonuses earned but not yet paid; added to the next monthly income, then cleared.
+var _pending_milestone_bonus: int = 0
 
 var _status_weights: Dictionary = {}   # species_id -> status_weight
 var _trickle_threshold: int = 0        # cheapest crossing tile the player can buy in v1
@@ -75,10 +77,18 @@ func fragmentation_multiplier(deficit: float) -> float:
 	return EconomyConstants.FRAGMENTATION_MULT_MIN \
 		+ clampf(deficit, 0.0, 1.0) * (EconomyConstants.FRAGMENTATION_MULT_MAX - EconomyConstants.FRAGMENTATION_MULT_MIN)
 
-## One-time bonuses (recovery events, first crossing in a sub-area, diversity thresholds).
-## Returns 0 until the milestone tracker exists. TODO(Phase 6): sum the milestone bonuses here.
+## One-time milestone bonuses earned since the last income and still unpaid.
 func milestone_bonus() -> int:
-	return 0
+	return _pending_milestone_bonus
+
+## Queue a milestone's reward for the next monthly income. Amounts below zero are ignored.
+func add_milestone_bonus(amount: int) -> void:
+	if amount > 0:
+		_pending_milestone_bonus += amount
+
+## Set the unpaid bonus from a save, without announcing anything.
+func restore_milestone_bonus(amount: int) -> void:
+	_pending_milestone_bonus = maxi(0, amount)
 
 ## Pay the month's income for `crossings` (the completed crossing records, each with
 ## `id` and `fragmentation_deficit`): BASE_GRANT plus, per crossing, this month's
@@ -103,6 +113,7 @@ func run_monthly_income(crossings: Array) -> int:
 	var total: int = int(breakdown["base"]) + int(breakdown["per_crossing"]) \
 		+ int(breakdown["milestone"]) + int(breakdown["trickle"])
 	_tally.clear()
+	_pending_milestone_bonus = 0
 	last_donation = total
 	credit(total)
 	donation_received.emit(total, breakdown)

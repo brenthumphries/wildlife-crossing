@@ -21,6 +21,7 @@ var infrastructure: InfrastructureManager
 var species: SpeciesManager
 var economy: EconomyManager
 var information: InformationManager
+var milestones: MilestoneTracker
 var env: EnvConfig
 var rng: RandomNumberGenerator
 
@@ -81,6 +82,9 @@ func load_world(sub_area_id: int, registries: Dictionary, seed_value: int) -> vo
 	# permissions manager will own unlocking).
 	information = InformationManager.new()
 	information.setup(economy, habitat, graph, population, sub_area_id, true)
+
+	milestones = MilestoneTracker.new()
+	milestones.setup(registries.get("milestones", {}), sub_area_id)
 
 	_wire_signals()
 	_spawn_agents()
@@ -251,6 +255,7 @@ func save_state() -> Dictionary:
 		"crossings": _crossings_state(),
 		"economy": { "budget": economy.budget, "last_donation": economy.last_donation },
 		"information": information.save_state(),
+		"milestones": _milestones_state(),
 		"time_speed": time.multiplier,
 	}
 
@@ -269,6 +274,7 @@ func restore_state(state: Dictionary, registries: Dictionary, seed_value: int) -
 	_restore_patches(state.get("patches", []))
 	_restore_economy(state.get("economy", {}))
 	information.restore(state.get("information", {}))
+	_restore_milestones(state.get("milestones", {}))
 	# An absent or unusable speed loads at 1x (omit-means-default, ADR 0014).
 	var saved_speed: float = float(state.get("time_speed", TimeController.SPEED_1X))
 	time.set_speed(saved_speed if TimeController.STEPS.has(saved_speed) else TimeController.SPEED_1X)
@@ -343,6 +349,18 @@ func _restore_economy(saved: Dictionary) -> void:
 	economy.restore(int(saved.get("budget", EconomyConstants.STARTING_BUDGET)),
 		int(saved.get("last_donation", 0)))
 
+## The tracker's reached ids and capstone flag, plus the bonus earned but not yet
+## paid, so a save between a milestone and the month's income neither loses nor repeats it.
+func _milestones_state() -> Dictionary:
+	var out: Dictionary = milestones.save_state()
+	out["unpaid_bonus"] = economy.milestone_bonus()
+	return out
+
+## Apply the saved milestone record silently: nothing re-fires and nothing is re-paid.
+func _restore_milestones(saved: Dictionary) -> void:
+	milestones.restore(saved)
+	economy.restore_milestone_bonus(int(saved.get("unpaid_bonus", 0)))
+
 ## Apply saved population records. A `patch_id` that resolves to nothing is
 ## skipped with a warning rather than dropped silently — ADR 0014's noted risk
 ## is exactly this: the authored map changed under an existing save.
@@ -368,6 +386,7 @@ func _wire_signals() -> void:
 	economy.donation_received.connect(_on_donation_received)
 	species.animal_died.connect(_on_animal_died_record)
 	information.information_purchased.connect(_on_information_purchased)
+	milestones.milestone_reached.connect(_on_milestone_reached)
 
 func _on_animal_crossed(crossing_id: String, species_id: String) -> void:
 	infrastructure.on_animal_crossed(crossing_id)
@@ -387,15 +406,23 @@ func _on_crossing_completed(segment_id: String, crossing_type: String, sub_area_
 		if a["alive"]:
 			_assign_goal(a)                           # re-path onto the safe route
 	if _restoring:
-		return                                        # replaying a save, not a new build
+		milestones.count_crossing(sub_area_id)        # replaying a save: count it, announce nothing
+		return
 	var bus := _event_bus()
 	if bus:
 		bus.crossing_completed.emit(segment_id, crossing_type, sub_area_id)
+	milestones.on_crossing_completed(sub_area_id)
 
 func _on_population_recovered(patch_id: int, species_id: String, event_type: String) -> void:
 	var bus := _event_bus()
 	if bus:
 		bus.population_recovered.emit(patch_id, species_id, event_type)
+
+func _on_milestone_reached(milestone_id: String, is_capstone: bool) -> void:
+	economy.add_milestone_bonus(milestones.reward_of(milestone_id))
+	var bus := _event_bus()
+	if bus:
+		bus.milestone_reached.emit(milestone_id, is_capstone)
 
 func _on_time_speed_changed(multiplier: float) -> void:
 	var bus := _event_bus()

@@ -106,8 +106,33 @@ func test_donation_formula() -> void:
 	assert_eq(economy.budget, start + expected, "the total is credited")
 	assert_eq(economy.last_donation, expected, "and remembered as the last donation")
 
-func test_milestone_term_is_zero_until_phase_6() -> void:
-	assert_eq(_income_economy().milestone_bonus(), 0, "no milestone bonuses yet")
+func test_milestone_term_starts_at_zero() -> void:
+	assert_eq(_income_economy().milestone_bonus(), 0, "nothing earned, nothing owed")
+
+func test_milestone_bonus_is_paid_once_in_the_next_income() -> void:
+	var economy := _income_economy()
+	economy.add_milestone_bonus(2000)
+	var breakdown: Array = []
+	economy.donation_received.connect(func(_amount: int, parts: Dictionary) -> void: breakdown.append(parts))
+	assert_eq(economy.run_monthly_income([]), EconomyConstants.BASE_GRANT + 2000, "the bonus rides on the next income")
+	assert_eq(breakdown[0]["milestone"], 2000, "and shows in the milestone part of the breakdown")
+	assert_eq(economy.milestone_bonus(), 0, "it is cleared once paid")
+	assert_eq(economy.run_monthly_income([]), EconomyConstants.BASE_GRANT, "never paid twice")
+
+func test_milestone_bonuses_accumulate_and_ignore_non_positive_amounts() -> void:
+	var economy := _income_economy()
+	economy.add_milestone_bonus(2000)
+	economy.add_milestone_bonus(500)
+	economy.add_milestone_bonus(-300)
+	economy.add_milestone_bonus(0)
+	assert_eq(economy.milestone_bonus(), 2500, "bonuses sum; a negative can never act as a hidden spend")
+
+func test_restored_milestone_bonus_is_paid_without_announcing() -> void:
+	var economy := _income_economy()
+	economy.restore_milestone_bonus(2000)
+	assert_eq(economy.milestone_bonus(), 2000, "the unpaid bonus survives a load")
+	economy.restore_milestone_bonus(-5)
+	assert_eq(economy.milestone_bonus(), 0, "a corrupt negative value reads as nothing owed")
 
 func test_status_weight_scaling() -> void:
 	var common := _income_economy()

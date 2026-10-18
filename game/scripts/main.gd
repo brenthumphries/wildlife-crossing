@@ -152,7 +152,7 @@ func _registries() -> Dictionary:
 	var r := get_node_or_null("/root/SpeciesRegistry")
 	return {
 		"tiles": r.tiles, "species": r.species, "infrastructure": r.infrastructure,
-		"segments": r.segments, "biome_groups": r.biome_groups,
+		"segments": r.segments, "biome_groups": r.biome_groups, "milestones": r.milestones,
 	}
 
 ## The registry's segment records belonging to one sub-area.
@@ -263,6 +263,7 @@ func _quick_save() -> void:
 	game_state.active_sub_area_id = int(world_state["active_sub_area_id"])
 	game_state.patches = world_state["patches"]
 	game_state.crossings = world_state["crossings"]
+	game_state.milestones = world_state["milestones"]
 	var information_state: Dictionary = world_state["information"]
 	game_state.information["areas_revealed"] = information_state["areas_revealed"]
 	game_state.information["products_by_area"] = information_state["products_by_area"]
@@ -298,6 +299,7 @@ func _quick_load() -> void:
 		"crossings": game_state.crossings,
 		"economy": { "budget": game_state.budget, "last_donation": game_state.last_donation },
 		"information": game_state.information,
+		"milestones": game_state.milestones,
 		"time_speed": game_state.time_speed,
 	}, _registries(), randi())
 	# `restore_state` builds a fresh WorldData and ConnectivityGraph, so anything
