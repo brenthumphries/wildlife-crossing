@@ -262,6 +262,7 @@ func _quick_save() -> void:
 	var economy_state: Dictionary = world_state["economy"]
 	game_state.budget = int(economy_state["budget"])
 	game_state.last_donation = int(economy_state["last_donation"])
+	game_state.time_speed = float(world_state["time_speed"])
 	var error: String = SaveManager.save(game_state.to_dict())
 	if error.is_empty():
 		_log("Game saved.")
@@ -290,6 +291,7 @@ func _quick_load() -> void:
 		"crossings": game_state.crossings,
 		"economy": { "budget": game_state.budget, "last_donation": game_state.last_donation },
 		"information": game_state.information,
+		"time_speed": game_state.time_speed,
 	}, _registries(), randi())
 	# `restore_state` builds a fresh WorldData and ConnectivityGraph, so anything
 	# holding the previous pair is now pointing at a dead world. The renderer

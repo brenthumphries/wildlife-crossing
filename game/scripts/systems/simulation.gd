@@ -26,7 +26,11 @@ var rng: RandomNumberGenerator
 
 var agents: Array = []           # { species_id, coord, patch, path, idx, alive, in_crossing, last_crossing }
 var active_sub_area_id: int = 0
-var time_scale: float = 1.0      # 0 = paused; 1 / 2 / 4
+## Speed owner (0 = paused; 1 / 2 / 4). `time_scale` reads through to it.
+var time: TimeController = TimeController.new()
+var time_scale: float:
+	get:
+		return time.multiplier
 
 var _registries: Dictionary = {}
 var _tick_accum: float = 0.0
@@ -41,6 +45,9 @@ var _spawn_cursor: Dictionary = {}
 ## themselves on the EventBus — the player would get "Overpass complete" toasts
 ## and a crossing cue for structures they built an hour ago.
 var _restoring: bool = false
+
+func _init() -> void:
+	time.time_speed_changed.connect(_on_time_speed_changed)
 
 ## Build the whole system stack for one sub-area and seed populations + agents.
 ## `registries` carries tiles / species / infrastructure / segments / biome_groups.
@@ -244,6 +251,7 @@ func save_state() -> Dictionary:
 		"crossings": _crossings_state(),
 		"economy": { "budget": economy.budget, "last_donation": economy.last_donation },
 		"information": information.save_state(),
+		"time_speed": time.multiplier,
 	}
 
 ## Rebuild this simulation from a §14 payload: reload the sub-area from static
@@ -261,6 +269,9 @@ func restore_state(state: Dictionary, registries: Dictionary, seed_value: int) -
 	_restore_patches(state.get("patches", []))
 	_restore_economy(state.get("economy", {}))
 	information.restore(state.get("information", {}))
+	# An absent or unusable speed loads at 1x (omit-means-default, ADR 0014).
+	var saved_speed: float = float(state.get("time_speed", TimeController.SPEED_1X))
+	time.set_speed(saved_speed if TimeController.STEPS.has(saved_speed) else TimeController.SPEED_1X)
 	_restoring = false
 	resync_agents()
 
@@ -385,6 +396,11 @@ func _on_population_recovered(patch_id: int, species_id: String, event_type: Str
 	var bus := _event_bus()
 	if bus:
 		bus.population_recovered.emit(patch_id, species_id, event_type)
+
+func _on_time_speed_changed(multiplier: float) -> void:
+	var bus := _event_bus()
+	if bus:
+		bus.time_speed_changed.emit(multiplier)
 
 func _on_budget_changed(new_balance: int) -> void:
 	var bus := _event_bus()
