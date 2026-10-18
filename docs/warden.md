@@ -55,7 +55,11 @@ an open one is *in review*, unmet dependencies are *blocked*. Then, in
 priority order: `code`/`verify`-lane items go to the Claude Code bucket
 (two at a time, `--max-code`), `docs`-lane items to Cowork, `decision` and
 `mac` to you; anything sharing a file with an item in flight waits.
-`week.json` is never edited.
+`week.json` is never edited. `docs/testing-setup.md` (`SHARED_FILES` in
+`warden.py`) is ignored in the overlap test, both when an item claims its
+files and when another item is tested against them, so two items that share
+only that file run side by side; every other shared file still makes the
+later item wait.
 
 **`run <id>`** — creates `../wildlife-crossing-work/<branch>` as a worktree
 from `origin/main` (or reuses it), writes the facts there, and runs
@@ -99,6 +103,19 @@ plan it writes.
 **`doctor`** — `gh` authenticated, `claude` present and its version, whether
 it lists `--permission-mode auto`, git identity, origin, the plan files,
 lock debris.
+
+## The suite figure
+
+Items do not edit the suite size in `docs/testing-setup.md`; the run brief
+`warden run` hands Claude says so, and an acceptance line asking for the figure
+is satisfied by the batch step below. Instead, after each wave of items
+merges, the figure is refreshed once: take the `gut_results.xml` from a CI run
+of `main`, print the line with `tools/suite_figures.py --print --xml
+<that file>`, paste it into `docs/testing-setup.md`, and open the change from
+a `docs/suite-figure-<date>` branch. Until then the stated figure trails the
+run, which is expected and is reported as a warning by `suite_figures.py
+--check --warn-only`; a run below the stated figures is a dropped suite and
+still fails.
 
 ## Where things are
 
