@@ -187,6 +187,72 @@ class SuiteFiguresTestCase(unittest.TestCase):
         self.assertIn("Update the document", output)
         self.assertNotIn("dropped suite", output)
 
+    # -- --warn-only: the figure is refreshed per batch, not per item ----------
+
+    def _check_warn_only(self, stated: str, actions: bool = True, suites=None) -> tuple[int, str]:
+        self.xml_path.write_text(
+            xml(suites if suites is not None else [("a.gd", [4, 1]), ("b.gd", [2])]),
+            encoding="utf-8")
+        doc = self.root / "doc.md"
+        doc.write_text(f"{stated}\n", encoding="utf-8")
+        return self.run_in(actions, "--check", str(doc), "--warn-only")
+
+    def test_warn_only_turns_a_run_above_the_stated_figures_into_a_warning(self) -> None:
+        # The run measures 2 scripts / 3 tests / 7 asserts; the document trails it.
+        code, output = self._check_warn_only("1 scripts / 2 tests / 5 asserts")
+        self.assertEqual(code, 0, output)
+        self.assertTrue(output.startswith("::warning file="), output)
+        self.assertIn(",line=1::", output)
+        self.assertIn("suite_figures.py --print", output)
+        self.assertNotIn("::error", output)
+
+    def test_warn_only_outside_actions_is_a_plain_warning(self) -> None:
+        code, output = self._check_warn_only("1 scripts / 2 tests / 5 asserts", actions=False)
+        self.assertEqual(code, 0, output)
+        self.assertIn("warning:", output)
+        self.assertNotIn("::warning", output)
+
+    def test_warn_only_still_fails_a_run_below_the_stated_figures(self) -> None:
+        for actions in (False, True):
+            with self.subTest(actions=actions):
+                code, output = self._check_warn_only(
+                    "24 scripts / 246 tests / 3,154 asserts", actions=actions)
+                self.assertEqual(code, 1, output)
+                self.assertIn("dropped suite", output)
+                self.assertNotIn("warning", output)
+
+    def test_warn_only_still_fails_when_any_count_is_below_the_stated_figure(self) -> None:
+        # More scripts than stated, but fewer asserts: not simply "the run grew".
+        code, output = self._check_warn_only("1 scripts / 2 tests / 9 asserts")
+        self.assertEqual(code, 1, output)
+
+    def test_warn_only_matching_document_is_unchanged(self) -> None:
+        code, output = self._check_warn_only("2 scripts / 3 tests / 7 asserts")
+        self.assertEqual(code, 0, output)
+        self.assertIn("match", output)
+
+    def test_warn_only_does_not_soften_an_unusable_result_file(self) -> None:
+        for label, write in (
+            ("missing", lambda: None),
+            ("malformed", lambda: self.xml_path.write_text("<testsuites", encoding="utf-8")),
+            ("empty", lambda: self.xml_path.write_text(xml([]), encoding="utf-8")),
+        ):
+            with self.subTest(result=label):
+                if self.xml_path.exists():
+                    self.xml_path.unlink()
+                write()
+                doc = self.root / "doc.md"
+                doc.write_text("1 scripts / 2 tests / 5 asserts\n", encoding="utf-8")
+                code, output = self.run_in(True, "--check", str(doc), "--warn-only")
+                self.assertEqual(code, 2, output)
+                self.assertNotIn("::warning", output)
+
+    def test_warn_only_without_check_is_refused(self) -> None:
+        self.xml_path.write_text(xml([("a.gd", [1])]), encoding="utf-8")
+        with self.assertRaises(SystemExit) as raised, redirect_stderr(io.StringIO()):
+            suite_figures.main(["--xml", str(self.xml_path), "--warn-only"])
+        self.assertEqual(raised.exception.code, 2)
+
     def test_an_empty_suite_is_annotated_under_github_actions(self) -> None:
         self.xml_path.write_text(xml([]), encoding="utf-8")
         code, output = self.run_in(True, "--print")

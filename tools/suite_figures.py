@@ -31,10 +31,19 @@ Usage:
     suite_figures.py --print
     suite_figures.py --print --xml game/gut_results.xml
     suite_figures.py --check docs/testing-setup.md
+    suite_figures.py --check docs/testing-setup.md --warn-only
     suite_figures.py --json
 
 Exit status is 0 on success or a matching document, 1 on a mismatch, 2 when the
 XML is missing, malformed, or reports an empty suite.
+
+**``--warn-only`` (2026-10-18)** is for ``--check`` between batches. Work items no
+longer edit the stated figure; it is refreshed once per batch of merged items,
+so a document that trails a run which *grew* is expected, not a failure. With
+the flag, a run above the stated figures on every count prints a
+``::warning::`` annotation and exits 0. A run below the stated figures on any
+count is still a dropped suite and exits 1, and a missing, malformed or empty
+result file still exits 2.
 
 **A run with fewer scripts than the document states is a dropped suite, not a
 stale document** (build-review V6). The failure this guard was first written
@@ -80,6 +89,16 @@ def report_error(message: str, *, path: pathlib.Path | None = None,
         print(f"::error{where}::{message}")
     else:
         print(f"error: {message}", file=sys.stderr)
+
+
+def report_warning(message: str, *, path: pathlib.Path | None = None,
+                   line: int | None = None) -> None:
+    """The same split as report_error, for a mismatch that does not fail the run."""
+    if os.environ.get("GITHUB_ACTIONS") == "true":
+        where = f" file={path},line={line}" if path is not None and line is not None else ""
+        print(f"::warning{where}::{message}")
+    else:
+        print(f"warning: {message}", file=sys.stderr)
 
 
 @dataclass(frozen=True)
@@ -138,7 +157,9 @@ def parse(xml_path: pathlib.Path) -> Figures:
     return Figures(len(suites), len(cases), asserts, failures)
 
 
-def check_document(path: pathlib.Path, figures: Figures) -> int:
+def check_document(path: pathlib.Path, figures: Figures, *, warn_only: bool = False) -> int:
+    """0 when the document matches (or, with ``warn_only``, trails a run that
+    grew), 1 when it is stale in a way that fails the check."""
     if not path.is_file():
         raise SuiteFiguresError(f"{path} does not exist")
 
@@ -152,18 +173,29 @@ def check_document(path: pathlib.Path, figures: Figures) -> int:
             "shape."
         )
 
+    run = (figures.scripts, figures.tests, figures.asserts)
     stale = []
     for match in matches:
         found = tuple(int(g.replace(",", "")) for g in match.groups())
-        if found != (figures.scripts, figures.tests, figures.asserts):
+        if found != run:
             line_no = text.count("\n", 0, match.start()) + 1
-            stale.append((line_no, match.group(0), found[0]))
+            stale.append((line_no, match.group(0), found))
 
-    for line_no, found, stated_scripts in stale:
+    errors = 0
+    for line_no, shown, found in stale:
+        stated_scripts = found[0]
+        if warn_only and all(measured >= stated for measured, stated in zip(run, found)):
+            report_warning(
+                f"{path}:{line_no} states {shown!r}; the suite measures "
+                f"{figures.line()!r}. Expected between batches: the batch step "
+                "refreshes the figure with suite_figures.py --print.",
+                path=path, line=line_no,
+            )
+            continue
         if figures.scripts < stated_scripts:
             message = (
                 f"the run collected {figures.scripts} test script(s) but "
-                f"{path}:{line_no} states {stated_scripts} ({found!r}): "
+                f"{path}:{line_no} states {stated_scripts} ({shown!r}): "
                 f"{stated_scripts - figures.scripts} script(s) were not "
                 f"collected (the run measures {figures.line()!r}). This is a "
                 "dropped suite, not a stale document. Do not lower the stated "
@@ -171,14 +203,17 @@ def check_document(path: pathlib.Path, figures: Figures) -> int:
             )
         else:
             message = (
-                f"{path}:{line_no} states {found!r}; the suite measures "
+                f"{path}:{line_no} states {shown!r}; the suite measures "
                 f"{figures.line()!r}. Update the document, or regenerate it with "
                 "suite_figures.py --print."
             )
         report_error(message, path=path, line=line_no)
+        errors += 1
 
-    if stale:
+    if errors:
         return 1
+    if stale:
+        return 0
 
     print(f"{path}: {len(matches)} figure reference(s) match {figures.line()}.")
     return 0
@@ -192,7 +227,12 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--json", action="store_true", help="print the figures as JSON")
     parser.add_argument("--check", metavar="FILE", action="append", default=[],
                         help="check a document's stated figures (repeatable)")
+    parser.add_argument("--warn-only", action="store_true",
+                        help="with --check: a run above the stated figures is a ::warning::, "
+                             "not a failure; a run below them still fails")
     args = parser.parse_args(argv)
+    if args.warn_only and not args.check:
+        parser.error("--warn-only only applies to --check")
 
     try:
         figures = parse(pathlib.Path(args.xml))
@@ -208,7 +248,7 @@ def main(argv: list[str] | None = None) -> int:
     status = 0
     for target in args.check:
         try:
-            status |= check_document(pathlib.Path(target), figures)
+            status |= check_document(pathlib.Path(target), figures, warn_only=args.warn_only)
         except SuiteFiguresError as exc:
             report_error(str(exc))
             return 2
