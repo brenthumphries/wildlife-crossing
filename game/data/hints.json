@@ -1,0 +1,13 @@
+{
+  "data_version": 1,
+  "hints": [
+    { "id": "overlay_colors", "event": "overlay_shown",
+      "text": "Orange tiles are cut off from the habitat around them. Teal tiles are well connected. Look for orange along the highway." },
+    { "id": "build_mode", "event": "build_mode_opened",
+      "text": "Click tiles across the highway to place the crossing. Each tile costs money, and the total is shown at the top. Press Enter to confirm." },
+    { "id": "first_crossing", "event": "crossing_completed",
+      "text": "Your crossing is built. Animals can now use it to cross the highway safely." },
+    { "id": "first_donation", "event": "donation_received",
+      "text": "That was a donation. Supporters give money each month, and more connected habitat brings in more." }
+  ]
+}

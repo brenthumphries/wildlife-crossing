@@ -9,6 +9,8 @@
 class_name ConnectivityOverlay
 extends Node2D
 
+signal overlay_shown()
+
 const OVERLAY_OPACITY := 0.4                    # PRD: ~40% over terrain
 const COLOR_FRAGMENTED := Color(0.90, 0.62, 0.00)   # Okabe–Ito orange
 const COLOR_CONNECTED := Color(0.00, 0.62, 0.45)    # Okabe–Ito teal (colorblind-safe pair)
@@ -159,6 +161,7 @@ func activate() -> void:
 	_pulse_elapsed = 0.0
 	show()
 	queue_redraw()
+	overlay_shown.emit()
 
 func deactivate() -> void:
 	active = false

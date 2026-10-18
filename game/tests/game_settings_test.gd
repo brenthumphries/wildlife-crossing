@@ -103,3 +103,20 @@ func test_label_shows_percentage() -> void:
 	assert_eq(GameSettings.text_size_label(1.0), "Text size 100%")
 	assert_eq(GameSettings.text_size_label(1.25), "Text size 125%")
 	assert_eq(GameSettings.text_size_label(1.75), "Text size 175%")
+
+func test_seen_hints_default_to_empty() -> void:
+	assert_eq(_settings.load_seen_hints().size(), 0)
+
+func test_marking_a_hint_seen_persists_it_once() -> void:
+	assert_true(_settings.mark_hint_seen("build_mode"))
+	assert_true(_settings.mark_hint_seen("build_mode"))
+	assert_eq(_settings.load_seen_hints(), ["build_mode"] as Array[String])
+
+func test_marking_a_hint_keeps_the_text_size() -> void:
+	_settings.save_text_scale_step(2)
+	_settings.mark_hint_seen("build_mode")
+	assert_eq(_settings.load_text_scale_step(), 2)
+
+func test_malformed_seen_hints_load_empty() -> void:
+	_write_raw("[hints]\nseen=7\n")
+	assert_eq(_settings.load_seen_hints().size(), 0)

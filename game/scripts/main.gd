@@ -65,6 +65,7 @@ var _telemetry: TelemetryMinigame
 var _snowpack: SnowpackMinigame
 var _info_panel: InformationPanel
 var _toolbar: Toolbar
+var _hint_coach: HintCoach
 
 func _ready() -> void:
 	_debug = get_node_or_null("/root/Debug")
@@ -136,8 +137,15 @@ func _ready() -> void:
 	info_layer.add_child(_info_panel)
 	_info_panel.setup(sim.information, sim.economy, sim.active_sub_area_id)
 
+	_hint_coach = HintCoach.new()
+	_hint_coach.hint_shown.connect(_on_hint_coach_hint_shown)
+	_hint_coach.hint_cleared.connect(_hud.clear_hint)
+	_hud.hint_dismissed.connect(_hint_coach.dismiss)
+	_overlay.overlay_shown.connect(_hint_coach.notify.bind(HintCoach.EVENT_OVERLAY_SHOWN))
+
 	var bus := get_node_or_null("/root/EventBus")
 	if bus:
+		bus.crossing_completed.connect(_on_crossing_completed)
 		bus.animal_crossed.connect(_on_animal_crossed)
 		bus.budget_changed.connect(_on_budget_changed)
 		bus.donation_received.connect(_on_donation_received)
@@ -409,6 +417,7 @@ func _enter_build_mode(segment_id: String, _sub_area_id: int) -> void:
 	_renderer.information = sim.information
 	_renderer.hotspot_area_id = sim.active_sub_area_id
 	_update_build_status_label()
+	_hint_coach.notify(HintCoach.EVENT_BUILD_MODE_OPENED)
 	_log("Build mode — click tiles across the corridor. Enter to confirm, Escape to cancel.")
 
 func _try_toggle_build_tile() -> void:
@@ -527,6 +536,13 @@ func _on_budget_changed(new_balance: int) -> void:
 
 func _on_donation_received(amount: int, _breakdown: Dictionary) -> void:
 	_hud.set_last_donation(amount)
+	_hint_coach.notify(HintCoach.EVENT_DONATION_RECEIVED)
+
+func _on_crossing_completed(_segment_id: String, _crossing_type: String, _sub_area_id: int) -> void:
+	_hint_coach.notify(HintCoach.EVENT_CROSSING_COMPLETED)
+
+func _on_hint_coach_hint_shown(_hint_id: String, text: String) -> void:
+	_hud.show_hint(text)
 
 func _process(delta: float) -> void:
 	_update_toolbar()

@@ -129,6 +129,7 @@ The normative schema for every file below is `docs/data-schemas.md`.
 | `segments.json`            | Dangerous-tile segments within sub-areas            |
 | `infrastructure.json`      | Crossing types, costs, connectivity bonuses         |
 | `milestones.json`          | Corridor milestones and the capstone                |
+| `hints.json`               | First-time hint text, one per game event (HintCoach) |
 | `world/<sub_area>.json`    | Per-coordinate tile-id grid + origin (the authored map) |
 
 > `biome_definitions.json` was retired by

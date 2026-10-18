@@ -643,6 +643,30 @@ system defaults on load. Full worked example and shape rules in ADR 0014.
 
 ---
 
+## 15. Hint schema (`data/hints.json`)
+
+First-time hints shown once each by `HintCoach`. Edit the text without touching
+code. Which hints a player has seen is kept in `user://settings.cfg`
+(`[hints] seen`), never in a save.
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `id` | string | yes | stable key; this is what the settings file stores |
+| `event` | string | yes | `overlay_shown` \| `build_mode_opened` \| `crossing_completed` \| `donation_received` |
+| `text` | string | yes | plain, short; shown in the HUD banner |
+
+```json
+{
+  "data_version": 1,
+  "hints": [
+    { "id": "build_mode", "event": "build_mode_opened",
+      "text": "Click tiles across the highway to place the crossing." }
+  ]
+}
+```
+
+---
+
 ## Cross-references
 
 - What loads and saves this data: [`architecture`](architecture.md)
