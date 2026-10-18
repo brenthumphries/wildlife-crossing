@@ -146,6 +146,12 @@ func test_partial_sections_default_only_the_missing_keys() -> void:
 	assert_eq(_state.year, 9, "the supplied key is taken")
 	assert_eq(_state.day_of_season, 0, "the missing key defaults rather than failing the load")
 
+func test_an_unknown_season_loads_as_the_default() -> void:
+	assert_true(_state.from_dict({ "save_version": 1, "clock": { "year": 2, "season": "monsoon" } }),
+		"a hand-edited season does not fail the load")
+	assert_eq(_state.season, "spring", "it takes the default season")
+	assert_eq(_state.year, 2, "the rest of the clock is kept")
+
 func test_information_keeps_its_default_subkeys() -> void:
 	assert_true(_state.from_dict({ "save_version": 1,
 		"information": { "areas_revealed": ["7"] } }), "a partial information block loads")

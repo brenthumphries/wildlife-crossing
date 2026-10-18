@@ -494,3 +494,61 @@ func test_a_save_with_no_time_speed_loads_at_1x() -> void:
 	fresh.time.set_speed(4.0)
 	fresh.restore_state(state, _registries(), 42)
 	assert_eq(fresh.time.multiplier, 1.0)
+
+# --- the clock (season_manager) ----------------------------------------------
+
+func _tick_n(sim: Simulation, n: int) -> void:
+	for i in n:
+		sim.tick()
+
+func test_season_changed_is_relayed_once_at_the_end_of_the_boundary_tick() -> void:
+	var bus: Node = get_node("/root/EventBus")
+	watch_signals(bus)
+	var boundary: int = SimulationConstants.DAYS_PER_SEASON * Simulation.TICKS_PER_DAY
+	_tick_n(_sim, boundary - 1)
+	assert_signal_not_emitted(bus, "season_changed")
+	assert_eq(_sim.seasons.season, "spring")
+	_sim.tick()
+	assert_signal_emit_count(bus, "season_changed", 1)
+	assert_signal_emitted_with_parameters(bus, "season_changed", ["summer"])
+
+func test_the_monthly_step_still_runs_on_the_30_day_boundary() -> void:
+	var bus: Node = get_node("/root/EventBus")
+	watch_signals(bus)
+	_tick_n(_sim, Simulation.TICKS_PER_MONTH - 1)
+	assert_signal_not_emitted(bus, "donation_received")
+	_sim.tick()
+	assert_signal_emit_count(bus, "donation_received", 1)
+
+func test_save_state_writes_the_clock() -> void:
+	_tick_n(_sim, Simulation.TICKS_PER_DAY * 7)
+	assert_eq(_sim.save_state()["clock"], { "year": 1, "season": "spring", "day_of_season": 7 })
+
+func test_restore_resumes_the_clock_and_keeps_the_month_aligned() -> void:
+	var state: Dictionary = _sim.save_state()
+	state["clock"] = { "year": 3, "season": "fall", "day_of_season": 40 }
+	var other: Simulation = _restored_copy(JSON.parse_string(JSON.stringify(state)))
+	assert_eq(other.seasons.save_state(), { "year": 3, "season": "fall", "day_of_season": 40 })
+	assert_eq(other.current_day(), (10 * SimulationConstants.DAYS_PER_SEASON + 40))
+	var to_month: int = Simulation.TICKS_PER_MONTH - other._ticks % Simulation.TICKS_PER_MONTH
+	var bus: Node = get_node("/root/EventBus")
+	watch_signals(bus)
+	_tick_n(other, to_month - 1)
+	assert_signal_not_emitted(bus, "donation_received")
+	other.tick()
+	assert_signal_emit_count(bus, "donation_received", 1, "the 30-day boundary survives a load mid-season")
+
+func test_a_save_with_no_clock_loads_as_year_1_spring_day_0() -> void:
+	var state: Dictionary = _sim.save_state()
+	state.erase("clock")
+	var other: Simulation = _restored_copy(state)
+	assert_eq(other.seasons.save_state(), { "year": 1, "season": "spring", "day_of_season": 0 })
+	assert_eq(other._ticks, 0)
+
+func test_restoring_a_clock_announces_no_season() -> void:
+	var bus: Node = get_node("/root/EventBus")
+	watch_signals(bus)
+	var state: Dictionary = _sim.save_state()
+	state["clock"] = { "year": 2, "season": "winter", "day_of_season": 89 }
+	_restored_copy(state)
+	assert_signal_not_emitted(bus, "season_changed")
