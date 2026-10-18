@@ -64,6 +64,7 @@ var _credits: CreditsScreen
 var _telemetry: TelemetryMinigame
 var _snowpack: SnowpackMinigame
 var _info_panel: InformationPanel
+var _toolbar: Toolbar
 
 func _ready() -> void:
 	_debug = get_node_or_null("/root/Debug")
@@ -98,6 +99,13 @@ func _ready() -> void:
 	_hud = Hud.new()
 	hud_layer.add_child(_hud)
 	_hud.set_budget(sim.economy.budget)
+
+	# Same layer as the HUD (bottom-left vs the HUD's top-left); the toolbar hides
+	# itself under every overlay, see `_update_toolbar`.
+	_toolbar = Toolbar.new()
+	hud_layer.add_child(_toolbar)
+	_toolbar.add_crossing_pressed.connect(_on_toolbar_add_crossing_pressed)
+	_toolbar.info_pressed.connect(_on_toolbar_info_pressed)
 
 	# Own CanvasLayer above the HUD's: the credits overlay is a modal that must
 	# cover the message channel and build readout, not sit beside them.
@@ -194,7 +202,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		_credits.open()
 	elif event is InputEventKey and event.pressed and not event.echo \
 			and event.keycode == INFO_KEY:
-		_info_panel.open()
+		_open_info_panel()
 	elif event is InputEventKey and event.pressed and event.keycode == TELEMETRY_KEY:
 		_telemetry.start(randi())
 	elif event is InputEventKey and event.pressed and event.keycode == SNOWPACK_KEY:
@@ -206,8 +214,7 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif event is InputEventKey and event.pressed and event.keycode == KEY_B:
 		_enter_build_mode(TUTORIAL_SEGMENT, TUTORIAL_SUB_AREA)
 	elif event is InputEventKey and event.pressed and event.keycode == KEY_M:
-		if _build_mode == null:
-			_open_world_select()
+		_try_open_world_select()
 	elif event is InputEventKey and event.pressed \
 			and (event.keycode == KEY_ENTER or event.keycode == KEY_KP_ENTER):
 		if _build_mode != null:
@@ -453,8 +460,37 @@ func _update_build_status_label() -> void:
 		text += "  (%s)" % _build_mode.rejection_reason()
 	_hud.set_build_status(text)
 
+## The M key and the toolbar's Add crossing button: open selection unless a
+## build is already in progress.
+func _try_open_world_select() -> void:
+	if _build_mode == null:
+		_open_world_select()
+
+## The I key and the toolbar's Info button.
+func _open_info_panel() -> void:
+	_info_panel.open()
+
+func _on_toolbar_add_crossing_pressed() -> void:
+	_try_open_world_select()
+
+func _on_toolbar_info_pressed() -> void:
+	_open_info_panel()
+
+## True while any modal overlay (credits, a minigame, the Info panel) is open.
+func _modal_open() -> bool:
+	return (_credits != null and _credits.is_open) \
+			or (_telemetry != null and _telemetry.is_open) \
+			or (_snowpack != null and _snowpack.is_open) \
+			or (_info_panel != null and _info_panel.is_open)
+
+func _selection_active() -> bool:
+	return _world_select != null and _world_select.mode != WorldSelectController.Mode.INACTIVE
+
+func _update_toolbar() -> void:
+	_toolbar.update_visibility(_modal_open(), _selection_active())
+
 ## Open the crossing-location-selection map (lazily instanced on first use).
-## Placeholder trigger for the PRD's "Add crossing" toolbar action.
+## Reached from the M key and the toolbar's Add crossing button (PRD rule 1).
 func _open_world_select() -> void:
 	if _world_select == null:
 		_world_select = WORLD_SELECT_SCENE.instantiate()
@@ -491,6 +527,7 @@ func _on_donation_received(amount: int, _breakdown: Dictionary) -> void:
 	_hud.set_last_donation(amount)
 
 func _process(delta: float) -> void:
+	_update_toolbar()
 	if _coalesce_timer > 0.0:
 		_coalesce_timer -= delta
 		if _coalesce_timer <= 0.0 and _crossed_pending > 0:

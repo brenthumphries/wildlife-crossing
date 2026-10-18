@@ -67,8 +67,8 @@ godot --headless -s addons/gut/gut_cmdln.gd -gdir=res://tests -ginclude_subdirs 
 Substitute the path to your local binary for `godot` (e.g.
 `../tools/godot/Godot_v4.6.3-stable_linux.arm64`). A clean run ends with
 `---- All tests passed! ----` and a summary; the suite currently reports
-**36 scripts / 514 tests / 7,195 asserts** passing (measured 2026-10-18, after
-C33's `time_controller_test.gd` and time-control tests in `simulation_test.gd`, on top of
+**37 scripts / 525 tests / 7,220 asserts** passing (measured 2026-10-18, after
+C27's `toolbar_test.gd`, on top of C33's `time_controller_test.gd` and time-control tests in `simulation_test.gd`, on top of
 C23's `game_settings_test.gd` and text-size row tests in `main_menu_test.gd`, on top of
 C26's segment-mode hover highlight tests, on top of C32's economy trickle-threshold tests, on top of C22's text-scale and on-screen tests in the main menu and both minigame tests, on top of C21's text-scale and on-screen tests in the Info panel, credits and confirm panel tests, on top of V12's `snowpack_minigame_test.gd` and `telemetry_minigame_test.gd`, on top of
 C25's segment-mode click routing tests, on top of C24's live-world segment-mode tests, on top of C28's corridor-study hotspot marker tests, on top of C20's container-based HUD tests, on top of C19's `text_scale_test.gd`, on top of C18's `information_panel_test.gd` and the patch-overview accessor tests, on top of C17's `information_manager_test.gd` and the information save coverage, on top of C15's monthly-income tests and C14's fragmentation-deficit tests, on top of C16's HUD budget and donation labels and C13's charging and economy-save tests; the script before C12's `economy_manager_test.gd` was V2's
