@@ -18,11 +18,15 @@ func _build_ui() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 
 	# Bottom-left corner (ui-ux-spec §3); the HUD stack owns the top-left, so the
-	# two never share space at any text-scale step.
+	# two never share space at any text-scale step. The preset runs before the
+	# buttons exist, so it pins the bottom edge at a zero-height bar; growing
+	# upward keeps that edge on its margin however tall the buttons make the bar,
+	# whatever the call order.
 	_bar = HBoxContainer.new()
 	_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_bar.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT,
 			Control.PRESET_MODE_MINSIZE, int(BAR_MARGIN))
+	_bar.grow_vertical = Control.GROW_DIRECTION_BEGIN
 	_bar.add_theme_constant_override("separation", BAR_SEPARATION)
 	add_child(_bar)
 
