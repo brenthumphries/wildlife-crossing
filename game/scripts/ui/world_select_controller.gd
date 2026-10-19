@@ -3,7 +3,9 @@
 ## locked sub-area gating, and Escape exit (crossing-location-selection PRD P0;
 ## roadmap Phase 2; ADR 0013 naming; ADR 0002 flat-to-flat zoom measure). At
 ## segment zoom the card grid gives way to the live world: this controller
-## drives the world camera and draws nothing over it (ADR 0021).
+## drives the world camera and draws nothing over it (ADR 0021). Zoom comes from
+## the mouse wheel, a Mac trackpad's two-finger scroll (pan gesture) and its
+## pinch (magnify gesture); all three step through `zoom_in()`/`zoom_out()`.
 class_name WorldSelectController
 extends Control
 
@@ -28,6 +30,9 @@ const BASE_TILE_FLAT_TO_FLAT_PX := 32.0
 const ZOOM_MIN := 0.05                     # full-Y2Y world view
 const ZOOM_MAX := 1.5
 const ZOOM_STEP := 1.25                    # multiplicative scroll-wheel step
+## Pan-gesture delta.y that makes one zoom step. A macOS two-finger swipe streams
+## many small deltas; accumulating them keeps one swipe to a few steps. Tune by feel.
+const PAN_DELTA_PER_STEP := 4.0
 ## A locked sub-area is blocked at its boundary: on-screen tile size is held at
 ## or below the segment-mode deactivate threshold, so segment-level resolution
 ## is unreachable inside it (PRD rule 5).
@@ -61,6 +66,11 @@ var hover_tiles: Array[Vector2i] = []
 
 var _sub_areas: Dictionary = {}
 var _unlocked: Dictionary = {}
+
+# Gesture input not yet turned into whole zoom steps: pan delta.y, and the natural
+# log of the magnify factors (logs add where factors multiply).
+var _pan_pending := 0.0
+var _magnify_pending := 0.0
 
 # The world camera this controller drives while the live world shows through
 # (ADR 0021), the sub-area id → world-space centre resolver Main supplies, and
@@ -108,6 +118,8 @@ func enter_selection_mode() -> void:
 		return
 	mode = Mode.WORLD
 	zoom = ZOOM_MIN
+	_pan_pending = 0.0
+	_magnify_pending = 0.0
 	show()
 	queue_redraw()
 	selection_mode_entered.emit()
@@ -156,6 +168,47 @@ func zoom_in() -> void:
 
 func zoom_out() -> void:
 	set_zoom(zoom / ZOOM_STEP)
+
+## Whole zoom steps in `pan_delta_y` of accumulated pan-gesture travel: positive
+## zooms in, negative zooms out, truncated toward zero so a part-step waits for
+## more travel. Godot's macOS pan delta.y is positive for scroll-down, the wheel's
+## WHEEL_DOWN direction, so a negative delta (scroll up) zooms in as the wheel does.
+static func pan_zoom_steps(pan_delta_y: float) -> int:
+	return -int(pan_delta_y / PAN_DELTA_PER_STEP)
+
+## Whole zoom steps in `log_factor`, the summed natural log of magnify-gesture
+## factors: positive (factor above 1, fingers apart) zooms in, negative zooms out.
+## One step is a pinch by ZOOM_STEP, so a pinch zooms about as far as it spreads.
+static func magnify_zoom_steps(log_factor: float) -> int:
+	return int(log_factor / log(ZOOM_STEP))
+
+# Accumulate a pan gesture and apply the whole zoom steps it has earned.
+func _apply_pan(delta_y: float) -> void:
+	if _pan_pending * delta_y < 0.0:
+		_pan_pending = 0.0   # the swipe reversed: drop the leftover of the old direction
+	_pan_pending += delta_y
+	var steps := pan_zoom_steps(_pan_pending)
+	_pan_pending += steps * PAN_DELTA_PER_STEP
+	_zoom_by_steps(steps)
+
+# Accumulate a magnify gesture and apply the whole zoom steps it has earned.
+func _apply_magnify(factor: float) -> void:
+	if factor <= 0.0:
+		return
+	var log_factor := log(factor)
+	if _magnify_pending * log_factor < 0.0:
+		_magnify_pending = 0.0
+	_magnify_pending += log_factor
+	var steps := magnify_zoom_steps(_magnify_pending)
+	_magnify_pending -= steps * log(ZOOM_STEP)
+	_zoom_by_steps(steps)
+
+func _zoom_by_steps(steps: int) -> void:
+	for _i: int in absi(steps):
+		if steps > 0:
+			zoom_in()
+		else:
+			zoom_out()
 
 ## How far the live world has replaced the card grid, 0..1: 0 at world zoom
 ## (below SEGMENT_ZOOM_DEACTIVATE_PX) and whenever focus is locked, rising
@@ -314,14 +367,24 @@ func _unhandled_input(event: InputEvent) -> void:
 ## controller's zoom, so the drawn map and the camera agree: a left click there
 ## is announced as `segment_clicked` for the owner to pick against that camera.
 ##
-## Scroll-to-zoom works in both modes and every other press is swallowed. The
-## controller is hidden while `Mode.INACTIVE`, and a hidden Control is excluded
+## Scroll-to-zoom works in both modes and every other press is swallowed. A Mac
+## trackpad reports two-finger scroll as `InputEventPanGesture` and pinch as
+## `InputEventMagnifyGesture`, not as wheel buttons, so both zoom here too.
+## The controller is hidden while `Mode.INACTIVE`, and a hidden Control is excluded
 ## from mouse picking, so normal play (build-mode tile clicks) is unaffected.
 func _gui_input(event: InputEvent) -> void:
 	if mode == Mode.INACTIVE:
 		return
 	if event is InputEventMouseMotion:
 		update_hover(event.position)
+		return
+	if event is InputEventPanGesture or event is InputEventMagnifyGesture:
+		if event is InputEventPanGesture:
+			_apply_pan(event.delta.y)
+		else:
+			_apply_magnify(event.factor)
+		if is_inside_tree():
+			accept_event()
 		return
 	if not (event is InputEventMouseButton and event.pressed):
 		return
@@ -348,7 +411,7 @@ func _draw() -> void:
 		draw_rect(Rect2(Vector2.ZERO, size), backdrop)
 		_draw_card_grid(font, card_alpha)
 	var mode_name := "world view" if mode == Mode.WORLD else "segment mode"
-	var header := "Select a crossing location — %s (%.1f px/tile) · scroll to zoom · Esc to exit" \
+	var header := "Select a crossing location — %s (%.1f px/tile) · scroll or pinch to zoom · Esc to exit" \
 			% [mode_name, tile_px()]
 	# Outlined rather than backed: over the live world a scrim would cover it.
 	var header_pos := Vector2(GRID_ORIGIN.x, 40.0)
