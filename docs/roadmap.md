@@ -484,6 +484,10 @@ systems).
 > for pathing and mortality, and its ADR records what full re-derivation would need.
 >
 > **B7.** The Windows and Linux checks on v0.1.0 remain a blocker for any release.
+>
+> *Resolved 2026-10-25: both binaries launched in `binary-check.yml` run
+> 40204770783, and the title-screen screenshots were checked by hand. B7 no
+> longer blocks a release (daily log 2026-10-25).*
 
 ---
 
