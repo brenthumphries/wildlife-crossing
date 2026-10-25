@@ -1,12 +1,12 @@
 {
   "schema": 1,
   "week_of": "2026-10-19",
-  "written_at": "2026-10-16T22:22:00+00:00",
-  "written_by": "weekly-plan skill (sonnet), via bops:weekly, run early on Friday 2026-10-16 for the week of 2026-10-19, at Brent's request",
+  "written_at": "2026-10-19T15:10:00+00:00",
+  "written_by": "weekly-plan skill (sonnet), Monday 2026-10-19 reconcile of the Friday 2026-10-16 early plan",
   "measured_against": {
-    "head_sha": "6ddeb4e71c4bc00e660592a25942a02d07a8c784",
-    "head_date": "2026-10-16T16:58:19-05:00",
-    "github_state_read_at": "2026-10-16T22:05:05+00:00"
+    "head_sha": "8248874ae201a4ad4a4a004dd5f2b9ebf1cc3470",
+    "head_date": "2026-10-18T18:36:52-05:00",
+    "github_state_read_at": "2026-10-19T14:59:32+00:00"
   },
   "build_case": "next",
   "readiness": {
@@ -14,7 +14,7 @@
     "blockers_open": [
       "B7"
     ],
-    "summary": "v0.1.0 is published and CI is green on main. B7 still blocks: the Windows and Linux launch checks wait for a machine (Linear ATT-62). Phase 3's code is complete and merged (C12 to C18). Brent decided on 2026-10-16 to go big for v0.2.0: Phase 2 completion, text size, Phase 4 seasons and Phase 6 milestones, with Phase 5 held behind the cultural-advisor review, a feature freeze and one stabilization pass. This plan routes all of it: text size (C19 to C23), Phase 2 completion (C24 to C31), seasons (C33 to C40), milestones and hints (C41 to C43), housekeeping, the decisions Q9 and Q10, five windowed walks (V15 to V19) and the release steps (D7, B9)."
+    "summary": "v0.1.0 is published and CI is green on main at 8248874. B7 still blocks: the Windows and Linux launch checks wait for a machine (Linear ATT-62). Since the Friday plan 22 items closed (text size C19 to C23, Phase 2 completion C24 to C28, the trickle fix C32, TimeController C33, SeasonManager C35, MilestoneTracker C41, hints C43, V12 to V14, V3, D1, D5, and the Q9 decision), leaving 27 open items: 10 code, 1 verify, 5 docs and 11 yours. Phase 4 seasons now continue from C35 and Phase 6 from C41; C42 and C34 are eligible. Phase 5 stays held behind the cultural-advisor review. Three small items are new from the 2026-10-17 log: V20, D9 and Q11."
   },
   "note": "obsidian-vault/build-reviews/2026-10-19-next-build.md",
   "items": [
@@ -38,7 +38,7 @@
         "a Decision logged block in docs/roadmap.md or a daily log names the next build's scope: Phase 2 completion (in-map segment renderer and hover highlight, deferred post-v0.1.0 on 2026-08-06) or Phase 3 (economy and information), or something else",
         "the first work items for that scope are named so the next weekly plan can route them"
       ],
-      "context": "The build case is now next, and week.json holds no feature work. Roadmap Phase 2 completion lists the segment renderer and hover highlight as deferred post-v0.1.0, and Phase 3 exit criteria name economy_manager_test.gd and information_manager_test.gd, which do not exist. Which one the next build targets is the product owner's call, not the planner's. This item is the planner's inference from the roadmap, not something a log asks for. Decided 2026-10-15: Phase 3 is the next build, Phase 2 completion follows (docs/roadmap.md \u00a7Phase 3 Decision logged 2026-10-15, PR #55; Linear ATT-63)."
+      "context": "The build case is now next, and week.json holds no feature work. Roadmap Phase 2 completion lists the segment renderer and hover highlight as deferred post-v0.1.0, and Phase 3 exit criteria name economy_manager_test.gd and information_manager_test.gd, which do not exist. Which one the next build targets is the product owner's call, not the planner's. This item is the planner's inference from the roadmap, not something a log asks for. Decided 2026-10-15: Phase 3 is the next build, Phase 2 completion follows (docs/roadmap.md §Phase 3 Decision logged 2026-10-15, PR #55; Linear ATT-63)."
     },
     {
       "id": "Q4",
@@ -53,14 +53,14 @@
       "files": [],
       "acceptance": [
         "a Decision logged block in docs/roadmap.md or a daily log names how a crossing's pre-crossing connectivity deficit is measured and how it maps onto the 1.0 to 2.0 fragmentation multiplier",
-        "the same block says whether the new optional crossings[].fragmentation_deficit field bumps save_version, with the reason (data-schemas \u00a714 says a bump is MAJOR; ADR 0014 says absent optional keys take defaults)",
+        "the same block says whether the new optional crossings[].fragmentation_deficit field bumps save_version, with the reason (data-schemas §14 says a bump is MAJOR; ADR 0014 says absent optional keys take defaults)",
         "the same block names how a purchased information product is recorded under the information save key, since areas_revealed[] cannot say which of three products an area holds"
       ],
-      "context": "Two spec gaps found while routing Phase 3. The PRD says the multiplier comes 'from the pre-crossing connectivity deficit of the link' and defines no deficit; the code has no such measure. A proposal to accept or change: deficit = the share of the largest pre-crossing network that the link newly joins to it, (combined tile count of the distinct networks the crossing joins minus the largest network's tile count) divided by the largest network's tile count, capped at 1, so a link between two equal halves scores 1.0, one that joins a sliver to a large network scores near 0, and one between patches already in the same network scores 0; multiplier = FRAGMENTATION_MULT_MIN + deficit x (FRAGMENTATION_MULT_MAX - FRAGMENTATION_MULT_MIN). The first draft of this proposal used one minus the largest network's share of the combined total, which tops out at 0.5 for two networks and so never reaches the 2.0 end of the range. On the save: an optional float with a default of 0.0 loads under save_version 1 by ADR 0014's omit-means-default rule, so no bump. On information: keep areas_revealed[] and add a products map keyed by area id, or encode product and area together. Unblocks C14, C15 and C17. The dispatch cannot see a decision as done, so those items stay blocked until the next weekly plan marks Q4 done. Decided 2026-10-15 (Brent), recorded in docs/roadmap.md \u00a7Phase 3, second Decision logged block (PR #59, merge bed1768).",
+      "context": "Two spec gaps found while routing Phase 3. The PRD says the multiplier comes 'from the pre-crossing connectivity deficit of the link' and defines no deficit; the code has no such measure. A proposal to accept or change: deficit = the share of the largest pre-crossing network that the link newly joins to it, (combined tile count of the distinct networks the crossing joins minus the largest network's tile count) divided by the largest network's tile count, capped at 1, so a link between two equal halves scores 1.0, one that joins a sliver to a large network scores near 0, and one between patches already in the same network scores 0; multiplier = FRAGMENTATION_MULT_MIN + deficit x (FRAGMENTATION_MULT_MAX - FRAGMENTATION_MULT_MIN). The first draft of this proposal used one minus the largest network's share of the combined total, which tops out at 0.5 for two networks and so never reaches the 2.0 end of the range. On the save: an optional float with a default of 0.0 loads under save_version 1 by ADR 0014's omit-means-default rule, so no bump. On information: keep areas_revealed[] and add a products map keyed by area id, or encode product and area together. Unblocks C14, C15 and C17. The dispatch cannot see a decision as done, so those items stay blocked until the next weekly plan marks Q4 done. Decided 2026-10-15 (Brent), recorded in docs/roadmap.md §Phase 3, second Decision logged block (PR #59, merge bed1768).",
       "references": [
-        "docs/roadmap.md \u00a7Phase 3 Decision logged 2026-10-15",
+        "docs/roadmap.md §Phase 3 Decision logged 2026-10-15",
         "docs/adr/0014-gamestate-serialization-shape.md",
-        "docs/data-schemas.md \u00a714",
+        "docs/data-schemas.md §14",
         "obsidian-vault/prd/game-design-overview.md Economy and budget"
       ],
       "status": "done"
@@ -81,9 +81,9 @@
       ],
       "context": "The roadmap's open question from 2026-10-15. The confirm panel and segment label are unreachable in v0.1.0 (the world map is look-only), so the only live surfaces are the HUD and the B-key build mode. A proposal: a keyboard-opened survey panel in the style of the F2 and F3 overlays, listing the three products with their costs and showing what each has revealed for Bow Valley. Unblocks C18. Decided 2026-10-16 (Brent): the Info panel on the I key; recorded in docs/roadmap.md Phase 3, Decision logged 2026-10-16.",
       "references": [
-        "docs/roadmap.md \u00a7Phase 3 Decision logged 2026-10-15",
+        "docs/roadmap.md §Phase 3 Decision logged 2026-10-15",
         "obsidian-vault/prd/game-design-overview.md Information and uncertainty",
-        "docs/roadmap.md \u00a7Phase 2 Decision logged 2026-09-23"
+        "docs/roadmap.md §Phase 2 Decision logged 2026-09-23"
       ],
       "status": "done"
     },
@@ -115,8 +115,8 @@
       ],
       "context": "Phase 3's first system. The constants (economy_constants.gd) and signals (event_bus.gd: budget_changed, donation_received) exist; nothing sets or spends the budget, and game_state.gd defaults budget to 0. Everything else in Phase 3 spends or credits through this. Merged: PR #57, merge 2d7854f.",
       "references": [
-        "docs/roadmap.md \u00a7Phase 3 Decision logged 2026-10-15",
-        "docs/test-plan.md \u00a76",
+        "docs/roadmap.md §Phase 3 Decision logged 2026-10-15",
+        "docs/test-plan.md §6",
         "docs/simulation-design.md monthly step",
         "game/CLAUDE.md Systems"
       ],
@@ -149,15 +149,15 @@
         "main.gd passes ConfirmPanel the cost of one tile of the cheapest crossing type with available_in_v1 true, read from the registry rather than 0; the 'display-only' comment is updated",
         "the build status label shows the remaining budget and the log message on a refused build names the shortfall",
         "no literal 5000 or 15000 appears in the changed scripts",
-        "Simulation.save_state carries the economy in the \u00a714 shape (an economy object holding budget and last_donation) and restore_state applies it after load_world, so a restored game has the saved balance rather than a fresh EconomyManager at the starting budget",
+        "Simulation.save_state carries the economy in the §14 shape (an economy object holding budget and last_donation) and restore_state applies it after load_world, so a restored game has the saved balance rather than a fresh EconomyManager at the starting budget",
         "a test builds a crossing through Simulation.build_crossing, saves, restores into a fresh Simulation and finds the same reduced budget and last_donation (a refund on load fails it)",
         "main.gd's _quick_save folds sim.economy into GameState before to_dict, and _quick_load applies the loaded budget through the economy manager, so F5 then F9 after a build never refunds the crossing",
         "the stated suite figure in docs/testing-setup.md is updated with tools/suite_figures.py --print and python3 tools/suite_figures.py --check docs/testing-setup.md passes"
       ],
       "context": "Today the budget gate is display-only: main.gd passes a minimum crossing cost of 0 and build_mode.running_cost() is informational. This makes the 2026-09-23 note that the confirm path is 'met in tests' true for cost as well. Amended 2026-10-15 after C12 merged (PR #57): EconomyManager holds the live balance and GameState is the save target, and nothing copies one to the other, so charging for crossings without this sync would refund them on a quick load. Note load_world builds a new EconomyManager, so restore_state must apply the saved economy after it. Merged: PR #60, merge 9d2d82a; walked windowed by Brent 2026-10-15.",
       "references": [
-        "docs/roadmap.md \u00a7Phase 3 Decision logged 2026-10-15",
-        "docs/test-plan.md \u00a76",
+        "docs/roadmap.md §Phase 3 Decision logged 2026-10-15",
+        "docs/test-plan.md §6",
         "docs/adr/0016-crossing-span-geometry.md"
       ],
       "status": "done"
@@ -190,8 +190,8 @@
       ],
       "context": "Phase 3 exit criterion: budget_changed and donation_received drive the HUD. Q3 (text size) is separate; follow the existing label style. Merged: PR #61, merge 958952b.",
       "references": [
-        "docs/roadmap.md \u00a7Phase 3 Decision logged 2026-10-15",
-        "docs/roadmap.md \u00a7Phase 3 Exit criteria"
+        "docs/roadmap.md §Phase 3 Decision logged 2026-10-15",
+        "docs/roadmap.md §Phase 3 Exit criteria"
       ],
       "status": "done"
     },
@@ -222,12 +222,12 @@
         "a completed crossing records fragmentation_deficit = min(1, (combined - largest) / largest), where combined is the total tile count (sum of patch_tile_count) of the distinct connectivity networks of the patches bordering its covered tiles and largest is the biggest of them, measured before its safe links are added; stored as an optional float on crossings[] (docs/roadmap.md Phase 3, second Decision logged block)",
         "the field is written by save_state and read back by restore_state as stored; a restored crossing keeps its saved value rather than recomputing it, because restore replays crossings against a partly built graph",
         "a save with no fragmentation_deficit key loads with 0.0 (a 1.0x multiplier) and does not fail",
-        "docs/data-schemas.md \u00a714 documents the field; save_version is NOT bumped (the roadmap block decided additive and optional under ADR 0014); a test loads a save written before this change",
+        "docs/data-schemas.md §14 documents the field; save_version is NOT bumped (the roadmap block decided additive and optional under ADR 0014); a test loads a save written before this change",
         "the stated suite figure in docs/testing-setup.md is updated with tools/suite_figures.py --print and python3 tools/suite_figures.py --check docs/testing-setup.md passes"
       ],
       "context": "Supervised because it changes the save format. Q4 is decided: the formula, the stored field and the no-bump call are in the roadmap's second 2026-10-15 Decision logged block. Include tests for two equal halves (1.0), a 10 percent sliver (0.1) and patches already in one network (0). Merged: PR #64.",
       "references": [
-        "docs/roadmap.md \u00a7Phase 3 Decision logged 2026-10-15",
+        "docs/roadmap.md §Phase 3 Decision logged 2026-10-15",
         "docs/adr/0014-gamestate-serialization-shape.md",
         "docs/adr/0005-save-file-format.md"
       ],
@@ -263,8 +263,8 @@
       ],
       "context": "Phase 3 exit criteria: the donation formula matches the spec across status weights and fragmentation multipliers, and the trickle prevents deadlock. Tallies come from animal_crossed; species weights from species_stats.json status_weight. The deficit is stored on each crossing by C14 and the multiplier is computed from it at income time (roadmap second 2026-10-15 block). Merged: PR #65.",
       "references": [
-        "docs/roadmap.md \u00a7Phase 3 Decision logged 2026-10-15",
-        "docs/test-plan.md \u00a76",
+        "docs/roadmap.md §Phase 3 Decision logged 2026-10-15",
+        "docs/test-plan.md §6",
         "docs/simulation-design.md monthly step",
         "obsidian-vault/prd/game-design-overview.md Economy and budget"
       ],
@@ -301,10 +301,10 @@
         "the community liaison briefing is not implemented; INFO_LIAISON_BRIEFING and entities_revealed stay unused",
         "the stated suite figure in docs/testing-setup.md is updated with tools/suite_figures.py --print and python3 tools/suite_figures.py --check docs/testing-setup.md passes"
       ],
-      "context": "Data and logic only; C18 shows it. Q4 is decided: the storage shape, string keys and the product ids are in the roadmap's second 2026-10-15 Decision logged block. The liaison briefing stays in Phase 5. Document the new key in docs/data-schemas.md \u00a714. Merged: PR #66.",
+      "context": "Data and logic only; C18 shows it. Q4 is decided: the storage shape, string keys and the product ids are in the roadmap's second 2026-10-15 Decision logged block. The liaison briefing stays in Phase 5. Document the new key in docs/data-schemas.md §14. Merged: PR #66.",
       "references": [
-        "docs/roadmap.md \u00a7Phase 3 Decision logged 2026-10-15",
-        "docs/test-plan.md \u00a77",
+        "docs/roadmap.md §Phase 3 Decision logged 2026-10-15",
+        "docs/test-plan.md §7",
         "obsidian-vault/prd/game-design-overview.md Information and uncertainty"
       ],
       "status": "done"
@@ -342,9 +342,9 @@
       ],
       "context": "Phase 3 exit criterion: each information product reveals exactly its layer. Q5 is decided: the Info panel on the I key, arrow keys then Enter to buy, patches labelled and numbered by size (docs/roadmap.md Phase 3, Decision logged 2026-10-16). Supervised because it is a visual change that no headless test can confirm; the walk is the evidence. Hotspot markers on the map are not in this item; they join Phase 2 completion. Merged: PR #68, walked windowed by Brent 2026-10-16.",
       "references": [
-        "docs/roadmap.md \u00a7Phase 3 Decision logged 2026-10-16",
-        "docs/test-plan.md \u00a77",
-        "obsidian-vault/design/ui-ux-spec.md \u00a78 and \u00a710"
+        "docs/roadmap.md §Phase 3 Decision logged 2026-10-16",
+        "docs/test-plan.md §7",
+        "obsidian-vault/design/ui-ux-spec.md §8 and §10"
       ],
       "status": "done"
     },
@@ -456,7 +456,7 @@
       "context": "C15 merged reading it as the lowest price of anything buyable. The PRD says 'the cheapest possible action'; the confirm panel's gate uses the cheapest crossing tile. The unconditional 1,000 base grant makes deadlock unreachable either way, so this is about generosity, not safety. Decided 2026-10-16 by Brent: the cheapest crossing tile that can be bought. Recorded in the same roadmap block; the change is C32.",
       "references": [
         "game/scripts/systems/economy_manager.gd",
-        "docs/data-schemas.md \u00a710",
+        "docs/data-schemas.md §10",
         "obsidian-vault/prd/game-design-overview.md Economy and budget"
       ],
       "status": "done"
@@ -476,9 +476,9 @@
         "a Decision logged block or a daily log names what v0.2.0 contains (Phase 3 as merged, Phase 2 completion, text size) and what it excludes, and a target date or trigger",
         "it says whether B7 (the Windows and Linux checks on v0.1.0) must close first"
       ],
-      "context": "Phase 3's code is complete and Phase 2 completion plus text size are planned for this week. Cutting a release is a Mac job (signing runbook A6, A7, B3, B4) and the notarization identity is Brent's, so the release steps are routed only after this answer. Decided 2026-10-16 by Brent: go big. v0.2.0 is Phase 2 completion, text size, Phase 4 (seasons) and Phase 6 (milestones and polish); Phase 5 stays out behind the cultural-advisor review. Stability by feature freeze, then one stabilization pass. B7 stays a blocker for any release. Recorded in docs/roadmap.md \u00a7Phase 3 Decision logged 2026-10-16 (v0.2.0 scope).",
+      "context": "Phase 3's code is complete and Phase 2 completion plus text size are planned for this week. Cutting a release is a Mac job (signing runbook A6, A7, B3, B4) and the notarization identity is Brent's, so the release steps are routed only after this answer. Decided 2026-10-16 by Brent: go big. v0.2.0 is Phase 2 completion, text size, Phase 4 (seasons) and Phase 6 (milestones and polish); Phase 5 stays out behind the cultural-advisor review. Stability by feature freeze, then one stabilization pass. B7 stays a blocker for any release. Recorded in docs/roadmap.md §Phase 3 Decision logged 2026-10-16 (v0.2.0 scope).",
       "references": [
-        "docs/roadmap.md \u00a7Phase 3 Decision logged 2026-10-16",
+        "docs/roadmap.md §Phase 3 Decision logged 2026-10-16",
         "docs/signing-runbook.md"
       ],
       "status": "done"
@@ -510,10 +510,10 @@
       "context": "Foundation for the text-size work: one place for sizes and one signal so every screen can re-apply live. The new sizes are larger than today's (body 14 or 13, title 28), as Brent decided on 2026-10-16. Q6 confirmed these numbers on 2026-10-16; V15 tunes them on screen.",
       "references": [
         "obsidian-vault/daily-logs/2026-10-16.md (Decisions made: Q3, Q6)",
-        "docs/architecture.md \u00a75 events",
+        "docs/architecture.md §5 events",
         "game/CLAUDE.md Autoloads (no new autoload)"
       ],
-      "status": "open"
+      "status": "done"
     },
     {
       "id": "C20",
@@ -546,7 +546,7 @@
         "game/tests/hud_test.gd",
         "obsidian-vault/daily-logs/2026-10-16.md (Decisions made: Q3, Q6)"
       ],
-      "status": "open"
+      "status": "done"
     },
     {
       "id": "C21",
@@ -581,7 +581,7 @@
         "obsidian-vault/daily-logs/2026-10-16.md (Decisions made: Q3, Q6)",
         "game/scripts/ui/information_panel.gd"
       ],
-      "status": "open"
+      "status": "done"
     },
     {
       "id": "C22",
@@ -616,7 +616,7 @@
         "obsidian-vault/daily-logs/2026-10-16.md (Decisions made: Q3, Q6)",
         "tools/smoke_boot.sh"
       ],
-      "status": "open"
+      "status": "done"
     },
     {
       "id": "C23",
@@ -656,7 +656,7 @@
         "obsidian-vault/daily-logs/2026-10-16.md (Decisions made: Q3, Q6)",
         "docs/adr/0014-gamestate-serialization-shape.md (saves are separate)"
       ],
-      "status": "open"
+      "status": "done"
     },
     {
       "id": "C24",
@@ -688,11 +688,11 @@
       ],
       "context": "The 2026-09-23 decision left Phase 2's fourth exit criterion 'met in tests, not reachable in the artifact' because WorldSelectMap draws an opaque card grid over the world and stops mouse events. This item is the in-map segment renderer (earlier C1). The proposal is to reuse the live renderer rather than build a second one, since the connectivity overlay and the picker already work in world space; the implementer confirms or replaces it in the ADR. Architectural, so opus and supervised. Clicks are C25.",
       "references": [
-        "docs/roadmap.md \u00a7Phase 2 Decision logged 2026-09-23",
+        "docs/roadmap.md §Phase 2 Decision logged 2026-09-23",
         "docs/adr/0013-scaffolding-conventions.md",
         "docs/adr/0002-hex-grid-topology.md"
       ],
-      "status": "open",
+      "status": "done",
       "architectural": true
     },
     {
@@ -724,10 +724,10 @@
       ],
       "context": "Replaces the 2026-08-06 stopgap (MOUSE_FILTER_STOP on the whole screen) with real picking, now that C24 makes the drawn map and the camera agree. Supervised because it reverses a deliberate guard.",
       "references": [
-        "docs/roadmap.md \u00a7Phase 2 Decision logged 2026-09-23",
+        "docs/roadmap.md §Phase 2 Decision logged 2026-09-23",
         "game/scripts/main.gd _try_select_segment"
       ],
-      "status": "open"
+      "status": "done"
     },
     {
       "id": "C26",
@@ -756,11 +756,11 @@
       ],
       "context": "Phase 2 P0 'Segment hover highlight' (earlier C2), deferred on 2026-08-06 because it needed the in-map render. The build-mode tile hover in world_renderer.gd is a different feature.",
       "references": [
-        "docs/roadmap.md \u00a7Phase 2 Decision logged 2026-09-23",
-        "docs/test-plan.md \u00a7crossing-location-selection (P0)",
+        "docs/roadmap.md §Phase 2 Decision logged 2026-09-23",
+        "docs/test-plan.md §crossing-location-selection (P0)",
         "obsidian-vault/prd/crossing-location-selection.md rule 9"
       ],
-      "status": "open"
+      "status": "done"
     },
     {
       "id": "C27",
@@ -789,11 +789,11 @@
       ],
       "context": "Phase 2 P0 'Crossing location tool in build toolbar'. M and B stand in today; the 2026-09-23 note moved the toolbar to Phase 2 completion because it needs an interactive map to open into.",
       "references": [
-        "docs/roadmap.md \u00a7Phase 2 Decision logged 2026-09-23",
-        "obsidian-vault/design/ui-ux-spec.md \u00a7toolbar",
+        "docs/roadmap.md §Phase 2 Decision logged 2026-09-23",
+        "obsidian-vault/design/ui-ux-spec.md §toolbar",
         "obsidian-vault/prd/crossing-location-selection.md rule 1"
       ],
-      "status": "open"
+      "status": "done"
     },
     {
       "id": "C28",
@@ -819,10 +819,10 @@
       ],
       "context": "Brent's Q5 decision (2026-10-16) moved hotspot markers to Phase 2 completion. They do not need the in-map renderer: build mode already draws on the live world, so this can land before C24.",
       "references": [
-        "docs/roadmap.md \u00a7Phase 3 Decision logged 2026-10-16",
+        "docs/roadmap.md §Phase 3 Decision logged 2026-10-16",
         "game/scripts/systems/information_manager.gd"
       ],
-      "status": "open"
+      "status": "done"
     },
     {
       "id": "C29",
@@ -850,7 +850,7 @@
       ],
       "context": "Phase 2 P1 'Crossing count indicator', deferred on 2026-09-23 with the hover extras. Depends on C21 because both edit confirm_panel.gd.",
       "references": [
-        "docs/roadmap.md \u00a7Phase 2 Decision logged 2026-09-23",
+        "docs/roadmap.md §Phase 2 Decision logged 2026-09-23",
         "obsidian-vault/prd/crossing-location-selection.md P1"
       ],
       "status": "open"
@@ -881,7 +881,7 @@
       ],
       "context": "Phase 2 P1 'Sub-area summary on hover'. Also brings the last literal font size (LABEL_FONT_SIZE) onto TextScale.",
       "references": [
-        "docs/roadmap.md \u00a7Phase 2 Decision logged 2026-09-23",
+        "docs/roadmap.md §Phase 2 Decision logged 2026-09-23",
         "obsidian-vault/prd/crossing-location-selection.md P1"
       ],
       "status": "open"
@@ -913,7 +913,7 @@
       ],
       "context": "Phase 2 P1 'Connectivity score on hover'. Uses the overlay's cached scores (ADR 0004), so it is a read, not a new calculation.",
       "references": [
-        "docs/roadmap.md \u00a7Phase 2 Decision logged 2026-09-23",
+        "docs/roadmap.md §Phase 2 Decision logged 2026-09-23",
         "docs/adr/0004-connectivity-patch-adjacency-graph.md"
       ],
       "status": "open"
@@ -943,7 +943,7 @@
         "obsidian-vault/daily-logs/2026-10-15.md (Also this session, Open questions)",
         "tools/warden.py cmd_merge, cmd_clean"
       ],
-      "status": "open"
+      "status": "done"
     },
     {
       "blocker": false,
@@ -958,7 +958,7 @@
         "docs/plan/facts.json game.scripts_without_named_test",
         "tools/facts.py TEST_EXEMPT_SCRIPTS"
       ],
-      "status": "open",
+      "status": "done",
       "id": "V12",
       "title": "Name a test for the two minigame scripts or exempt them",
       "lane": "verify",
@@ -994,7 +994,7 @@
       "references": [
         "obsidian-vault/daily-logs/2026-10-16.md (Also this session, the GUT warning)"
       ],
-      "status": "open"
+      "status": "done"
     },
     {
       "id": "D5",
@@ -1010,20 +1010,20 @@
         "docs/adr/0018-code-signing-and-notarization.md"
       ],
       "acceptance": [
-        "the sentence in docs/adr/0018-code-signing-and-notarization.md \u00a7Follow-on that says Build-review V2 is still open is corrected to say it closed on 2026-08-10, with the pack gate covering Linux and Windows and macOS checked by hand in runbook A6 and A7 since 2026-09-26",
+        "the sentence in docs/adr/0018-code-signing-and-notarization.md §Follow-on that says Build-review V2 is still open is corrected to say it closed on 2026-08-10, with the pack gate covering Linux and Windows and macOS checked by hand in runbook A6 and A7 since 2026-09-26",
         "no other line of the ADR changes; its status and Decision are untouched"
       ],
       "context": "D3 fixed the same stale claim in docs/signing-runbook.md Part D and left the ADR alone, because existing ADRs are a forbidden path for auto. Supervised: a person reads the one-line diff before it merges.",
       "references": [
         "obsidian-vault/daily-logs/2026-10-15.md (Also this session, Open questions)",
         "docs/signing-runbook.md Part D point 3",
-        "docs/plan/routing.md \u00a7Forbidden paths"
+        "docs/plan/routing.md §Forbidden paths"
       ],
-      "status": "open"
+      "status": "done"
     },
     {
       "id": "V3",
-      "title": "Make every P0 row in docs/test-plan.md \u00a711 name a test or a deferral",
+      "title": "Make every P0 row in docs/test-plan.md §11 name a test or a deferral",
       "lane": "docs",
       "model": "sonnet",
       "mode": "auto",
@@ -1035,15 +1035,15 @@
         "docs/test-plan.md"
       ],
       "acceptance": [
-        "every P0 row in docs/test-plan.md \u00a711 either names a test that exists in game/tests/ (checked against docs/plan/facts.json game.tests) or is marked deferred with a reason",
+        "every P0 row in docs/test-plan.md §11 either names a test that exists in game/tests/ (checked against docs/plan/facts.json game.tests) or is marked deferred with a reason",
         "the note-level figure the reviews quote (named / missing / percent) is recomputed from the edited table and stated in the commit body"
       ],
       "context": "The 09-01 and 09-08 reviews disagreed about this table's figures. Closing the rows removes the figure from the reviews altogether.",
       "references": [
         "obsidian-vault/build-reviews/2026-09-08-next-build.md V3 and amendment 2026-09-09b",
-        "docs/test-plan.md \u00a711"
+        "docs/test-plan.md §11"
       ],
-      "status": "open"
+      "status": "done"
     },
     {
       "id": "D6",
@@ -1068,7 +1068,7 @@
       ],
       "context": "The 2026-09-23 block required every review and release note to say 'met in tests, not reachable in the shipped build'. Once C24 to C26 land and V16 walks them, that wording must be retired on the record.",
       "references": [
-        "docs/roadmap.md \u00a7Phase 2 Decision logged 2026-09-23",
+        "docs/roadmap.md §Phase 2 Decision logged 2026-09-23",
         "docs/test-plan.md"
       ],
       "status": "open"
@@ -1090,14 +1090,14 @@
       "acceptance": [
         "docs/pre-build-checklist.md no longer asserts there is no Godot project to build: either its status is archived with a one-paragraph pointer to docs/plan/week.json and the build reviews as the living punch list, or its checklist is rewritten against docs/plan/facts.json",
         "any README or docs link to it still resolves and describes what it now is",
-        "a commit plan on branch docs/d1-\u2026 claims every changed path"
+        "a commit plan on branch docs/d1-… claims every changed path"
       ],
-      "context": "Flagged in eight consecutive reviews and never fixed, because \u00a74 rows had no mechanism to close. The repository is public, so the file is stranger-facing. Judgment about what the document should become, so Cowork.",
+      "context": "Flagged in eight consecutive reviews and never fixed, because §4 rows had no mechanism to close. The repository is public, so the file is stranger-facing. Judgment about what the document should become, so Cowork.",
       "references": [
         "obsidian-vault/build-reviews/2026-09-08-next-build.md amendment 2026-09-09b (structural point)",
         "docs/pre-build-checklist.md"
       ],
-      "status": "open"
+      "status": "done"
     },
     {
       "blocker": false,
@@ -1164,7 +1164,8 @@
       "files": [],
       "acceptance": [
         "on the Mac at the default window, every screen (title menu, HUD, Info panel, credits, confirm panel, both minigames) is comfortably readable at the default step, and at 175 percent nothing is clipped or overlapping; recorded in a daily log",
-        "any change to the baseline sizes is made by editing the TextScale constants and noted in the log"
+        "any change to the baseline sizes is made by editing the TextScale constants and noted in the log",
+        "opening build mode does not shift or clip the HUD stack at any step, since C20 moved the build status readout into the HUD stack; recorded in the log"
       ],
       "context": "The text size cannot be judged headlessly. This is where the Q6 numbers meet the real screen.",
       "references": [
@@ -1189,11 +1190,12 @@
       "files": [],
       "acceptance": [
         "on the Mac: the toolbar's Add crossing opens the map; zooming in reaches segment mode with the live world and the overlay visible; hovering a road highlights it and plain terrain does not; clicking opens the confirm panel; Confirm opens build mode; Escape exits from each state; with a corridor study held, hotspot markers show in build mode; recorded in a daily log",
-        "the finding that Phase 2's fourth exit criterion is reachable in the shipped build, or what still blocks it, is stated"
+        "the finding that Phase 2's fourth exit criterion is reachable in the shipped build, or what still blocks it, is stated",
+        "the C25 click test from obsidian-vault/daily-logs/2026-10-17.md passes windowed: segment tile, plain terrain, edge, Escape and Cancel, world view, wheel, pan"
       ],
       "context": "Phase 2's exit criteria were met in tests only. This is the first time a human drives the whole selection flow in the real build.",
       "references": [
-        "docs/roadmap.md \u00a7Phase 2 Decision logged 2026-09-23"
+        "docs/roadmap.md §Phase 2 Decision logged 2026-09-23"
       ],
       "status": "open"
     },
@@ -1240,10 +1242,10 @@
       ],
       "context": "Q7 decided on 2026-10-16: the trickle threshold is the cheapest crossing tile that can be bought. C15 shipped the lowest price of anything buyable (1,000, an information product). One line in setup plus tests.",
       "references": [
-        "docs/roadmap.md \u00a7Phase 3 Decision logged 2026-10-16 (later)",
+        "docs/roadmap.md §Phase 3 Decision logged 2026-10-16 (later)",
         "game/scripts/systems/economy_manager.gd"
       ],
-      "status": "open"
+      "status": "done"
     },
     {
       "id": "Q9",
@@ -1259,13 +1261,13 @@
       "acceptance": [
         "a Decision logged block or a daily log accepts or changes: which species are absent in which season, the migration seasons, the motivation multiplier, and the winter and spring terrain rules below; if accepted, one line says so"
       ],
-      "context": "The data says only each species' seasonal_pattern (resident, seasonal_migration, elevational_migration, hibernates); it names no seasons. Proposals: hibernates (grizzly) is absent in winter; seasonal_migration (elk, pronghorn) is absent in winter; elevational_migration (caribou, bighorn) is never absent; resident (wolverine, wolf, lynx) is never absent. Migration seasons for both migration patterns are spring and fall, when goal-distance willingness is multiplied by 1.5. Seasons run spring, summer, fall, winter from year 1 spring. Winter clears is_hazardous on river tiles; spring widens river hazard zones by one tile; summer and fall use the base terrain. C37 to C39 build on these proposals and do not wait for this item.",
+      "context": "The data says only each species' seasonal_pattern (resident, seasonal_migration, elevational_migration, hibernates); it names no seasons. Proposals: hibernates (grizzly) is absent in winter; seasonal_migration (elk, pronghorn) is absent in winter; elevational_migration (caribou, bighorn) is never absent; resident (wolverine, wolf, lynx) is never absent. Migration seasons for both migration patterns are spring and fall, when goal-distance willingness is multiplied by 1.5. Seasons run spring, summer, fall, winter from year 1 spring. Winter clears is_hazardous on river tiles; spring widens river hazard zones by one tile; summer and fall use the base terrain. C37 to C39 build on these proposals and do not wait for this item. Decided 2026-10-16 (evening): elk and pronghorn are present all year with migration spikes in spring and fall; only the grizzly is absent (winter). Recorded in the docs/roadmap.md Phase 4 Decision logged block.",
       "references": [
-        "docs/simulation-design.md \u00a76 Seasonal modifiers",
-        "docs/data-schemas.md \u00a73 seasonal_pattern",
+        "docs/simulation-design.md §6 Seasonal modifiers",
+        "docs/data-schemas.md §3 seasonal_pattern",
         "obsidian-vault/prd/game-design-overview.md Seasons and time"
       ],
-      "status": "open"
+      "status": "done"
     },
     {
       "id": "Q10",
@@ -1283,7 +1285,7 @@
       ],
       "context": "Brent chose a feature freeze followed by one stabilization pass (2026-10-16). The freeze is called when the features Brent wants are merged and their walks (V15 to V18) are done, not on a fixed date. The risk of this approach is that a late problem blocks the whole release; the per-phase walks V15 to V18 exist to surface problems before the freeze.",
       "references": [
-        "docs/roadmap.md \u00a7Phase 3 Decision logged 2026-10-16 (v0.2.0 scope)"
+        "docs/roadmap.md §Phase 3 Decision logged 2026-10-16 (v0.2.0 scope)"
       ],
       "status": "open"
     },
@@ -1313,11 +1315,11 @@
       ],
       "context": "Phase 4: time controls. Simulation.time_scale is a bare variable today (0 paused, 1, 2, 4) with no owner or signal. The UI is C34.",
       "references": [
-        "docs/roadmap.md \u00a7Phase 4",
-        "docs/architecture.md \u00a74 and \u00a77",
-        "docs/test-plan.md \u00a79"
+        "docs/roadmap.md §Phase 4",
+        "docs/architecture.md §4 and §7",
+        "docs/test-plan.md §9"
       ],
-      "status": "open"
+      "status": "done"
     },
     {
       "id": "C34",
@@ -1348,8 +1350,8 @@
       ],
       "context": "Phase 4: the time controls from the UI spec (pause / 1x / 2x / 4x, always available).",
       "references": [
-        "docs/roadmap.md \u00a7Phase 4",
-        "obsidian-vault/design/ui-ux-spec.md \u00a73 persistent HUD"
+        "docs/roadmap.md §Phase 4",
+        "obsidian-vault/design/ui-ux-spec.md §3 persistent HUD"
       ],
       "status": "open"
     },
@@ -1384,12 +1386,12 @@
       ],
       "context": "Phase 4: the season cycle. The 2026-10 save/restore code restarts the tick counter at zero on load and says to revisit when the clock has one owner; this is that owner. The clock keys already exist in the save schema, so no version bump.",
       "references": [
-        "docs/roadmap.md \u00a7Phase 4",
-        "docs/architecture.md \u00a74 and \u00a77",
-        "docs/test-plan.md \u00a79",
+        "docs/roadmap.md §Phase 4",
+        "docs/architecture.md §4 and §7",
+        "docs/test-plan.md §9",
         "game/scripts/systems/simulation.gd restore_state"
       ],
-      "status": "open"
+      "status": "done"
     },
     {
       "id": "C37",
@@ -1415,7 +1417,7 @@
         "docs/testing-setup.md"
       ],
       "acceptance": [
-        "SimulationConstants gains named tables keyed by seasonal_pattern for the absence seasons and the migration seasons, with the Q9 proposals as values, documented in docs/data-schemas.md \u00a710 and pinned by constants_test.gd",
+        "SimulationConstants gains named tables keyed by seasonal_pattern for the absence seasons and the migration seasons, with the Q9 proposals as values, documented in docs/data-schemas.md §10 and pinned by constants_test.gd",
         "SeasonManager.is_absent(species, season) reads the tables; on season_changed the rendered agents of an absent species leave the world and return when the season ends, without touching counts",
         "the monthly population step skips an absent species and changes neither its count nor its trend (test_seasonal_absence_not_decline); a grizzly is absent in winter and present in spring",
         "an absent species still appears in the Info panel's population survey with its counts, marked as away",
@@ -1423,9 +1425,9 @@
       ],
       "context": "Phase 4: hibernators leave in winter, migrators appear seasonally. Uses the Q9 proposals; if Q9 changes them, follow the logged answer.",
       "references": [
-        "docs/roadmap.md \u00a7Phase 4",
-        "docs/simulation-design.md \u00a76 Seasonal modifiers",
-        "docs/test-plan.md \u00a75 and \u00a79"
+        "docs/roadmap.md §Phase 4",
+        "docs/simulation-design.md §6 Seasonal modifiers",
+        "docs/test-plan.md §5 and §9"
       ],
       "status": "open"
     },
@@ -1458,8 +1460,8 @@
       ],
       "context": "Phase 4: 'calendar always visible', the planning aid from the UI spec.",
       "references": [
-        "docs/roadmap.md \u00a7Phase 4",
-        "obsidian-vault/design/ui-ux-spec.md \u00a73"
+        "docs/roadmap.md §Phase 4",
+        "obsidian-vault/design/ui-ux-spec.md §3"
       ],
       "status": "open"
     },
@@ -1487,14 +1489,14 @@
       "acceptance": [
         "goal-distance willingness is multiplied by a named MIGRATION_MOTIVATION_MULT (1.5 by the Q9 proposal) during a species' migration seasons from the C37 table, and is unchanged otherwise; MOTIVATION_DISTANCE_MULT stays 1.0",
         "test_migration_motivation_spike: with a fixed seed a migratory species makes more barrier-crossing attempts in its migration season than outside it, and a resident species does not change",
-        "the new constant is in docs/data-schemas.md \u00a710 and pinned by constants_test.gd; the run is deterministic for a given seed",
+        "the new constant is in docs/data-schemas.md §10 and pinned by constants_test.gd; the run is deterministic for a given seed",
         "the stated suite figure in docs/testing-setup.md is updated with tools/suite_figures.py --print and python3 tools/suite_figures.py --check docs/testing-setup.md passes"
       ],
       "context": "Phase 4: migration seasons spike crossing usage, so a crossing built before a migration season sees more use.",
       "references": [
-        "docs/roadmap.md \u00a7Phase 4",
-        "docs/simulation-design.md \u00a76 Seasonal modifiers",
-        "docs/test-plan.md \u00a79"
+        "docs/roadmap.md §Phase 4",
+        "docs/simulation-design.md §6 Seasonal modifiers",
+        "docs/test-plan.md §9"
       ],
       "status": "open"
     },
@@ -1524,13 +1526,13 @@
         "an effective seasonal terrain layer, derived from the current season and never saved, makes river tiles not hazardous in winter and widens river hazard zones by one tile in spring; summer and fall use the base terrain (test_frozen_river_clears_hazard covers winter clearing and spring restoring plus widening)",
         "agent pathing and mortality use the effective hazard flag, cached paths are invalidated on season_changed, and the renderer colours frozen and flooded tiles distinctly from base river",
         "for stability the connectivity graph, patch identity and population records are NOT re-derived on season_changed; build mode and completed crossings keep working in every season, and a test completes a span in each season",
-        "docs/adr/0022-seasonal-terrain-overlay.md, status proposed, records the overlay design, the deliberate narrowing of docs/simulation-design.md \u00a76 (no seasonal patch re-derivation), what full re-derivation would require, and the rejected alternative",
+        "docs/adr/0022-seasonal-terrain-overlay.md, status proposed, records the overlay design, the deliberate narrowing of docs/simulation-design.md §6 (no seasonal patch re-derivation), what full re-derivation would require, and the rejected alternative",
         "the stated suite figure in docs/testing-setup.md is updated with tools/suite_figures.py --print and python3 tools/suite_figures.py --check docs/testing-setup.md passes"
       ],
       "context": "Phase 4: frozen and flooded terrain. The simulation design asks for patch re-derivation on every season change; that remaps population records keyed by patch id and is the heaviest and riskiest recompute in the design. Brent asked for scope without risking stability, so the proposal narrows it to hazard changes for pathing and mortality only. The implementer confirms or replaces that in the ADR. Architectural, so opus and supervised.",
       "references": [
-        "docs/roadmap.md \u00a7Phase 4",
-        "docs/simulation-design.md \u00a76 Seasonal modifiers",
+        "docs/roadmap.md §Phase 4",
+        "docs/simulation-design.md §6 Seasonal modifiers",
         "docs/adr/0004-connectivity-patch-adjacency-graph.md",
         "docs/adr/0007-patch-derivation-biome-compatibility.md"
       ],
@@ -1566,10 +1568,10 @@
         "no save_version change; the existing round trip tests still pass",
         "the stated suite figure in docs/testing-setup.md is updated with tools/suite_figures.py --print and python3 tools/suite_figures.py --check docs/testing-setup.md passes"
       ],
-      "context": "Phase 4: autosave on the season boundary bounds data loss to one season (docs/architecture.md \u00a77). Continue is the way to use it from a cold start.",
+      "context": "Phase 4: autosave on the season boundary bounds data loss to one season (docs/architecture.md §7). Continue is the way to use it from a cold start.",
       "references": [
-        "docs/roadmap.md \u00a7Phase 4",
-        "docs/architecture.md \u00a74 and \u00a77",
+        "docs/roadmap.md §Phase 4",
+        "docs/architecture.md §4 and §7",
         "docs/adr/0005-save-file-format.md"
       ],
       "status": "open"
@@ -1605,11 +1607,11 @@
       ],
       "context": "Phase 6: the milestone track and rewards. C15 left milestone_bonus() as a stub returning 0 with a Phase 6 comment; this fills it. milestones.json already holds 12 first-crossing milestones and the capstone, though only sub-area 7 is playable.",
       "references": [
-        "docs/roadmap.md \u00a7Phase 6",
-        "docs/test-plan.md \u00a710 milestone_tracker_test",
+        "docs/roadmap.md §Phase 6",
+        "docs/test-plan.md §10 milestone_tracker_test",
         "game/data/milestones.json"
       ],
-      "status": "open"
+      "status": "done"
     },
     {
       "id": "C42",
@@ -1639,8 +1641,8 @@
       ],
       "context": "Phase 6: celebrations, not gates. Reusing the chime keeps the licence notices unchanged (no new third-party or generated binary).",
       "references": [
-        "docs/roadmap.md \u00a7Phase 6",
-        "obsidian-vault/design/ui-ux-spec.md \u00a73 milestone track"
+        "docs/roadmap.md §Phase 6",
+        "obsidian-vault/design/ui-ux-spec.md §3 milestone track"
       ],
       "status": "open"
     },
@@ -1675,10 +1677,10 @@
       ],
       "context": "Phase 6 exit criterion: a new player in Bow Valley can find a fragmented segment via the overlay, build an overpass, watch the first animal cross, receive a first donation, and understand why all four happened. 'Understand why' needs words at those four moments.",
       "references": [
-        "docs/roadmap.md \u00a7Phase 6",
+        "docs/roadmap.md §Phase 6",
         "docs/CLAUDE.md data files"
       ],
-      "status": "open"
+      "status": "done"
     },
     {
       "id": "V17",
@@ -1704,7 +1706,7 @@
       ],
       "context": "Phase 4 exit criteria have never been seen by a person. This is the first look.",
       "references": [
-        "docs/roadmap.md \u00a7Phase 4"
+        "docs/roadmap.md §Phase 4"
       ],
       "status": "open"
     },
@@ -1730,7 +1732,7 @@
       ],
       "context": "Phase 6's vision success criterion. This is the walk that decides whether the loop teaches itself.",
       "references": [
-        "docs/roadmap.md \u00a7Phase 6"
+        "docs/roadmap.md §Phase 6"
       ],
       "status": "open"
     },
@@ -1760,7 +1762,7 @@
       ],
       "context": "The one stabilization pass Brent chose instead of per-phase release candidates.",
       "references": [
-        "docs/roadmap.md \u00a7Phase 3 Decision logged 2026-10-16 (v0.2.0 scope)"
+        "docs/roadmap.md §Phase 3 Decision logged 2026-10-16 (v0.2.0 scope)"
       ],
       "status": "open"
     },
@@ -1788,8 +1790,8 @@
       ],
       "context": "Closes the paperwork once the walks are recorded.",
       "references": [
-        "docs/roadmap.md \u00a7Phase 4",
-        "docs/roadmap.md \u00a7Phase 6",
+        "docs/roadmap.md §Phase 4",
+        "docs/roadmap.md §Phase 6",
         "docs/test-plan.md"
       ],
       "status": "open"
@@ -1843,6 +1845,77 @@
       "references": [
         "docs/signing-runbook.md",
         "docs/release-notes/v0.2.0.md"
+      ],
+      "status": "open"
+    },
+    {
+      "id": "V20",
+      "title": "Stub the gh query in the warden land test so the tool tests pass without gh",
+      "lane": "verify",
+      "model": "sonnet",
+      "mode": "auto",
+      "size": "S",
+      "priority": 47,
+      "blocker": false,
+      "depends_on": [],
+      "files": [
+        "tools/warden.py",
+        "tools/tests/test_warden.py"
+      ],
+      "acceptance": [
+        "python3 -m unittest discover -s tools/tests -b passes on a machine with no gh installed: test_land_issues_the_seven_commands_in_order no longer raises FileNotFoundError from pr_head_branch",
+        "Runner.query either catches OSError and returns an empty result or the test stubs the query; the real warden merge path still resolves the head branch through gh when gh exists",
+        "a test names the no-gh case"
+      ],
+      "context": "The 2026-10-17 log found that V13's new gh pr view call runs for real inside a dry-run land test, so the suite errors where gh is absent (the Cowork VM). It passes on the Mac. Small, and it keeps the tool tests honest on every surface.",
+      "references": [
+        "obsidian-vault/daily-logs/2026-10-17.md (Open questions: test_land_issues_the_seven_commands_in_order needs gh installed)",
+        "tools/warden.py"
+      ],
+      "status": "open"
+    },
+    {
+      "id": "D9",
+      "title": "Correct ADR 0021's stale method name and the credits_screen click-path comment",
+      "lane": "docs",
+      "model": "sonnet",
+      "mode": "supervised",
+      "size": "S",
+      "priority": 48,
+      "blocker": false,
+      "depends_on": [],
+      "files": [
+        "docs/adr/0021-world-select-renders-the-live-world.md",
+        "game/scripts/ui/credits_screen.gd"
+      ],
+      "acceptance": [
+        "docs/adr/0021-world-select-renders-the-live-world.md names Main._pick_segment_at, not Main._pick_segment_at_mouse",
+        "the comment in game/scripts/ui/credits_screen.gd describes segment clicks reaching Main._try_select_segment through the segment_clicked signal, not a fall-through",
+        "no behaviour change: python3 tools/suite_figures.py --check docs/testing-setup.md still passes"
+      ],
+      "context": "Two stale references the 2026-10-17 log named after C25 changed the click path. The ADR is on the forbidden list, so this runs as a supervised session; the ADR status change from proposed to accepted stays Brent's call.",
+      "references": [
+        "obsidian-vault/daily-logs/2026-10-17.md (Open questions: Stale references)"
+      ],
+      "status": "open"
+    },
+    {
+      "id": "Q11",
+      "title": "Decide whether to tighten the segment pick radius",
+      "lane": "decision",
+      "model": "human",
+      "mode": "human",
+      "size": "S",
+      "priority": 49,
+      "blocker": false,
+      "depends_on": [],
+      "files": [],
+      "acceptance": [
+        "a daily log or Decision logged block says keep SEGMENT_PICK_RADIUS at 1 or names the new value; if it changes, one code item is added to the next plan"
+      ],
+      "context": "C25 left SEGMENT_PICK_RADIUS at 1, so a click on a tile next to a segment picks it. Brent walks it in V16; the answer can wait for that walk.",
+      "references": [
+        "obsidian-vault/daily-logs/2026-10-17.md (Open questions: C25 pick radius)"
       ],
       "status": "open"
     }
