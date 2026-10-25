@@ -10,6 +10,20 @@ status: active
 > [`docs/plan/week.json`](../../docs/plan/week.json); `tools/warden.py day`
 > dispatches from it.
 
+> [!success] Amendment 2026-10-25 — **B7 is closed: the Windows and Linux binaries launch.**
+> The new `binary-check.yml` workflow (ATT-67, merged in #97) downloaded the
+> v0.1.0 Release assets, checked them against `SHA256SUMS.txt`, launched each
+> binary for at least 10 seconds and uploaded a title-screen screenshot. Run
+> [40204770783](https://github.com/brenthumphries/wildlife-crossing/actions/runs/40204770783)
+> passed on both runners, logging `Title screen ready` under Mesa software
+> OpenGL on Linux and ANGLE on Microsoft's software renderer on Windows. Brent
+> opened both PNGs and both show the correct title screen, and he is closing
+> ATT-62. This review's "open blockers: B7", the B7 row in section 3 and the B7
+> line under Verification below are superseded: nothing blocks a release on the launch checks. B9
+> still waits on V19 and D7. `docs/plan/week.json` is not edited midweek, so it
+> still lists B7 until the next weekly plan closes it. Detail:
+> [[../daily-logs/2026-10-25]].
+
 > [!info] Snapshot
 > Measured against **`8248874`** (*Merge pull request #94 from
 > brenthumphries/chore/suite-figure-per-batch*, 2026-10-18T18:36:52-05:00) on
