@@ -14,6 +14,8 @@ const PRODUCTS: Array = [
 const CORRIDOR_SCOPE_LINE := "Covers the time since the session started or loaded."
 const UNKNOWN_POPULATION := "unknown"
 const NO_CORRIDOR_DATA := "no data"
+## Marks a surveyed species that is away for the season; its counts still show.
+const AWAY_MARK := "away"
 const SELECTION_MARK := "> "
 const NO_MARK := "  "
 const PANEL_MARGIN := 48.0
@@ -196,7 +198,10 @@ func _population_text(has_population: bool, record: Dictionary) -> String:
 		return "none resident"
 	var parts: PackedStringArray = []
 	for species: Dictionary in record["species"]:
-		parts.append("%s %d (%s)" % [species["species_id"], int(species["count"]), species["trend"]])
+		var state: String = String(species["trend"])
+		if bool(species.get("away", false)):
+			state += ", " + AWAY_MARK
+		parts.append("%s %d (%s)" % [species["species_id"], int(species["count"]), state])
 	return ", ".join(parts)
 
 func _corridor_lines() -> PackedStringArray:

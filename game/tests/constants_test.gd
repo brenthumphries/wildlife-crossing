@@ -64,6 +64,15 @@ func test_simulation_constants_match_schema() -> void:
 	assert_eq(SimulationConstants.DECLINE_STEP, 2, "DECLINE_STEP")
 	assert_eq(SimulationConstants.RE_ESTABLISH_SEED, 2, "RE_ESTABLISH_SEED")
 
+func test_seasonal_presence_tables_match_the_q9_decision() -> void:
+	assert_eq(SimulationConstants.ABSENCE_SEASONS, {
+		"resident": [], "seasonal_migration": [], "elevational_migration": [], "hibernates": ["winter"],
+	}, "ABSENCE_SEASONS: only hibernators leave, in winter (elk and pronghorn stay)")
+	assert_eq(SimulationConstants.MIGRATION_SEASONS, {
+		"resident": [], "seasonal_migration": ["spring", "fall"],
+		"elevational_migration": ["spring", "fall"], "hibernates": [],
+	}, "MIGRATION_SEASONS: both migration patterns, spring and fall")
+
 # HAZARD_AVOIDANCE_MULT is intentionally not asserted here: it is absent from
 # §10 (the constant's own docstring flags the gap) and this file tests §10
 # coverage, not the full .gd source.

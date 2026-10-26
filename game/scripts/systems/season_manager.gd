@@ -24,6 +24,13 @@ var _season_index: int = 0
 static func is_season(name: String) -> bool:
 	return SEASONS.has(name)
 
+## Whether a species is away from the world in `season`: its `seasonal_pattern`
+## lists that season in `SimulationConstants.ABSENCE_SEASONS`. A record with no
+## pattern, or a pattern the table does not know, is never absent.
+static func is_absent(species: Dictionary, season_name: String) -> bool:
+	var seasons: Array = SimulationConstants.ABSENCE_SEASONS.get(String(species.get("seasonal_pattern", "")), [])
+	return seasons.has(season_name)
+
 ## Move the clock to `ticks` simulation ticks since year 1 spring day 0. Emits
 ## `season_changed` once if that crossed a boundary; staying put or going back
 ## announces nothing.

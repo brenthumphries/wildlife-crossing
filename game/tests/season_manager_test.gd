@@ -74,3 +74,16 @@ func test_time_never_runs_backwards_announcing_a_season() -> void:
 	_clock.advance_to(SEASON_TICKS)
 	_clock.advance_to(0)
 	assert_signal_emit_count(_clock, "season_changed", 1)
+
+func test_only_a_hibernator_is_absent_and_only_in_winter() -> void:
+	var grizzly: Dictionary = { "seasonal_pattern": "hibernates" }
+	assert_true(SeasonManager.is_absent(grizzly, "winter"))
+	for s: String in ["spring", "summer", "fall"]:
+		assert_false(SeasonManager.is_absent(grizzly, s), "a grizzly is present in " + s)
+	for pattern: String in ["resident", "seasonal_migration", "elevational_migration"]:
+		for s: String in SeasonManager.SEASONS:
+			assert_false(SeasonManager.is_absent({ "seasonal_pattern": pattern }, s), "%s is never absent (%s)" % [pattern, s])
+
+func test_a_record_without_a_known_pattern_is_never_absent() -> void:
+	assert_false(SeasonManager.is_absent({}, "winter"))
+	assert_false(SeasonManager.is_absent({ "seasonal_pattern": "unheard_of" }, "winter"))

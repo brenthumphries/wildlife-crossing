@@ -11,6 +11,10 @@ extends RefCounted
 
 signal population_recovered(patch_id: int, species_id: String, event_type: String)
 
+## The season the monthly step runs in; the simulation keeps it current. A species
+## absent in it is skipped by `monthly_step`.
+var season: String = SeasonManager.SPRING
+
 var _graph: ConnectivityGraph
 var _habitat: HabitatManager
 var _species: Dictionary        # species_id -> record
@@ -29,6 +33,10 @@ func resident_species(patch_index: int) -> Array:
 		if _graph.resolve_habitat_biomes(_species[sid]).has(pb):
 			out.append(sid)
 	return out
+
+## Whether `species_id` is away from the world in the current `season`.
+func is_absent(species_id: String) -> bool:
+	return SeasonManager.is_absent(_species.get(species_id, {}), season)
 
 # --- capacity / rates (ADR 0011) ------------------------------------------
 
@@ -60,10 +68,14 @@ func seed_initial() -> void:
 # --- monthly step ----------------------------------------------------------
 
 ## Advance every patch/species one month: decline, re-establish, recover, or hold.
+## A species away for the season is skipped whole: its count and trend stay as they
+## were, so a hibernator's winter is not read as a decline.
 func monthly_step() -> void:
 	for idx in _graph.patches.size():
 		var network: Array = _graph.network_of(idx)
 		for sid in resident_species(idx):
+			if is_absent(sid):
+				continue
 			var sp: Dictionary = _species[sid]
 			var rec: Dictionary = _ensure(idx, sid)
 			var effective: int = _graph.habitat_tile_count(network, sp)

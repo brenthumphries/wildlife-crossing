@@ -78,3 +78,27 @@ func test_locally_extinct_patch_re_establishes_and_fires_returned() -> void:
 	_pop.monthly_step()
 	assert_eq(_pop.count_of(_east, GRIZZLY), 2, "re-establishes at RE_ESTABLISH_SEED via immigration")
 	assert_true([_east, GRIZZLY, "returned"] in _recovered, "fires population_recovered 'returned'")
+
+func test_seasonal_absence_not_decline() -> void:
+	_pop.seed_initial()
+	_pop.season = "winter"
+	var count: int = _pop.count_of(_west, GRIZZLY)
+	var trend: String = _pop.trend_of(_west, GRIZZLY)
+	for i in 3:
+		_pop.monthly_step()
+	assert_true(_pop.is_absent(GRIZZLY), "a grizzly is absent in winter")
+	assert_eq(_pop.count_of(_west, GRIZZLY), count, "winter months leave the count alone, though the patch is sub-viable")
+	assert_eq(_pop.trend_of(_west, GRIZZLY), trend, "and the trend")
+	assert_eq(_recovered, [], "and fire no recovery event")
+
+func test_a_grizzly_is_present_in_spring_and_steps_as_usual() -> void:
+	_pop.seed_initial()
+	_pop.season = "spring"
+	assert_false(_pop.is_absent(GRIZZLY))
+	_pop.monthly_step()
+	assert_eq(_pop.count_of(_west, GRIZZLY), 16, "the sub-viable decline applies in spring")
+
+func test_a_resident_species_steps_in_winter() -> void:
+	_pop.seed_initial()
+	_pop.season = "winter"
+	assert_false(_pop.is_absent("elk"), "elk stays all year")
