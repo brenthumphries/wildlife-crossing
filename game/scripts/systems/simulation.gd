@@ -108,6 +108,7 @@ func tick() -> void:
 			_step_agent(a)
 	if _ticks % TICKS_PER_MONTH == 0:
 		population.season = seasons.season
+		species.season = seasons.season
 		population.monthly_step()
 		resync_agents()
 		economy.run_monthly_income(infrastructure.crossings())
@@ -294,6 +295,7 @@ func restore_state(state: Dictionary, registries: Dictionary, seed_value: int) -
 	time.set_speed(saved_speed if TimeController.STEPS.has(saved_speed) else TimeController.SPEED_1X)
 	_restoring = false
 	population.season = seasons.season
+	species.season = seasons.season
 	resync_agents()
 
 func _patches_state() -> Array:
@@ -444,6 +446,7 @@ func _on_milestone_reached(milestone_id: String, is_capstone: bool) -> void:
 func _on_season_changed(new_season: String) -> void:
 	# Hibernators leave as winter starts and come back as it ends.
 	population.season = new_season
+	species.season = new_season
 	resync_agents()
 	var bus := _event_bus()
 	if bus:

@@ -20,6 +20,10 @@ var _env: EnvConfig
 var _rng: RandomNumberGenerator
 var _coverage: Dictionary = {}
 
+## The season goal selection runs in; the simulation keeps it current. A species
+## in one of its migration seasons reaches further for a goal (Q9, C38).
+var season: String = SeasonManager.SPRING
+
 func setup(world: WorldData, graph: ConnectivityGraph, habitat: HabitatManager, species_registry: Dictionary, env_config: EnvConfig, rng: RandomNumberGenerator) -> void:
 	_world = world
 	_graph = graph
@@ -87,15 +91,26 @@ func walk(species_id: String, path: Array, crossing_id: String) -> bool:
 
 # --- goal selection (ADR 0010) ---------------------------------------------
 
-## Season-independent forage/wander goal for an idle agent at `from`.
+## Forage/wander goal for an idle agent at `from`. Goal choice itself is
+## season-independent (ADR 0010); only the reach widens in migration seasons.
 func select_goal(from: Vector2i, species_id: String) -> Vector2i:
 	var sp: Dictionary = _species[species_id]
-	var reach: int = int(round(float(sp.get("range_tiles", 0)) * SimulationConstants.MOTIVATION_DISTANCE_MULT))
+	var reach: int = goal_reach(sp)
 	if _rng.randf() < SimulationConstants.WANDERLUST_PROB:
 		var goal: Vector2i = _weighted_patch_goal(from, sp, reach)
 		if goal != from:
 			return goal
 	return _forage_goal(from)
+
+## Goal-distance willingness in tiles: `range_tiles` scaled by the motivation
+## multiplier, and by MIGRATION_MOTIVATION_MULT while `season` is one of the
+## species' migration seasons.
+func goal_reach(sp: Dictionary) -> int:
+	var mult: float = SimulationConstants.MOTIVATION_DISTANCE_MULT
+	var migrating: Array = SimulationConstants.MIGRATION_SEASONS.get(String(sp.get("seasonal_pattern", "")), [])
+	if migrating.has(season):
+		mult *= SimulationConstants.MIGRATION_MOTIVATION_MULT
+	return int(round(float(sp.get("range_tiles", 0)) * mult))
 
 func _weighted_patch_goal(from: Vector2i, sp: Dictionary, reach: int) -> Vector2i:
 	var habitat: Dictionary = _graph.resolve_habitat_biomes(sp)
