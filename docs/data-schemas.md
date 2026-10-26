@@ -465,9 +465,10 @@ The exact expression for each quality term (`terrain_base`, `size_factor`,
 | `REPATH_INTERVAL_TICKS` | 200 | soft re-path cadence so animals react to new crossings |
 | `IDLE_DWELL_TICKS` | 50 | forage dwell at a reached goal before selecting again |
 | `FORAGE_RADIUS_TILES` | 3 | local-forage wander radius when no other patch is in range |
-| `MOTIVATION_DISTANCE_MULT` | 1.0 | goal-distance willingness; Phase 4 seasons scale this |
+| `MOTIVATION_DISTANCE_MULT` | 1.0 | baseline goal-distance willingness |
+| `MIGRATION_MOTIVATION_MULT` | 1.5 | factor on goal-distance willingness while the season is in the species' `MIGRATION_SEASONS` (Q9 proposal); unchanged otherwise |
 | `ABSENCE_SEASONS` | `{resident: [], seasonal_migration: [], elevational_migration: [], hibernates: [winter]}` | seasons each `seasonal_pattern` is away from the world; read by `SeasonManager.is_absent`. Only the grizzly leaves (Q9, decided 2026-10-16: elk and pronghorn stay all year) |
-| `MIGRATION_SEASONS` | `{resident: [], seasonal_migration: [spring, fall], elevational_migration: [spring, fall], hibernates: []}` | seasons each pattern migrates in; Phase 4 raises goal-distance willingness in them |
+| `MIGRATION_SEASONS` | `{resident: [], seasonal_migration: [spring, fall], elevational_migration: [spring, fall], hibernates: []}` | seasons each pattern migrates in; `MIGRATION_MOTIVATION_MULT` raises goal-distance willingness in them |
 | `CAPACITY_PER_HABITAT_TILE` | 0.5 | animals per habitat tile, the base carrying-capacity density ([ADR 0011](adr/0011-carrying-capacity-recovery-decline.md)) |
 | `QUALITY_CAPACITY_FLOOR_FRAC` | 0.5 | floor on the habitat-quality factor scaling capacity |
 | `RECOVERY_APPROACH_FRAC` | 0.2 | fraction of the gap to capacity closed per month |

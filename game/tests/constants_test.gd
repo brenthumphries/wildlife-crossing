@@ -57,6 +57,7 @@ func test_simulation_constants_match_schema() -> void:
 	assert_eq(SimulationConstants.IDLE_DWELL_TICKS, 50, "IDLE_DWELL_TICKS")
 	assert_eq(SimulationConstants.FORAGE_RADIUS_TILES, 3, "FORAGE_RADIUS_TILES")
 	assert_eq(SimulationConstants.MOTIVATION_DISTANCE_MULT, 1.0, "MOTIVATION_DISTANCE_MULT")
+	assert_eq(SimulationConstants.MIGRATION_MOTIVATION_MULT, 1.5, "MIGRATION_MOTIVATION_MULT")
 	assert_eq(SimulationConstants.CAPACITY_PER_HABITAT_TILE, 0.5, "CAPACITY_PER_HABITAT_TILE")
 	assert_eq(SimulationConstants.QUALITY_CAPACITY_FLOOR_FRAC, 0.5, "QUALITY_CAPACITY_FLOOR_FRAC")
 	assert_eq(SimulationConstants.RECOVERY_APPROACH_FRAC, 0.2, "RECOVERY_APPROACH_FRAC")

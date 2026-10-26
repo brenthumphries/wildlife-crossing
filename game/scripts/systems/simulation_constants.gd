@@ -30,7 +30,8 @@ const GOAL_QUALITY_FLOOR := 10             # floor added to quality in goal weig
 const REPATH_INTERVAL_TICKS := 200         # soft re-path cadence
 const IDLE_DWELL_TICKS := 50               # forage dwell at a reached goal
 const FORAGE_RADIUS_TILES := 3             # local-forage wander radius
-const MOTIVATION_DISTANCE_MULT := 1.0      # goal-distance willingness (Phase 4 scales this)
+const MOTIVATION_DISTANCE_MULT := 1.0      # baseline goal-distance willingness
+const MIGRATION_MOTIVATION_MULT := 1.5     # extra goal-distance willingness in a migration season (Q9 proposal)
 
 # --- seasonal presence (Q9, decided 2026-10-16; roadmap Phase 4 Decision logged) ---
 # Both tables are keyed by a species' `seasonal_pattern` (data-schemas §3). Season
@@ -44,7 +45,7 @@ const ABSENCE_SEASONS := {
 	"elevational_migration": [],
 	"hibernates": ["winter"],
 }
-# Seasons a pattern migrates in (goal-distance willingness rises; C38 applies it).
+# Seasons a pattern migrates in (goal-distance willingness rises by MIGRATION_MOTIVATION_MULT).
 const MIGRATION_SEASONS := {
 	"resident": [],
 	"seasonal_migration": ["spring", "fall"],

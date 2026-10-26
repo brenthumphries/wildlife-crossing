@@ -107,3 +107,52 @@ func test_select_goal_is_deterministic_for_a_seed() -> void:
 	var sm_b := SpeciesManager.new(); sm_b.setup(wd, graph, habitat, species, _env, rng_b)
 	assert_eq(sm_a.select_goal(Vector2i(0, 0), "grizzly_bear"), sm_b.select_goal(Vector2i(0, 0), "grizzly_bear"),
 		"same seed yields the same goal (deterministic RNG)")
+
+# Three forest patches along one row, split by two-tile road gaps: the near patch
+# is inside every species' base reach, the far one only inside a migrating reach.
+func _far_patch_goal_count(species_id: String, season_name: String, draws: int) -> int:
+	var cells: Array = []
+	for q in range(0, 21):
+		var tile: String = "forest" if (q <= 2 or q == 20) else "road"
+		cells.append({ "q": q, "r": 0, "tile": tile })
+	var wd := WorldData.new()
+	wd.load_from_dict({ "sub_area_id": 1, "origin": [0, 0], "cells": cells }, TILES)
+	var graph := ConnectivityGraph.new()
+	graph.build(wd, { "groups": { "forest_complex": ["forest"] }, "terrain_aliases": {} })
+	var habitat := HabitatManager.new()
+	habitat.setup(wd, graph, TILES, ["forest"])
+	var registry := {
+		"elk": { "habitat_terrains": ["forest"], "range_tiles": 14, "seasonal_pattern": "seasonal_migration" },
+		"gray_wolf": { "habitat_terrains": ["forest"], "range_tiles": 14, "seasonal_pattern": "resident" },
+	}
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 2026
+	var sm := SpeciesManager.new()
+	sm.setup(wd, graph, habitat, registry, _env, rng)
+	sm.season = season_name
+	var hits := 0
+	for i in draws:
+		# A goal across the road is a barrier-crossing attempt.
+		if sm.select_goal(Vector2i(0, 0), species_id).x >= 20:
+			hits += 1
+	return hits
+
+func test_migration_motivation_spike() -> void:
+	var elk_off: int = _far_patch_goal_count("elk", "summer", 400)
+	var elk_in: int = _far_patch_goal_count("elk", "spring", 400)
+	assert_eq(elk_off, 0, "a migrant's base reach (14) never targets the patch 20 tiles away")
+	assert_gt(elk_in, elk_off, "a migrant makes more barrier-crossing attempts in its migration season")
+	var wolf_off: int = _far_patch_goal_count("gray_wolf", "summer", 400)
+	var wolf_in: int = _far_patch_goal_count("gray_wolf", "spring", 400)
+	assert_eq(wolf_in, wolf_off, "a resident species does not change with the season")
+
+func test_goal_reach_scales_only_in_migration_seasons() -> void:
+	var elk := { "range_tiles": 40, "seasonal_pattern": "seasonal_migration" }
+	_sm.season = "summer"
+	assert_eq(_sm.goal_reach(elk), 40, "unchanged outside a migration season")
+	_sm.season = "fall"
+	assert_eq(_sm.goal_reach(elk), 60, "range * MIGRATION_MOTIVATION_MULT in fall")
+	assert_eq(_sm.goal_reach({ "range_tiles": 40, "seasonal_pattern": "resident" }), 40, "resident never scales")
+
+func test_migration_run_is_deterministic_for_a_seed() -> void:
+	assert_eq(_far_patch_goal_count("elk", "fall", 100), _far_patch_goal_count("elk", "fall", 100), "same seed, same count")
