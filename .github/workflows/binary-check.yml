@@ -1,0 +1,332 @@
+name: Binary launch check
+
+# ATT-67, the automatable half of B7 (ATT-62): launch the published v0.1.0
+# Windows and Linux binaries in a real window and capture the title screen, so
+# the product owner reads two screenshots instead of owning two machines.
+#
+# This is not a gate and not part of CI. It runs on demand, against a Release
+# that already exists, and changes nothing: no tag, no upload to the Release, no
+# signing, no secret beyond the repository's own read-only GITHUB_TOKEN. The
+# download step reads the Release with that token, so it works whether the
+# repository is public or private.
+#
+# It is separate from ci.yml's smoke tests on purpose. Those boot a freshly
+# built binary with --headless, which has no renderer, so they prove the data
+# loads and the scene tree builds but never that a window opens. This one
+# boots the binary that users actually download, with a renderer, and looks.
+#
+# What a pass means: the process was still running after the run time, it
+# logged TitleScreen.READY_LOG_LINE, and a screenshot was taken. Whether the
+# screenshot shows a title screen is still a human's call; the step summary
+# says if the image is a single flat colour.
+#
+# Renderer: game/project.godot pins gl_compatibility, so Vulkan is never used
+# and there is no Vulkan-to-OpenGL fallback to make. Both jobs still pass the
+# renderer flags explicitly, so a future change to the project setting cannot
+# quietly turn this into a Vulkan check on a runner that has no GPU. The one
+# real fallback is on Windows, where a GPU-less runner has only Microsoft's
+# OpenGL 1.1 and Godot needs 3.3; the job retries through ANGLE (OpenGL ES on
+# top of Direct3D 11, which has a software rasteriser). Linux gets its OpenGL
+# from Mesa's llvmpipe under Xvfb.
+#
+# Not run end to end before it landed: the author had neither runner. If a job
+# cannot produce a title screen, leave ATT-62 open for that platform.
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag whose assets are launched
+        required: false
+        default: v0.1.0
+        type: string
+
+permissions:
+  contents: read
+
+env:
+  # Seconds the binary runs before the screenshot, at minimum.
+  RUN_SECONDS: 10
+  # Longest wait for the title line before giving up on an attempt. Software
+  # rendering on a cold runner is slow; this is a ceiling, not a delay.
+  READY_TIMEOUT: 40
+  # TitleScreen.READY_LOG_LINE. Change one, change the other.
+  TITLE_LINE: Title screen ready
+
+jobs:
+  linux:
+    name: Launch the Linux binary (Xvfb, Mesa software OpenGL)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      GH_TOKEN: ${{ github.token }}
+      TAG: ${{ inputs.tag }}
+    steps:
+      - name: Download the Release assets and check them against SHA256SUMS.txt
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p dl out
+          gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --dir dl \
+            --pattern 'wildlife-crossing.x86_64' \
+            --pattern 'wildlife-crossing.pck' \
+            --pattern 'SHA256SUMS.txt'
+          cd dl
+          # --ignore-missing: the manifest also lists the .dmg, the .exe and the
+          # notices, none of which this job downloads. The two files it did
+          # download must be present and must match, which --ignore-missing
+          # does not relax; it fails if none of the listed files exist.
+          sha256sum --check --ignore-missing SHA256SUMS.txt
+          chmod +x wildlife-crossing.x86_64
+          ls -l
+
+      - name: Install Xvfb, ImageMagick and Mesa
+        run: |
+          set -euo pipefail
+          sudo apt-get update -q
+          sudo apt-get install -y -q --no-install-recommends \
+            xvfb imagemagick libgl1 libglx-mesa0 libgl1-mesa-dri \
+            libxcursor1 libxinerama1 libxrandr2 libxi6
+
+      - name: Launch, wait for the title screen, take the screenshot
+        run: |
+          set -euo pipefail
+          export DISPLAY=:99
+          GAME_PID=""
+          XVFB_PID=""
+          cleanup() {
+            [ -n "$GAME_PID" ] && kill "$GAME_PID" 2>/dev/null || true
+            [ -n "$XVFB_PID" ] && kill "$XVFB_PID" 2>/dev/null || true
+          }
+          trap cleanup EXIT
+
+          Xvfb "$DISPLAY" -screen 0 1280x720x24 -nolisten tcp > out/xvfb.log 2>&1 &
+          XVFB_PID=$!
+          sleep 2
+
+          # LIBGL_ALWAYS_SOFTWARE keeps Mesa on llvmpipe even if a GPU driver
+          # were present. stdbuf: line-buffer so the log is complete when the
+          # process is killed, as in tools/smoke_boot.sh.
+          LIBGL_ALWAYS_SOFTWARE=1 stdbuf -oL -eL ./dl/wildlife-crossing.x86_64 \
+            --rendering-method gl_compatibility --rendering-driver opengl3 \
+            --resolution 1280x720 --position 0,0 \
+            > out/linux-launch.log 2>&1 &
+          GAME_PID=$!
+
+          ready=0
+          alive=1
+          start=$SECONDS
+          while [ $((SECONDS - start)) -lt "$READY_TIMEOUT" ]; do
+            if ! kill -0 "$GAME_PID" 2>/dev/null; then alive=0; break; fi
+            if grep -qF "$TITLE_LINE" out/linux-launch.log; then ready=1; break; fi
+            sleep 1
+          done
+          while [ "$alive" -eq 1 ] && [ $((SECONDS - start)) -lt "$RUN_SECONDS" ]; do
+            sleep 1
+          done
+          kill -0 "$GAME_PID" 2>/dev/null || alive=0
+
+          # Screenshot even on a failed attempt when the process is alive: an
+          # image of what it did show is the evidence the failure needs.
+          shot=0
+          flat="n/a"
+          if [ "$alive" -eq 1 ]; then
+            import -display "$DISPLAY" -window root out/title-screen-linux.png
+            shot=1
+            sd="$(identify -format '%[fx:standard_deviation]' out/title-screen-linux.png)"
+            flat="$(awk -v sd="$sd" 'BEGIN { print (sd < 0.001) ? "yes" : "no" }')"
+          fi
+
+          kill "$GAME_PID" 2>/dev/null || true
+          wait "$GAME_PID" 2>/dev/null || true
+
+          errors="$(grep -cF 'ERROR:' out/linux-launch.log || true)"
+          renderer="$(grep -m1 -F 'OpenGL API' out/linux-launch.log || echo 'not logged')"
+          {
+            echo "### Linux binary launch (${TAG})"
+            echo
+            echo "| Check | Result |"
+            echo "|---|---|"
+            echo "| Still running after ${RUN_SECONDS}s | $([ "$alive" -eq 1 ] && echo yes || echo NO) |"
+            echo "| Logged \`${TITLE_LINE}\` | $([ "$ready" -eq 1 ] && echo yes || echo NO) |"
+            echo "| Screenshot taken | $([ "$shot" -eq 1 ] && echo yes || echo NO) |"
+            echo "| Screenshot is one flat colour | ${flat} |"
+            echo "| \`ERROR:\` lines in the log | ${errors} |"
+            echo "| Renderer | ${renderer} |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          echo "--- first 40 log lines ---"
+          head -40 out/linux-launch.log
+          [ "$errors" -gt 0 ] && echo "::warning::${errors} ERROR: line(s) in the launch log; read them in the artifact."
+          [ "$flat" = "yes" ] && echo "::warning::The Linux screenshot is a single flat colour, so nothing was drawn."
+
+          if [ "$alive" -ne 1 ] || [ "$ready" -ne 1 ] || [ "$shot" -ne 1 ]; then
+            echo "::error::Linux binary did not reach a running title screen (alive=${alive} ready=${ready} screenshot=${shot}). ATT-62 stays the manual fallback for Linux."
+            exit 1
+          fi
+
+      - name: Upload the screenshot and logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: title-screen-linux
+          path: out/
+          if-no-files-found: warn
+          retention-days: 14
+
+  windows:
+    name: Launch the Windows binary (software OpenGL, ANGLE fallback)
+    runs-on: windows-latest
+    timeout-minutes: 10
+    env:
+      GH_TOKEN: ${{ github.token }}
+      TAG: ${{ inputs.tag }}
+    steps:
+      - name: Download the Release assets and check them against SHA256SUMS.txt
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p dl out
+          gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --dir dl \
+            --pattern 'wildlife-crossing.exe' \
+            --pattern 'wildlife-crossing.pck' \
+            --pattern 'SHA256SUMS.txt'
+          cd dl
+          # See the Linux job for why --ignore-missing is safe here.
+          sha256sum --check --ignore-missing SHA256SUMS.txt
+          ls -l
+
+      # A GUI-subsystem exe started from a runner step has the interactive
+      # desktop to draw on; CopyFromScreen reads it back. Windows runners
+      # default to a 1024x768 screen, so the window is sized below that rather
+      # than clipped. The project stretches with canvas_items, so a smaller
+      # window shows the same layout.
+      - name: Launch, wait for the title screen, take the screenshot
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Add-Type -AssemblyName System.Windows.Forms, System.Drawing
+          $exe = (Resolve-Path 'dl/wildlife-crossing.exe').Path
+          $runSeconds = [int]$env:RUN_SECONDS
+          $titleLine = $env:TITLE_LINE
+
+          # Saves the primary screen and returns how many distinct colours a
+          # 32x32 sample of it holds. One means nothing was drawn.
+          function Save-Screenshot([string]$path) {
+            $area = [System.Windows.Forms.SystemInformation]::VirtualScreen
+            $bmp = New-Object System.Drawing.Bitmap $area.Width, $area.Height
+            $gfx = [System.Drawing.Graphics]::FromImage($bmp)
+            $gfx.CopyFromScreen($area.Left, $area.Top, 0, 0, $bmp.Size)
+            $gfx.Dispose()
+            $seen = New-Object 'System.Collections.Generic.HashSet[int]'
+            $stepX = [Math]::Max(1, [int]($bmp.Width / 32))
+            $stepY = [Math]::Max(1, [int]($bmp.Height / 32))
+            for ($x = 0; $x -lt $bmp.Width; $x += $stepX) {
+              for ($y = 0; $y -lt $bmp.Height; $y += $stepY) {
+                [void]$seen.Add($bmp.GetPixel($x, $y).ToArgb())
+              }
+            }
+            $bmp.Save($path, [System.Drawing.Imaging.ImageFormat]::Png)
+            $bmp.Dispose()
+            return $seen.Count
+          }
+
+          # Order matters: plain OpenGL first, which is what a user with a GPU
+          # gets, then ANGLE for a runner with none.
+          $drivers = @('opengl3', 'opengl3_angle')
+          $results = @()
+          $passed = $false
+
+          foreach ($driver in $drivers) {
+            $out = "out/windows-$driver.stdout.log"
+            $err = "out/windows-$driver.stderr.log"
+            $shotPath = "out/title-screen-windows-$driver.png"
+            $launchArgs = @(
+              '--rendering-method', 'gl_compatibility',
+              '--rendering-driver', $driver,
+              '--resolution', '960x540', '--position', '0,0'
+            )
+            Write-Host "::group::attempt: --rendering-driver $driver"
+            $proc = Start-Process -FilePath $exe -ArgumentList $launchArgs `
+              -RedirectStandardOutput $out -RedirectStandardError $err -PassThru
+            $started = Get-Date
+            # Hold for the run time. The title line is not polled for: a release
+            # template does not flush stdout when it is redirected to a file, so
+            # the line can sit in the buffer until the process exits. It is read
+            # after a graceful close instead, below.
+            while (-not $proc.HasExited -and ((Get-Date) - $started).TotalSeconds -lt $runSeconds) {
+              Start-Sleep -Seconds 1
+            }
+
+            $alive = -not $proc.HasExited
+            $colours = 0
+            $shot = $false
+            if ($alive) {
+              try {
+                $colours = Save-Screenshot $shotPath
+                # Software rendering can be slow to draw its first frame. If the
+                # first capture is one flat colour, give it one more run time
+                # and capture again, overwriting the first.
+                if ($colours -le 1) {
+                  Start-Sleep -Seconds $runSeconds
+                  $colours = Save-Screenshot $shotPath
+                }
+                $shot = $true
+              } catch {
+                Write-Host "::warning::Screenshot failed for ${driver}: $($_.Exception.Message)"
+              }
+              # WM_CLOSE lets Godot quit normally and flush its log; Stop-Process
+              # is the fallback if the window does not answer.
+              [void]$proc.CloseMainWindow()
+              if (-not $proc.WaitForExit(10000)) {
+                Stop-Process -Id $proc.Id -Force -ErrorAction SilentlyContinue
+                [void]$proc.WaitForExit(5000)
+              }
+            } else {
+              Write-Host "process exited early with code $($proc.ExitCode)"
+            }
+
+            $logText = ''
+            foreach ($f in @($out, $err)) {
+              if (Test-Path $f) { $logText += (Get-Content $f -Raw -ErrorAction SilentlyContinue) }
+            }
+            $ready = $logText.Contains($titleLine)
+            $errors = ([regex]::Matches($logText, 'ERROR:')).Count
+            $renderer = (($logText -split "`r?`n") | Where-Object { $_ -match 'OpenGL API' } | Select-Object -First 1)
+            if (-not $renderer) { $renderer = 'not logged' }
+            Write-Host "--- first 40 log lines ---"
+            ($logText -split "`r?`n") | Select-Object -First 40 | ForEach-Object { Write-Host $_ }
+            Write-Host "::endgroup::"
+
+            $results += [pscustomobject]@{
+              Driver = $driver; Alive = $alive; Ready = $ready; Shot = $shot
+              Flat = ($shot -and $colours -le 1); Errors = $errors; Renderer = $renderer
+            }
+            if ($alive -and $ready -and $shot) { $passed = $true; break }
+            Write-Host "::warning::Attempt with $driver did not reach a running title screen (alive=$alive ready=$ready screenshot=$shot)."
+          }
+
+          $lines = @("### Windows binary launch ($($env:TAG))", '',
+            '| Driver | Running after run time | Logged title line | Screenshot | Flat colour | ERROR: lines | Renderer |',
+            '|---|---|---|---|---|---|---|')
+          foreach ($r in $results) {
+            $lines += "| $($r.Driver) | $($r.Alive) | $($r.Ready) | $($r.Shot) | $($r.Flat) | $($r.Errors) | $($r.Renderer) |"
+          }
+          $lines | Add-Content -Path $env:GITHUB_STEP_SUMMARY
+
+          if ($results | Where-Object { $_.Flat }) {
+            Write-Host "::warning::A Windows screenshot is a single flat colour, so nothing was drawn."
+          }
+          if (-not $passed) {
+            Write-Host "::error::Windows binary did not reach a running title screen with any renderer. ATT-62 stays the manual fallback for Windows."
+            exit 1
+          }
+
+      - name: Upload the screenshot and logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: title-screen-windows
+          path: out/
+          if-no-files-found: warn
+          retention-days: 14

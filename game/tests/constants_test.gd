@@ -57,12 +57,22 @@ func test_simulation_constants_match_schema() -> void:
 	assert_eq(SimulationConstants.IDLE_DWELL_TICKS, 50, "IDLE_DWELL_TICKS")
 	assert_eq(SimulationConstants.FORAGE_RADIUS_TILES, 3, "FORAGE_RADIUS_TILES")
 	assert_eq(SimulationConstants.MOTIVATION_DISTANCE_MULT, 1.0, "MOTIVATION_DISTANCE_MULT")
+	assert_eq(SimulationConstants.MIGRATION_MOTIVATION_MULT, 1.5, "MIGRATION_MOTIVATION_MULT")
 	assert_eq(SimulationConstants.CAPACITY_PER_HABITAT_TILE, 0.5, "CAPACITY_PER_HABITAT_TILE")
 	assert_eq(SimulationConstants.QUALITY_CAPACITY_FLOOR_FRAC, 0.5, "QUALITY_CAPACITY_FLOOR_FRAC")
 	assert_eq(SimulationConstants.RECOVERY_APPROACH_FRAC, 0.2, "RECOVERY_APPROACH_FRAC")
 	assert_eq(SimulationConstants.RECOVERY_MIN_STEP, 1, "RECOVERY_MIN_STEP")
 	assert_eq(SimulationConstants.DECLINE_STEP, 2, "DECLINE_STEP")
 	assert_eq(SimulationConstants.RE_ESTABLISH_SEED, 2, "RE_ESTABLISH_SEED")
+
+func test_seasonal_presence_tables_match_the_q9_decision() -> void:
+	assert_eq(SimulationConstants.ABSENCE_SEASONS, {
+		"resident": [], "seasonal_migration": [], "elevational_migration": [], "hibernates": ["winter"],
+	}, "ABSENCE_SEASONS: only hibernators leave, in winter (elk and pronghorn stay)")
+	assert_eq(SimulationConstants.MIGRATION_SEASONS, {
+		"resident": [], "seasonal_migration": ["spring", "fall"],
+		"elevational_migration": ["spring", "fall"], "hibernates": [],
+	}, "MIGRATION_SEASONS: both migration patterns, spring and fall")
 
 # HAZARD_AVOIDANCE_MULT is intentionally not asserted here: it is absent from
 # §10 (the constant's own docstring flags the gap) and this file tests §10

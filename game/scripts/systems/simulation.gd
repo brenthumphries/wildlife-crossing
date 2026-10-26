@@ -107,6 +107,8 @@ func tick() -> void:
 		if a["alive"]:
 			_step_agent(a)
 	if _ticks % TICKS_PER_MONTH == 0:
+		population.season = seasons.season
+		species.season = seasons.season
 		population.monthly_step()
 		resync_agents()
 		economy.run_monthly_income(infrastructure.crossings())
@@ -149,7 +151,7 @@ func _spawn_agents() -> void:
 	_spawn_cursor.clear()
 	for idx in graph.patches.size():
 		for sid in population.resident_species(idx):
-			var n: int = species.rendered_agents(population.count_of(idx, sid))
+			var n: int = _rendered_target(idx, sid)
 			for k in n:
 				agents.append(_new_agent(idx, sid))
 
@@ -178,12 +180,19 @@ func resync_agents() -> void:
 	for idx in graph.patches.size():
 		for sid: String in population.resident_species(idx):
 			var key: String = _pool_key(idx, sid)
-			var target: int = species.rendered_agents(population.count_of(idx, sid))
+			var target: int = _rendered_target(idx, sid)
 			var current: int = int(have.get(key, 0))
 			for _k in maxi(0, target - current):
 				agents.append(_new_agent(idx, sid))
 			if current > target:
 				_cull_pool(idx, sid, current - target)
+
+## How many agents a pool renders: none while its species is away for the season,
+## otherwise what the population count supports. The count itself is never touched.
+func _rendered_target(patch_index: int, species_id: String) -> int:
+	if population.is_absent(species_id):
+		return 0
+	return species.rendered_agents(population.count_of(patch_index, species_id))
 
 ## Build one agent for a patch/species pool, placed on the next tile in the
 ## patch's list so a pool spreads across the patch instead of stacking on tile 0.
@@ -285,6 +294,8 @@ func restore_state(state: Dictionary, registries: Dictionary, seed_value: int) -
 	var saved_speed: float = float(state.get("time_speed", TimeController.SPEED_1X))
 	time.set_speed(saved_speed if TimeController.STEPS.has(saved_speed) else TimeController.SPEED_1X)
 	_restoring = false
+	population.season = seasons.season
+	species.season = seasons.season
 	resync_agents()
 
 func _patches_state() -> Array:
@@ -433,6 +444,10 @@ func _on_milestone_reached(milestone_id: String, is_capstone: bool) -> void:
 		bus.milestone_reached.emit(milestone_id, is_capstone)
 
 func _on_season_changed(new_season: String) -> void:
+	# Hibernators leave as winter starts and come back as it ends.
+	population.season = new_season
+	species.season = new_season
+	resync_agents()
 	var bus := _event_bus()
 	if bus:
 		bus.season_changed.emit(new_season)
