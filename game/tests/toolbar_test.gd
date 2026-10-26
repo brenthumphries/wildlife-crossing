@@ -1,6 +1,8 @@
 ## Tests for Toolbar: the Add crossing and Info buttons, their signals, text scaling, anchoring and visibility.
 extends GutTest
 
+const WINDOW_SIZE := Vector2i(1280, 720)
+
 var _t: Toolbar
 var _add_count := 0
 var _info_count := 0
@@ -49,6 +51,37 @@ func test_bar_is_anchored_bottom_left_clear_of_the_hud_stack() -> void:
 	assert_eq(_t._bar.anchor_top, 1.0, "toolbar hugs the bottom edge")
 	assert_eq(_t._bar.anchor_bottom, 1.0)
 	assert_eq(hud._stack.anchor_bottom, 0.0, "HUD stack hugs the top edge")
+
+func test_bar_sits_inside_the_window_and_clear_of_the_hud_at_every_text_scale_step() -> void:
+	# A real 1280x720 viewport, so anchors resolve to pixels. The bar's anchors
+	# alone do not prove it fits: it was built before its buttons existed and grew
+	# downward past the bottom edge (V16, 2026-10-18).
+	var window := SubViewport.new()
+	window.size = WINDOW_SIZE
+	add_child_autofree(window)
+	var hud := Hud.new()
+	hud.set_last_donation(1)
+	hud.set_build_status("Build mode: Overpass, $100")
+	hud.show_message("Crossing location selection")
+	hud.show_hint("A short first-time hint for the banner.")
+	window.add_child(hud)
+	window.add_child(_t)
+	var view := Rect2(Vector2.ZERO, Vector2(WINDOW_SIZE))
+	for step: int in TextScale.STEPS.size():
+		TextScale.set_step(step)
+		_t.apply_text_scale()
+		hud.apply_text_scale()
+		await get_tree().process_frame
+		await get_tree().process_frame
+		var bar := _t._bar.get_global_rect()
+		assert_true(view.encloses(bar), "bar %s within the window at step %d" % [bar, step])
+		assert_almost_eq(bar.position.x, Toolbar.BAR_MARGIN, 0.5, "hugs the left at step %d" % step)
+		assert_almost_eq(bar.end.y, view.end.y - Toolbar.BAR_MARGIN, 0.5,
+				"keeps its bottom margin at step %d" % step)
+		var stack := hud._stack.get_global_rect()
+		assert_false(bar.intersects(stack),
+				"bar %s clear of the HUD stack %s at step %d" % [bar, stack, step])
+	window.remove_child(_t)   # after_each frees it directly
 
 func test_toolbar_does_not_block_the_world_outside_its_buttons() -> void:
 	assert_eq(_t.mouse_filter, Control.MOUSE_FILTER_IGNORE)

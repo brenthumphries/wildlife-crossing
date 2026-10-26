@@ -524,7 +524,7 @@ func _open_world_select() -> void:
 		layer.add_child(_confirm_panel)
 	if _world_select.mode == WorldSelectController.Mode.INACTIVE:
 		_world_select.enter_selection_mode()
-		_log("Crossing location selection — scroll to zoom, Escape to exit.")
+		_log("Crossing location selection — scroll wheel, trackpad scroll or pinch to zoom, Escape to exit.")
 
 ## World-space centre of a sub-area for the world-select camera. Only the loaded
 ## sub-area exists as a live world — v0.1.0 is Bow Valley only, the one sub-area

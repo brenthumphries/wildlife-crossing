@@ -275,6 +275,151 @@ func test_scroll_wheel_still_zooms_through_gui_input() -> void:
 	_c._gui_input(_mouse_button(MOUSE_BUTTON_WHEEL_DOWN))
 	assert_lt(_c.zoom, zoomed, "wheel-down still zooms out")
 
+# --- trackpad zoom (V16, 2026-10-18) ---
+#
+# A Mac trackpad reports two-finger scroll as a pan gesture and pinch as a magnify
+# gesture, never as wheel buttons. Godot's macOS pan delta.y is positive for
+# scroll-down, so a negative delta zooms in, matching WHEEL_UP. Synthetic events
+# prove the mapping, not the hardware; the real trackpad is checked by hand.
+
+const PAN_STEP := WorldSelectController.PAN_DELTA_PER_STEP
+const MAGNIFY_STEP := WorldSelectController.ZOOM_STEP * 1.01   # a hair over one step, clear of float rounding
+
+func _pan(delta_y: float) -> InputEventPanGesture:
+	var ev := InputEventPanGesture.new()
+	ev.delta = Vector2(0.0, delta_y)
+	return ev
+
+func _magnify(factor: float) -> InputEventMagnifyGesture:
+	var ev := InputEventMagnifyGesture.new()
+	ev.factor = factor
+	return ev
+
+# Enter selection mode at a zoom with room to move both ways, in world or segment mode.
+func _enter_mid_zoom(segment: bool) -> void:
+	_c.enter_selection_mode()
+	_zoom_to_px(ACTIVATE_PX if segment else DEACTIVATE_PX - 4.0)
+	assert_eq(_c.mode, WorldSelectController.Mode.SEGMENT if segment else WorldSelectController.Mode.WORLD,
+			"precondition: starting mode")
+
+func test_pan_up_zooms_in_like_wheel_up_in_both_modes() -> void:
+	for segment: bool in [false, true]:
+		_c.free()
+		before_each()
+		_enter_mid_zoom(segment)
+		var start: float = _c.zoom
+		_c._gui_input(_pan(-PAN_STEP))
+		assert_almost_eq(_c.zoom, start * WorldSelectController.ZOOM_STEP, 0.0001,
+				"one step of upward pan zooms in by ZOOM_STEP (segment=%s)" % segment)
+
+func test_pan_down_zooms_out_like_wheel_down_in_both_modes() -> void:
+	for segment: bool in [false, true]:
+		_c.free()
+		before_each()
+		_enter_mid_zoom(segment)
+		var start: float = _c.zoom
+		_c._gui_input(_pan(PAN_STEP))
+		assert_almost_eq(_c.zoom, start / WorldSelectController.ZOOM_STEP, 0.0001,
+				"one step of downward pan zooms out by ZOOM_STEP (segment=%s)" % segment)
+
+func test_small_pan_deltas_accumulate_into_whole_steps() -> void:
+	_enter_mid_zoom(true)
+	var start: float = _c.zoom
+	var slice := PAN_STEP / 4.0
+	for _i: int in 3:
+		_c._gui_input(_pan(-slice))
+	assert_eq(_c.zoom, start, "three quarters of a step moves nothing")
+	_c._gui_input(_pan(-slice))
+	assert_almost_eq(_c.zoom, start * WorldSelectController.ZOOM_STEP, 0.0001,
+			"the fourth slice completes one step")
+	for _i: int in 4:
+		_c._gui_input(_pan(-slice))
+	assert_almost_eq(_c.zoom, start * pow(WorldSelectController.ZOOM_STEP, 2.0), 0.0001,
+			"four more slices make exactly one more step")
+
+func test_one_large_swipe_is_a_few_steps_not_dozens() -> void:
+	_enter_mid_zoom(false)
+	var start: float = _c.zoom
+	var total_delta := 0.0
+	while total_delta < 3.0 * PAN_STEP:   # 3 steps of travel, streamed as tiny events
+		_c._gui_input(_pan(-0.1))
+		total_delta += 0.1
+	var steps := roundi(log(_c.zoom / start) / log(WorldSelectController.ZOOM_STEP))
+	assert_between(steps, 2, 3, "about three steps for three steps of travel")
+
+func test_pan_that_reverses_drops_the_leftover_of_the_old_direction() -> void:
+	_enter_mid_zoom(true)
+	var start: float = _c.zoom
+	_c._gui_input(_pan(-PAN_STEP * 0.75))
+	_c._gui_input(_pan(PAN_STEP * 0.5))
+	assert_eq(_c.zoom, start, "half a step the other way is still only half a step")
+
+func test_pan_steps_function_is_pure_and_signed() -> void:
+	assert_eq(WorldSelectController.pan_zoom_steps(0.0), 0)
+	assert_eq(WorldSelectController.pan_zoom_steps(-PAN_STEP), 1, "negative delta zooms in")
+	assert_eq(WorldSelectController.pan_zoom_steps(PAN_STEP), -1, "positive delta zooms out")
+	assert_eq(WorldSelectController.pan_zoom_steps(-PAN_STEP * 2.9), 2, "part-steps truncate")
+	assert_eq(WorldSelectController.pan_zoom_steps(PAN_STEP * 2.9), -2)
+
+func test_magnify_above_one_zooms_in_in_both_modes() -> void:
+	for segment: bool in [false, true]:
+		_c.free()
+		before_each()
+		_enter_mid_zoom(segment)
+		var start: float = _c.zoom
+		_c._gui_input(_magnify(MAGNIFY_STEP))
+		assert_almost_eq(_c.zoom, start * WorldSelectController.ZOOM_STEP, 0.0001,
+				"fingers apart zoom in (segment=%s)" % segment)
+
+func test_magnify_below_one_zooms_out_in_both_modes() -> void:
+	for segment: bool in [false, true]:
+		_c.free()
+		before_each()
+		_enter_mid_zoom(segment)
+		var start: float = _c.zoom
+		_c._gui_input(_magnify(1.0 / MAGNIFY_STEP))
+		assert_almost_eq(_c.zoom, start / WorldSelectController.ZOOM_STEP, 0.0001,
+				"fingers together zoom out (segment=%s)" % segment)
+
+func test_small_magnify_factors_accumulate_and_a_factor_of_one_does_nothing() -> void:
+	_enter_mid_zoom(true)
+	var start: float = _c.zoom
+	_c._gui_input(_magnify(1.0))
+	assert_eq(_c.zoom, start, "factor 1.0 is no gesture")
+	for _i: int in 5:
+		_c._gui_input(_magnify(1.04))   # 1.04^5 is about 1.22, just short of one step
+	assert_eq(_c.zoom, start, "a pinch short of one step moves nothing")
+	_c._gui_input(_magnify(1.04))       # 1.04^6 is about 1.27
+	assert_almost_eq(_c.zoom, start * WorldSelectController.ZOOM_STEP, 0.0001)
+
+func test_gestures_are_ignored_while_inactive() -> void:
+	var start: float = _c.zoom
+	_c._gui_input(_pan(-PAN_STEP * 5.0))
+	_c._gui_input(_magnify(MAGNIFY_STEP * 2.0))
+	assert_eq(_c.mode, WorldSelectController.Mode.INACTIVE)
+	assert_eq(_c.zoom, start, "an inactive controller never zooms")
+	_c.enter_selection_mode()
+	assert_eq(_c.zoom, WorldSelectController.ZOOM_MIN, "and holds no stale gesture travel after entering")
+	_c._gui_input(_pan(PAN_STEP * 0.5))
+	assert_eq(_c.zoom, WorldSelectController.ZOOM_MIN)
+
+func test_gesture_zoom_drives_the_camera_in_segment_mode() -> void:
+	_attach_camera()
+	_c.enter_selection_mode()
+	_zoom_to_px(ACTIVATE_PX)
+	_c._gui_input(_pan(-PAN_STEP))
+	assert_almost_eq(_camera_tile_px(), _c.tile_px(), 0.001, "pan zoom reaches the world")
+	_c._gui_input(_magnify(MAGNIFY_STEP))
+	assert_almost_eq(_camera_tile_px(), _c.tile_px(), 0.001, "pinch zoom reaches the world")
+	_free_camera()
+
+func test_wheel_still_zooms_by_one_step_after_gestures() -> void:
+	_enter_mid_zoom(false)
+	_c._gui_input(_pan(-PAN_STEP * 0.5))   # leaves half a step pending
+	var start: float = _c.zoom
+	_c._gui_input(_mouse_button(MOUSE_BUTTON_WHEEL_UP))
+	assert_almost_eq(_c.zoom, start * WorldSelectController.ZOOM_STEP, 0.0001)
+
 # --- live world at segment zoom (ADR 0021) ---
 #
 # Segment mode used to draw an opaque card grid over the world. Now the cards
