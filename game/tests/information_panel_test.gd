@@ -211,3 +211,10 @@ func test_rows_and_hint_stay_in_the_viewport_at_every_text_scale_step() -> void:
 			assert_true(view.encloses(shown[c].get_global_rect()),
 					"element %d within the viewport at step %d" % [c, i])
 		assert_gt(_panel._body.size.y, 0.0, "body keeps room to scroll at step %d" % i)
+
+func test_population_survey_marks_an_absent_species_as_away_with_its_counts() -> void:
+	_sim.population.season = "winter"
+	_select(1)
+	_panel.buy_selected()
+	var text: String = _panel.details_text()
+	assert_string_contains(text, "grizzly_bear 18 (stable, away)")

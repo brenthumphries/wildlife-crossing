@@ -175,6 +175,7 @@ func _population_patches() -> Array:
 				"species_id": sid,
 				"count": _population.count_of(idx, sid),
 				"trend": _population.trend_of(idx, sid),
+				"away": _population.is_absent(sid),
 			})
 		if not records.is_empty():
 			out.append({ "patch_id": _graph.patch_key(idx), "species": records })

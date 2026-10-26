@@ -552,3 +552,39 @@ func test_restoring_a_clock_announces_no_season() -> void:
 	state["clock"] = { "year": 2, "season": "winter", "day_of_season": 89 }
 	_restored_copy(state)
 	assert_signal_not_emitted(bus, "season_changed")
+
+# --- seasonal absence (C37) ----------------------------------------------------
+
+const SEASON_TICKS: int = SimulationConstants.DAYS_PER_SEASON * SimulationConstants.TICKS_PER_DAY
+
+func _agent_count_of(species_id: String) -> int:
+	var n: int = 0
+	for a: Dictionary in _sim.agents:
+		if String(a["species_id"]) == species_id:
+			n += 1
+	return n
+
+func test_grizzly_agents_leave_in_winter_and_return_in_spring_without_touching_counts() -> void:
+	var west: int = _sim.graph.patch_at(Vector2i(0, 0))
+	var count: int = _sim.population.count_of(west, "grizzly_bear")
+	var elk: int = _agent_count_of("elk")
+	assert_gt(_agent_count_of("grizzly_bear"), 0, "grizzlies are rendered in spring")
+	_sim.seasons.advance_to(SEASON_TICKS * 3)
+	assert_eq(_sim.seasons.season, "winter")
+	assert_eq(_agent_count_of("grizzly_bear"), 0, "no grizzly is rendered in winter")
+	assert_eq(_agent_count_of("elk"), elk, "elk stay")
+	assert_eq(_sim.population.count_of(west, "grizzly_bear"), count, "the count is untouched")
+	_sim.seasons.advance_to(SEASON_TICKS * 4)
+	assert_eq(_sim.seasons.season, "spring")
+	assert_gt(_agent_count_of("grizzly_bear"), 0, "grizzlies are back when winter ends")
+	assert_eq(_sim.population.count_of(west, "grizzly_bear"), count, "still untouched")
+
+func test_a_save_loaded_in_winter_renders_no_grizzly() -> void:
+	var state: Dictionary = _sim.save_state()
+	state["clock"] = { "year": 1, "season": "winter", "day_of_season": 10 }
+	var other: Simulation = _restored_copy(state)
+	var n: int = 0
+	for a: Dictionary in other.agents:
+		if String(a["species_id"]) == "grizzly_bear":
+			n += 1
+	assert_eq(n, 0)
