@@ -44,7 +44,10 @@ builds/
 # Commit plans consumed by tools/ship.py are per-session scratch. They must be
 # ignored rather than merely untracked: ship.py refuses to run when a changed
 # path is unaccounted for, and the plan file sitting in the repo would be one.
+# Active plans stay at the root; once a plan has landed it moves to
+# commit-plans/archive/, which is ignored for the same reason.
 /commit-plan*.json
+/commit-plans/
 
 # Credentials. Never commit any of these.
 #

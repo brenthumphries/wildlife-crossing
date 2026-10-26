@@ -247,6 +247,7 @@ bops:
   commit:
     tool: python3 tools/ship.py <plan.json>
     plan_file: commit-plan-YYYY-MM-DD.json at the repo root; shape per tools/ship.py --help and any existing commit-plan-*.json
+    archive: commit-plans/archive/   # move a plan here once its commits are on main; gitignored; never delete
     land: tools/warden land <plan.json>
     branch: "<type>/<short-description>"
     git_over_mount: never
