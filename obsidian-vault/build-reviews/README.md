@@ -19,6 +19,7 @@ Notes are named `YYYY-MM-DD-next-build.md`. Newest first.
 
 <!-- Add one line per review, newest at top: -->
 <!-- - [[YYYY-MM-DD-next-build]] — one-line headline (N blockers) -->
+- [[2026-10-26-next-build]] — Next build, measured at `7f2ad1e`. **No blocker open** (B7 closed 2026-10-25); verdict ready, v0.2.0 features still unbuilt. C37, C38, C36 and #95 merged 2026-10-26 (#101 to #103). Next code: C34, C40, C42 (ATT-78), C29 to C31 (ATT-77); yours: V15, V16, Q10.
 - [[2026-10-19-next-build]] — Next build, measured at `8248874`; Monday version of the Friday plan. **No blocker open as of 2026-10-25** (B7 closed: both binaries launch, run 40204770783); `week.json` still lists it until the next plan. v0.2.0 scope unchanged. 22 items closed since Friday (C19 to C28, C32, C33, C35, C41, C43, V3, V12 to V14, D1, D5, Q9). New: V20, D9, Q11. Next code picks: C37, C34.
 - [[2026-10-16-next-build]] — Next build, measured at `3f3d227`. **1 blocker open** (B7, Windows and Linux checks deferred). Phase 3's code is complete: C12 to C18 and D3 merged; Q3 to Q8 decided. Text size and Phase 2 completion are routed in [[2026-10-19-next-build]]. Open: Q2, V13, D5, V12, V3, D1, D4, V5.
 - [[2026-10-15-next-build]] — Next build, measured at `d013c6d`. **1 blocker open** (B7, Windows and Linux checks deferred). Q1 and Q4 decided: Phase 3 is the next build. C12, C13, C16 and D3 merged (#57, #58, #60, #61). Open: Q2, Q5, C14, C15, C17, C18, V5, V3, V12, D1, D4, Q3.

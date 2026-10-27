@@ -1,22 +1,20 @@
 {
   "schema": 1,
-  "week_of": "2026-10-19",
-  "written_at": "2026-10-19T15:10:00+00:00",
-  "written_by": "weekly-plan skill (sonnet), Monday 2026-10-19 reconcile of the Friday 2026-10-16 early plan",
+  "week_of": "2026-10-26",
+  "written_at": "2026-10-26T11:30:00+00:00",
+  "written_by": "weekly-plan skill (sonnet), Monday 2026-10-26, unattended",
   "measured_against": {
-    "head_sha": "8248874ae201a4ad4a4a004dd5f2b9ebf1cc3470",
-    "head_date": "2026-10-18T18:36:52-05:00",
-    "github_state_read_at": "2026-10-19T14:59:32+00:00"
+    "head_sha": "7f2ad1efed751098357c52d274ad452e46a3cba8",
+    "head_date": "2026-10-25T10:31:52-05:00",
+    "github_state_read_at": "2026-10-26T11:17:11+00:00"
   },
   "build_case": "next",
   "readiness": {
-    "verdict": "not-ready",
-    "blockers_open": [
-      "B7"
-    ],
-    "summary": "v0.1.0 is published and CI is green on main at 8248874. B7 still blocks: the Windows and Linux launch checks wait for a machine (Linear ATT-62). Since the Friday plan 22 items closed (text size C19 to C23, Phase 2 completion C24 to C28, the trickle fix C32, TimeController C33, SeasonManager C35, MilestoneTracker C41, hints C43, V12 to V14, V3, D1, D5, and the Q9 decision), leaving 27 open items: 10 code, 1 verify, 5 docs and 11 yours. Phase 4 seasons now continue from C35 and Phase 6 from C41; C42 and C34 are eligible. Phase 5 stays held behind the cultural-advisor review. Three small items are new from the 2026-10-17 log: V20, D9 and Q11."
+    "verdict": "ready",
+    "blockers_open": [],
+    "summary": "v0.1.0 is published and CI is green on main at 7f2ad1e. B7 is closed: the binary-check workflow launched the Windows and Linux binaries (run 40204770783, 2026-10-25), both title-screen screenshots were checked by hand, and ATT-62 and ATT-67 are Done. No item with blocker true is open, so by the skill rule the verdict is ready. That is honest but narrow: it says nothing blocks a release, not that v0.2.0 is close. Nothing since C19 has been walked windowed, the seasons chain (C34 to C40) and the milestone track (C42) are unbuilt, and B9 still waits on V19 and D7. 26 items remain: 11 code (including verify), 5 docs and 10 yours. Since the 2026-10-19 plan one item closed, B7; pull requests #96 to #99 were the plan reconcile, the binary-check workflow, and two B7 records. Phase 5 stays held behind the cultural-advisor review."
   },
-  "note": "obsidian-vault/build-reviews/2026-10-19-next-build.md",
+  "note": "obsidian-vault/build-reviews/2026-10-26-next-build.md",
   "items": [
     {
       "blocker": false,
@@ -414,7 +412,7 @@
         "obsidian-vault/daily-logs/2026-10-12.md (Also this session: B6, Open questions)",
         "docs/signing-runbook.md A8, Part C"
       ],
-      "status": "open"
+      "status": "done"
     },
     {
       "id": "Q6",

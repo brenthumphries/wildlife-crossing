@@ -111,3 +111,6 @@ _to_delete/
 
 # Cowork output-folder duplicate, not part of the repo
 Claude outputs/
+
+# Claude Code per-machine settings
+/.claude/settings.local.json
