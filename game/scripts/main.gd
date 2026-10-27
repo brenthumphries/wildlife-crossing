@@ -148,6 +148,7 @@ func _ready() -> void:
 		bus.crossing_completed.connect(_on_crossing_completed)
 		bus.animal_crossed.connect(_on_animal_crossed)
 		bus.budget_changed.connect(_on_budget_changed)
+		bus.season_changed.connect(_on_event_bus_season_changed)
 		bus.donation_received.connect(_on_donation_received)
 
 	# "Tutorial loaded" is asserted verbatim by tools/smoke_boot.sh — keep it
@@ -549,8 +550,17 @@ func _on_crossing_completed(_segment_id: String, _crossing_type: String, _sub_ar
 func _on_hint_coach_hint_shown(_hint_id: String, text: String) -> void:
 	_hud.show_hint(text)
 
+func _on_event_bus_season_changed(_new_season: String) -> void:
+	_sync_calendar()
+
+## Push the sim clock to the HUD calendar. Cheap enough to call every frame,
+## which is how a day passing, or a load, reaches it.
+func _sync_calendar() -> void:
+	_hud.set_clock(sim.seasons.year, sim.seasons.season, sim.seasons.day_of_season)
+
 func _process(delta: float) -> void:
 	_update_toolbar()
+	_sync_calendar()
 	if _coalesce_timer > 0.0:
 		_coalesce_timer -= delta
 		if _coalesce_timer <= 0.0 and _crossed_pending > 0:

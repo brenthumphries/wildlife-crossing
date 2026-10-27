@@ -12,6 +12,7 @@
 ## sizes from TextScale, and re-applies them on `text_scale_changed`. The
 ## build status readout, formerly a free-floating label in Main, lives here.
 ## C43 adds a dismissible hint banner at the foot of the stack for HintCoach.
+## C36 puts the SeasonCalendar at the head of the stack, always visible.
 class_name Hud
 extends BaseScreen
 
@@ -33,6 +34,7 @@ const HINT_WIDTH_BASE := 420
 const HINT_DISMISS_TEXT := "Got it"
 
 var _stack: VBoxContainer
+var _calendar: SeasonCalendar
 var _build_status_label: Label
 var _message_label: Label
 var _cue_row: HBoxContainer
@@ -55,6 +57,9 @@ func _build_ui() -> void:
 			Control.PRESET_MODE_MINSIZE, int(STACK_MARGIN))
 	_stack.add_theme_constant_override("separation", STACK_SEPARATION)
 	add_child(_stack)
+
+	_calendar = SeasonCalendar.new()
+	_stack.add_child(_calendar)
 
 	_build_status_label = _add_label(Color.WHITE)
 	_build_status_label.hide()   # shown only while build mode is open
@@ -105,6 +110,10 @@ func apply_text_scale() -> void:
 	_hint_button.add_theme_font_size_override("font_size", TextScale.size(TextScale.BODY))
 	_hint_label.custom_minimum_size.x = TextScale.size(HINT_WIDTH_BASE)
 	_cue_icon.custom_minimum_size = Vector2.ONE * TextScale.size(roundi(CUE_ICON_BASE_SIZE))
+
+## Show the clock in the season calendar; call on `season_changed` and as days pass.
+func set_clock(year: int, season: String, day_of_season: int) -> void:
+	_calendar.set_clock(year, season, day_of_season)
 
 ## Show the build-mode cost/status readout above the message line.
 func set_build_status(text: String) -> void:
