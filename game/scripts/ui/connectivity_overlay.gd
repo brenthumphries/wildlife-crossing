@@ -17,6 +17,13 @@ const COLOR_CONNECTED := Color(0.00, 0.62, 0.45)    # Okabe–Ito teal (colorbli
 const PULSE_SEGMENT_COUNT := 3                  # PRD: pulse the worst three
 const PULSE_PERIOD_SECONDS := 2.4               # subtle slow pulse
 const PULSE_ALPHA_SPAN := 0.15                  # alpha swing around the base opacity
+# Qualitative hover labels. A score below the first bound is the first label,
+# below the second the second, anything higher the third (0 = most fragmented).
+const BAND_HIGH_FRAGMENTATION_BELOW := 0.34
+const BAND_MODERATE_FRAGMENTATION_BELOW := 0.67
+const LABEL_HIGH_FRAGMENTATION := "High fragmentation"
+const LABEL_MODERATE_FRAGMENTATION := "Moderate fragmentation"
+const LABEL_WELL_CONNECTED := "Well connected"
 ## Above the world renderer's default 0, so the heatmap draws over the terrain
 ## whatever order the two are added in.
 const OVERLAY_Z_INDEX := 1
@@ -58,6 +65,7 @@ func attach(controller: WorldSelectController) -> void:
 	controller.segment_mode_entered.connect(_on_world_select_controller_segment_mode_entered)
 	controller.segment_mode_exited.connect(_on_world_select_controller_segment_mode_exited)
 	controller.selection_mode_exited.connect(_on_world_select_controller_selection_mode_exited)
+	controller.attach_hover_label(segment_label)
 
 ## Recompute the cached per-patch and per-segment scores. Called at setup and on
 ## graph-changing events (crossing completed) — never per frame.
@@ -129,6 +137,21 @@ func patch_score(patch_index: int) -> float:
 
 func segment_score(segment_id: String) -> float:
 	return float(_segment_score.get(segment_id, 0.0))
+
+## The qualitative label for a 0..1 connectivity score.
+static func label_for_score(score: float) -> String:
+	if score < BAND_HIGH_FRAGMENTATION_BELOW:
+		return LABEL_HIGH_FRAGMENTATION
+	if score < BAND_MODERATE_FRAGMENTATION_BELOW:
+		return LABEL_MODERATE_FRAGMENTATION
+	return LABEL_WELL_CONNECTED
+
+## The hover label for a segment, read from the cached score; "" when the
+## segment has none (it splits no habitat), so no tooltip shows.
+func segment_label(segment_id: String) -> String:
+	if not _segment_score.has(segment_id):
+		return ""
+	return label_for_score(float(_segment_score[segment_id]))
 
 ## The most fragmented segments (up to three), worst first.
 func worst_segments() -> Array:

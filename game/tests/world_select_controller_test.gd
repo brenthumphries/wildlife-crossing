@@ -628,6 +628,88 @@ func test_hover_clears_on_escape() -> void:
 	_c._unhandled_input(ev)
 	assert_eq(_c.hover_tiles.size(), 0, "Escape clears the highlight")
 
+# --- hover tooltip (cached connectivity label) ---
+
+const TOOLTIP_LABEL := "High fragmentation"
+
+func _attach_label_source() -> Array:
+	var reads: Array = []
+	_c.attach_hover_label(func(segment_id: String) -> String:
+		reads.append(segment_id)
+		return TOOLTIP_LABEL)
+	return reads
+
+func test_tooltip_label_shows_for_highlighted_segment() -> void:
+	_enter_segment_mode_with_picker()
+	_attach_label_source()
+	_c._gui_input(_motion(Vector2(50.0, 0.0)))
+	assert_eq(_c.hover_label, TOOLTIP_LABEL)
+
+func test_tooltip_absent_when_nothing_highlighted() -> void:
+	_enter_segment_mode_with_picker()
+	var reads := _attach_label_source()
+	_c._gui_input(_motion(Vector2(150.0, 0.0)))
+	assert_eq(_c.hover_label, "", "plain terrain has no tooltip")
+	_c._gui_input(_motion(Vector2(300.0, 0.0)))
+	assert_eq(_c.hover_label, "", "no segment has no tooltip")
+	assert_eq(reads.size(), 0, "the label source is only read for a highlighted segment")
+
+func test_tooltip_absent_without_label_source_or_score() -> void:
+	_enter_segment_mode_with_picker()
+	_c._gui_input(_motion(Vector2(50.0, 0.0)))
+	assert_eq(_c.hover_label, "", "no label source attached")
+	_c.attach_hover_label(func(_id: String) -> String: return "")
+	_c._gui_input(_motion(Vector2(60.0, 0.0)))
+	assert_eq(_c.hover_label, "", "an unscored segment shows no tooltip")
+
+func test_tooltip_reads_label_for_the_segment_id() -> void:
+	_enter_segment_mode_with_picker()
+	var reads := _attach_label_source()
+	_c._gui_input(_motion(Vector2(50.0, 0.0)))
+	assert_eq(reads, ["road"])
+
+func test_tooltip_clears_with_the_highlight() -> void:
+	_enter_segment_mode_with_picker()
+	_attach_label_source()
+	_c._gui_input(_motion(Vector2(50.0, 0.0)))
+	_c._gui_input(_motion(Vector2(300.0, 0.0)))
+	assert_eq(_c.hover_label, "", "moving off the segment drops the tooltip")
+	_c._gui_input(_motion(Vector2(50.0, 0.0)))
+	_zoom_to_px(DEACTIVATE_PX - 1.0)
+	assert_eq(_c.hover_label, "", "leaving segment mode drops the tooltip")
+	_enter_segment_mode_again()
+	_c._gui_input(_motion(Vector2(50.0, 0.0)))
+	var ev := InputEventKey.new()
+	ev.keycode = KEY_ESCAPE
+	ev.pressed = true
+	_c._unhandled_input(ev)
+	assert_eq(_c.hover_label, "", "Escape drops the tooltip")
+
+func _enter_segment_mode_again() -> void:
+	_zoom_to_px(ACTIVATE_PX)
+
+func test_tooltip_uses_text_scale_sizes() -> void:
+	assert_eq(WorldSelectController.tooltip_font_size(), TextScale.size(TextScale.SMALL))
+	TextScale.set_step(TextScale.STEPS.size() - 1)
+	assert_eq(WorldSelectController.tooltip_font_size(), TextScale.size(TextScale.SMALL),
+			"follows the live step")
+	assert_gt(WorldSelectController.tooltip_font_size(), TextScale.SMALL)
+	TextScale.set_step(0)
+
+func test_tooltip_rect_follows_cursor_and_stays_on_screen() -> void:
+	_enter_segment_mode_with_picker()
+	_attach_label_source()
+	_c.size = Vector2(400.0, 300.0)
+	var text := Vector2(100.0, 20.0)
+	assert_eq(_c.tooltip_rect(text), Rect2(), "no label, no rect")
+	_c._gui_input(_motion(Vector2(50.0, 40.0)))
+	var rect := _c.tooltip_rect(text)
+	assert_eq(rect.position, Vector2(50.0, 40.0) + WorldSelectController.TOOLTIP_OFFSET)
+	assert_eq(rect.size, text + WorldSelectController.TOOLTIP_PADDING * 2.0)
+	_c._gui_input(_motion(Vector2(95.0, 290.0)))
+	rect = _c.tooltip_rect(text)
+	assert_true(Rect2(Vector2.ZERO, _c.size).encloses(rect), "clamped inside the control")
+
 func test_hover_colour_is_distinct_from_overlay_and_ghosts() -> void:
 	var taken: Array[Color] = [
 		ConnectivityOverlay.COLOR_FRAGMENTED, ConnectivityOverlay.COLOR_CONNECTED,
