@@ -10,6 +10,11 @@ extends RefCounted
 
 const SAVE_DIR := "user://saves"
 const DEFAULT_SLOT := "slot_1"
+## The quick-save slot (F5/F9). Named so call sites read as intent; it is the
+## default slot, and an autosave never writes to it.
+const QUICKSAVE_SLOT := DEFAULT_SLOT
+## The slot the season-change autosave writes (architecture §7).
+const AUTOSAVE_SLOT := "autosave"
 ## Suffix of the in-progress write. Deliberately not ".tmp": the launcher and
 ## some backup tools sweep ".tmp", and a swept temp file mid-save would leave
 ## `save()` renaming something that no longer exists.
@@ -23,6 +28,42 @@ const READABLE_VERSION := 1
 ## Path of a named save slot in the user data directory.
 static func slot_path(slot: String = DEFAULT_SLOT) -> String:
 	return "%s/%s.json" % [SAVE_DIR, slot]
+
+## Path of the autosave slot.
+static func autosave_path() -> String:
+	return slot_path(AUTOSAVE_SLOT)
+
+## Set by the title screen's Continue and consumed (and cleared) by `Main` on its
+## first frame: a static so it survives the scene change without a new autoload.
+static var pending_load_path: String = ""
+
+## `meta.saved_at_unix` of the save at `path`, or -1 when it is missing or
+## unreadable. Goes through `load_save`, so a corrupt slot counts as absent.
+static func saved_at(path: String) -> int:
+	var data := load_save(path)
+	if data.is_empty():
+		return -1
+	var meta: Variant = data.get("meta", {})
+	if typeof(meta) != TYPE_DICTIONARY:
+		return -1
+	return int((meta as Dictionary).get("saved_at_unix", 0))
+
+## The path Continue should load: whichever of `paths` holds the newest
+## `saved_at_unix`, or "" when none is readable. A tie goes to the earlier path,
+## so callers list the quick-save slot first.
+static func newest_save_path(paths: Array[String]) -> String:
+	var best := ""
+	var best_at := -1
+	for path: String in paths:
+		var at := saved_at(path)
+		if at > best_at:
+			best = path
+			best_at = at
+	return best
+
+## The save Continue loads from the real slots: the newer of quick save and autosave.
+static func continue_path() -> String:
+	return newest_save_path([slot_path(QUICKSAVE_SLOT), autosave_path()])
 
 static func has_save(path: String = slot_path()) -> bool:
 	return FileAccess.file_exists(path)

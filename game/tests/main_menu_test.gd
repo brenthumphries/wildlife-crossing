@@ -32,6 +32,24 @@ func test_play_button_emits_intent() -> void:
 	_m._play_button.pressed.emit()
 	assert_signal_emitted(_m, "play_pressed")
 
+func test_continue_starts_disabled_until_a_save_is_found() -> void:
+	assert_true(_m._continue_button.disabled)
+	_m.set_continue_available(true)
+	assert_false(_m._continue_button.disabled)
+	_m.set_continue_available(false)
+	assert_true(_m._continue_button.disabled)
+
+func test_continue_button_emits_intent() -> void:
+	watch_signals(_m)
+	_m._continue_button.pressed.emit()
+	assert_signal_emitted(_m, "continue_pressed")
+
+func test_play_still_emits_play_not_continue() -> void:
+	watch_signals(_m)
+	_m._play_button.pressed.emit()
+	assert_signal_emitted(_m, "play_pressed")
+	assert_signal_not_emitted(_m, "continue_pressed")
+
 func test_credits_button_emits_intent() -> void:
 	watch_signals(_m)
 	_m._credits_button.pressed.emit()
@@ -83,7 +101,7 @@ func test_buttons_stay_in_the_viewport_at_every_text_scale_step() -> void:
 		TextScale.set_step(i)
 		await get_tree().process_frame
 		await get_tree().process_frame
-		for button: Button in [_m._play_button, _m._credits_button, _m._quit_button]:
+		for button: Button in [_m._continue_button, _m._play_button, _m._credits_button, _m._quit_button]:
 			assert_true(view.encloses(button.get_global_rect()), "%s within the viewport at step %d" % [button.text, i])
 		assert_true(view.encloses(_m._version_label.get_global_rect()), "version line within the viewport at step %d" % i)
 

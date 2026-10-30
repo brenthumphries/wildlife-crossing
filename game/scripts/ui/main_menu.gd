@@ -1,6 +1,6 @@
 ## Minimal title-screen menu: Play, Credits, Quit. Deliberately thin — it exists
 ## so the credits screen has somewhere to live that isn't a hidden keybind, not
-## because v0.1.0 needs a front end. Options, load/continue and anything else
+## because v0.1.0 needs a front end. Options and anything else
 ## belong here later; nothing about this shape blocks that.
 ##
 ## Emits intent rather than acting on it: `TitleScreen` owns the scene change
@@ -10,6 +10,7 @@ class_name MainMenu
 extends BaseScreen
 
 signal play_pressed()
+signal continue_pressed()
 signal credits_pressed()
 signal quit_pressed()
 ## The player changed the text size from the menu; `step` is the new TextScale
@@ -24,6 +25,7 @@ const TEXT_SIZE_ROW_SEPARATION := 8
 const BACKGROUND_COLOR := Color(0.09, 0.15, 0.11)
 
 var _play_button: Button
+var _continue_button: Button
 var _credits_button: Button
 var _quit_button: Button
 var _text_size_label: Label
@@ -44,7 +46,7 @@ func apply_text_scale() -> void:
 	_title_label.add_theme_font_size_override("font_size", TextScale.size(TextScale.TITLE))
 	_tagline_label.add_theme_font_size_override("font_size", TextScale.size(TextScale.BODY))
 	_version_label.add_theme_font_size_override("font_size", TextScale.size(TextScale.SMALL))
-	for button: Button in [_play_button, _credits_button, _quit_button]:
+	for button: Button in [_continue_button, _play_button, _credits_button, _quit_button]:
 		button.add_theme_font_size_override("font_size", TextScale.size(TextScale.BODY))
 		button.custom_minimum_size = BUTTON_MIN_SIZE * TextScale.factor()
 	_text_size_label.add_theme_font_size_override("font_size", TextScale.size(TextScale.BODY))
@@ -73,6 +75,13 @@ func _on_text_larger_button_pressed() -> void:
 
 func _on_event_bus_text_scale_changed(_factor: float) -> void:
 	apply_text_scale()
+
+## Enable Continue only when the owner found a save to continue from.
+func set_continue_available(available: bool) -> void:
+	_continue_button.disabled = not available
+
+func _on_continue_button_pressed() -> void:
+	continue_pressed.emit()
 
 func _on_play_button_pressed() -> void:
 	play_pressed.emit()
@@ -115,6 +124,10 @@ func _build_ui() -> void:
 	var spacer := Control.new()
 	spacer.custom_minimum_size = Vector2(0.0, 24.0)
 	column.add_child(spacer)
+
+	_continue_button = _make_button("Continue", _on_continue_button_pressed)
+	_continue_button.disabled = true
+	column.add_child(_continue_button)
 
 	_play_button = _make_button("Play", _on_play_button_pressed)
 	column.add_child(_play_button)
