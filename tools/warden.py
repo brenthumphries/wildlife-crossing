@@ -1031,7 +1031,7 @@ def pr_head_branch(runner: Runner, root: pathlib.Path, ref: str) -> str:
     try:
         return runner.query(["gh", "pr", "view", ref, "--json", "headRefName", "-q", ".headRefName"],
                             cwd=root).strip()
-    except WardenError:
+    except (WardenError, OSError):  # OSError: gh is not installed (Cowork VM)
         return ""
 
 
@@ -1052,7 +1052,7 @@ def pr_is_merged(runner: Runner, root: pathlib.Path, ref: str) -> bool:
     try:
         return runner.query(["gh", "pr", "view", ref, "--json", "state", "-q", ".state"],
                             cwd=root).strip() == "MERGED"
-    except WardenError:
+    except (WardenError, OSError):
         return False
 
 

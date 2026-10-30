@@ -461,6 +461,13 @@ class LandCommandTestCase(RepoFixture):
         self.assertIn("docs(vault): add notes", create)
         self.assertEqual(real_branch, warden.current_branch)
 
+    def test_land_survives_gh_not_installed(self) -> None:
+        """The head-branch query must not raise when gh is absent from PATH."""
+        runner = warden.Runner(dry_run=True)
+        with mock.patch.object(warden.subprocess, "run", side_effect=FileNotFoundError("gh")):
+            self.assertEqual(warden.pr_head_branch(runner, self.repo, "12"), "")
+            self.assertFalse(warden.pr_is_merged(runner, self.repo, "12"))
+
     def test_land_with_no_merge_stops_after_checks(self) -> None:
         (self.repo / "notes.md").write_text("x\n")
         (self.repo / "commit-plan.json").write_text(json.dumps({"branch": "docs/notes", "commits": [
