@@ -137,6 +137,11 @@ func _ready() -> void:
 	info_layer.add_child(_info_panel)
 	_info_panel.setup(sim.information, sim.economy, sim.active_sub_area_id)
 
+	# Speed changes (from the HUD or a loaded save) all land here; the sim owns the speed.
+	_hud.time_speed_selected.connect(_on_hud_time_speed_selected)
+	sim.time.time_speed_changed.connect(_hud.set_time_speed)
+	_hud.set_time_speed(sim.time_scale)
+
 	_hint_coach = HintCoach.new()
 	_hint_coach.hint_shown.connect(_on_hint_coach_hint_shown)
 	_hint_coach.hint_cleared.connect(_hud.clear_hint)
@@ -199,6 +204,13 @@ func _unhandled_input(event: InputEvent) -> void:
 	if _snowpack != null and _snowpack.is_open:
 		if event is InputEventKey and event.pressed and event.keycode == KEY_ESCAPE:
 			_snowpack.close()
+		get_viewport().set_input_as_handled()
+		return
+	# Time keys work under the Info panel and in build mode, but after the guards
+	# above: the minigames own Space and the digits while they are open.
+	if event is InputEventKey and event.pressed and not event.echo \
+			and not event.ctrl_pressed and not event.meta_pressed and not event.alt_pressed \
+			and _hud.handle_time_key(event.keycode):
 		get_viewport().set_input_as_handled()
 		return
 	if _info_panel != null and _info_panel.is_open:
@@ -495,6 +507,10 @@ func _try_open_world_select() -> void:
 ## The I key and the toolbar's Info button.
 func _open_info_panel() -> void:
 	_info_panel.open()
+
+## A speed picked on the HUD row or with a time key; pausing touches nothing else.
+func _on_hud_time_speed_selected(multiplier: float) -> void:
+	sim.time.set_speed(multiplier)
 
 func _on_toolbar_add_crossing_pressed() -> void:
 	_try_open_world_select()

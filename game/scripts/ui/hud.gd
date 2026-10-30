@@ -13,10 +13,13 @@
 ## build status readout, formerly a free-floating label in Main, lives here.
 ## C43 adds a dismissible hint banner at the foot of the stack for HintCoach.
 ## C36 puts the SeasonCalendar at the head of the stack, always visible.
+## C34 adds the TimeControls row directly beneath it.
 class_name Hud
 extends BaseScreen
 
 signal hint_dismissed()
+## The player picked a speed (button or key) on the TimeControls row.
+signal time_speed_selected(multiplier: float)
 
 const MESSAGE_FADE_SECONDS := 4.0
 const CUE_FLASH_SECONDS := 1.2
@@ -35,6 +38,7 @@ const HINT_DISMISS_TEXT := "Got it"
 
 var _stack: VBoxContainer
 var _calendar: SeasonCalendar
+var _time_controls: TimeControls
 var _build_status_label: Label
 var _message_label: Label
 var _cue_row: HBoxContainer
@@ -60,6 +64,10 @@ func _build_ui() -> void:
 
 	_calendar = SeasonCalendar.new()
 	_stack.add_child(_calendar)
+
+	_time_controls = TimeControls.new()
+	_time_controls.speed_selected.connect(_on_time_controls_speed_selected)
+	_stack.add_child(_time_controls)
 
 	_build_status_label = _add_label(Color.WHITE)
 	_build_status_label.hide()   # shown only while build mode is open
@@ -115,6 +123,14 @@ func apply_text_scale() -> void:
 func set_clock(year: int, season: String, day_of_season: int) -> void:
 	_calendar.set_clock(year, season, day_of_season)
 
+## Highlight the running speed on the time controls; call on `time_speed_changed`.
+func set_time_speed(multiplier: float) -> void:
+	_time_controls.show_speed(multiplier)
+
+## Handle a Space / 1 / 2 / 3 press; true if it was a time-control key.
+func handle_time_key(keycode: Key) -> bool:
+	return _time_controls.handle_key(keycode)
+
 ## Show the build-mode cost/status readout above the message line.
 func set_build_status(text: String) -> void:
 	_build_status_label.text = text
@@ -160,6 +176,9 @@ func _build_hint_banner() -> void:
 	_hint_button.focus_mode = Control.FOCUS_NONE   # Enter confirms a build; the button must not steal it
 	_hint_button.pressed.connect(_on_hint_button_pressed)
 	column.add_child(_hint_button)
+
+func _on_time_controls_speed_selected(multiplier: float) -> void:
+	time_speed_selected.emit(multiplier)
 
 func _on_hint_button_pressed() -> void:
 	clear_hint()
