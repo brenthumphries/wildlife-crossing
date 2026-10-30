@@ -518,6 +518,7 @@ func _open_world_select() -> void:
 		_world_select.attach_world_camera(_camera, _sub_area_centre_px)
 		_world_select.segment_clicked.connect(_try_select_segment)
 		_world_select.attach_hover_picker(_pick_segment_at, _is_dangerous_tile)
+		_world_select.attach_summary_source(_registries()["segments"], _crossings_in_sub_area)
 		_world_select.hover_highlight_changed.connect(_on_hover_highlight_changed)
 		_confirm_panel = ConfirmPanel.new()
 		_confirm_panel.attach(_world_select)
@@ -526,6 +527,14 @@ func _open_world_select() -> void:
 	if _world_select.mode == WorldSelectController.Mode.INACTIVE:
 		_world_select.enter_selection_mode()
 		_log("Crossing location selection — scroll wheel, trackpad scroll or pinch to zoom, Escape to exit.")
+
+## Completed crossings in one sub-area, for the world-select hover summary.
+func _crossings_in_sub_area(sub_area_id: int) -> int:
+	var count := 0
+	for c: Dictionary in sim.infrastructure.crossings():
+		if int(c["sub_area_id"]) == sub_area_id:
+			count += 1
+	return count
 
 ## World-space centre of a sub-area for the world-select camera. Only the loaded
 ## sub-area exists as a live world — v0.1.0 is Bow Valley only, the one sub-area

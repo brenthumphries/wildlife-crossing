@@ -6,6 +6,8 @@
 ## drives the world camera and draws nothing over it (ADR 0021). Zoom comes from
 ## the mouse wheel, a Mac trackpad's two-finger scroll (pan gesture) and its
 ## pinch (magnify gesture); all three step through `zoom_in()`/`zoom_out()`.
+## C30: hovering a card shows a name + summary tooltip, and every label takes its
+## size from TextScale, re-applied live on `text_scale_changed`.
 class_name WorldSelectController
 extends Control
 
@@ -53,7 +55,17 @@ const COLOR_LOCK_GLYPH := Color(0.15, 0.15, 0.15)
 const COLOR_TEXT := Color(0.92, 0.92, 0.88)
 const COLOR_TEXT_DIM := Color(0.70, 0.70, 0.70)
 const COLOR_LABEL_SCRIM := Color(0.0, 0.0, 0.0, 0.45)   # legibility backing over card art
-const LABEL_FONT_SIZE := 12
+const CARD_TEXT_INSET := 8.0
+const CARD_MAX_NAME_LINES := 2
+const HEADER_Y := 40.0
+const HEADER_MARGIN := 12.0                       # gap under the header before the grid
+const GRID_BOTTOM_MARGIN := 12.0
+## Layout height assumed before the control has a size (1280x720 viewport).
+const FALLBACK_HEIGHT := 720.0
+const TOOLTIP_WIDTH := 260.0                      # at TextScale step 1.0
+const TOOLTIP_PAD := 8.0
+const TOOLTIP_CURSOR_OFFSET := Vector2(16.0, 16.0)
+const COLOR_TOOLTIP_BG := Color(0.05, 0.07, 0.06, 0.95)
 const HEADER_OUTLINE_PX := 4                      # header legibility over the live world
 const COLOR_HEADER_OUTLINE := Color(0.0, 0.0, 0.0, 0.85)
 
@@ -66,6 +78,12 @@ var hover_tiles: Array[Vector2i] = []
 
 var _sub_areas: Dictionary = {}
 var _unlocked: Dictionary = {}
+# Summary sources: segment records (id → record) and a `(sub_area_id) -> int`
+# resolver for completed crossings, both supplied by Main.
+var _segments: Dictionary = {}
+var _crossings_in: Callable
+var _hovered_card_id := 0
+var _hover_position := Vector2.ZERO
 
 # Gesture input not yet turned into whole zoom steps: pan delta.y, and the natural
 # log of the magnify factors (logs add where factors multiply).
@@ -89,6 +107,7 @@ func _ready() -> void:
 	var bus := get_node_or_null("/root/EventBus")
 	if bus:
 		bus.sub_area_unlocked.connect(_on_event_bus_sub_area_unlocked)
+		bus.text_scale_changed.connect(_on_event_bus_text_scale_changed)
 	if _sub_areas.is_empty():
 		var registry := get_node_or_null("/root/SpeciesRegistry")
 		if registry:
@@ -112,6 +131,30 @@ func setup(sub_areas: Dictionary) -> void:
 	if focused_sub_area_id == 0 and not ids.is_empty():
 		focused_sub_area_id = ids[0]
 
+## Hand this controller what the hover summary counts: `segments` (id → record,
+## the SpeciesRegistry.segments shape) and `crossings_in(sub_area_id) -> int`,
+## the number of completed crossings in that sub-area.
+func attach_summary_source(segments: Dictionary, crossings_in: Callable) -> void:
+	_segments = segments
+	_crossings_in = crossings_in
+
+## The hover text for a sub-area: its name, then either a locked note or the
+## number of dangerous segments and existing crossings.
+func summary_text(sub_area_id: int) -> String:
+	var area_name := String(_sub_areas.get(sub_area_id, {}).get("name", str(sub_area_id)))
+	if not is_sub_area_unlocked(sub_area_id):
+		return "%s\nLocked — build trust to open this area." % area_name
+	var segment_count := 0
+	for seg: Dictionary in _segments.values():
+		if int(seg.get("sub_area_id", -1)) == sub_area_id:
+			segment_count += 1
+	var crossing_count := 0
+	if _crossings_in.is_valid():
+		crossing_count = int(_crossings_in.call(sub_area_id))
+	return "%s\n%d %s · %d existing %s" % [area_name,
+			segment_count, "segment" if segment_count == 1 else "segments",
+			crossing_count, "crossing" if crossing_count == 1 else "crossings"]
+
 ## Enter crossing-location-selection mode at the full Y2Y world view (PRD rule 1).
 func enter_selection_mode() -> void:
 	if mode != Mode.INACTIVE:
@@ -134,6 +177,7 @@ func exit_selection_mode(cancelled: bool = true) -> void:
 		segment_mode_exited.emit()
 	mode = Mode.INACTIVE
 	clear_hover()
+	_hovered_card_id = 0
 	_sync_world_camera()   # restores the player's camera before anyone hears of the exit
 	hide()
 	selection_mode_exited.emit()
@@ -254,6 +298,7 @@ func attach_hover_picker(pick: Callable, is_dangerous: Callable) -> void:
 ## Update the hover highlight for a cursor at `screen_position` (screen pixels).
 ## Segment mode only; anywhere else it clears.
 func update_hover(screen_position: Vector2) -> void:
+	_update_card_hover(screen_position)
 	if mode != Mode.SEGMENT or not _hover_pick.is_valid() or not _tile_is_dangerous.is_valid():
 		clear_hover()
 		return
@@ -267,6 +312,27 @@ func update_hover(screen_position: Vector2) -> void:
 	if not dangerous:
 		tiles.clear()
 	_set_hover_tiles(tiles)
+
+## Which card is under `screen_position`, or 0. Only while the card grid shows.
+func card_at(screen_position: Vector2) -> int:
+	if mode != Mode.WORLD or card_layer_alpha() <= 0.0:
+		return 0
+	var layout := _card_layout()
+	for id: int in layout["rects"]:
+		if (layout["rects"][id] as Rect2).has_point(screen_position):
+			return id
+	return 0
+
+func _update_card_hover(screen_position: Vector2) -> void:
+	var id := card_at(screen_position)
+	if id == _hovered_card_id and (id == 0 or screen_position == _hover_position):
+		return
+	_hovered_card_id = id
+	_hover_position = screen_position
+	queue_redraw()
+
+func _on_event_bus_text_scale_changed(_factor: float) -> void:
+	queue_redraw()
 
 ## Drop the hover highlight.
 func clear_hover() -> void:
@@ -405,33 +471,59 @@ func _draw() -> void:
 		return
 	var font := ThemeDB.fallback_font
 	var card_alpha := card_layer_alpha()
+	var layout := _card_layout()
 	if card_alpha > 0.0:
-		var backdrop := COLOR_BACKDROP
-		backdrop.a *= card_alpha
-		draw_rect(Rect2(Vector2.ZERO, size), backdrop)
-		_draw_card_grid(font, card_alpha)
-	var mode_name := "world view" if mode == Mode.WORLD else "segment mode"
-	var header := "Select a crossing location — %s (%.1f px/tile) · scroll or pinch to zoom · Esc to exit" \
-			% [mode_name, tile_px()]
+		_draw_card_grid(font, card_alpha, layout)
 	# Outlined rather than backed: over the live world a scrim would cover it.
-	var header_pos := Vector2(GRID_ORIGIN.x, 40.0)
-	draw_string_outline(font, header_pos, header, HORIZONTAL_ALIGNMENT_LEFT, -1.0,
-			LABEL_FONT_SIZE + 2, HEADER_OUTLINE_PX, COLOR_HEADER_OUTLINE)
-	draw_string(font, header_pos, header,
-			HORIZONTAL_ALIGNMENT_LEFT, -1.0, LABEL_FONT_SIZE + 2, COLOR_TEXT)
+	var header_size := TextScale.size(TextScale.SMALL)
+	var header_pos := Vector2(GRID_ORIGIN.x, HEADER_Y)
+	draw_multiline_string_outline(font, header_pos, layout["header"], HORIZONTAL_ALIGNMENT_LEFT,
+			layout["header_width"], header_size, -1, HEADER_OUTLINE_PX, COLOR_HEADER_OUTLINE)
+	draw_multiline_string(font, header_pos, layout["header"], HORIZONTAL_ALIGNMENT_LEFT,
+			layout["header_width"], header_size, -1, COLOR_TEXT)
+	if card_alpha > 0.0 and _hovered_card_id != 0:
+		_draw_tooltip(font, _hovered_card_id)
 
-func _draw_card_grid(font: Font, alpha: float) -> void:
+func _header_text() -> String:
+	var mode_name := "world view" if mode == Mode.WORLD else "segment mode"
+	return "Select a crossing location — %s (%.1f px/tile) · scroll or pinch to zoom · Esc to exit" \
+			% [mode_name, tile_px()]
+
+# Header text, and the card grid it pushes down: card size scales with TextScale,
+# then shrinks vertically if needed so every row fits the control (1280x720 at the
+# largest step). Returns { header, header_width, card_size, rects: id → Rect2 }.
+func _card_layout() -> Dictionary:
+	var font := ThemeDB.fallback_font
+	var width := size.x if size.x > 0.0 else GRID_ORIGIN.x * 2.0 + GRID_COLS * (CARD_SIZE.x * TextScale.factor() + CARD_GAP)
+	var height := size.y if size.y > 0.0 else FALLBACK_HEIGHT
+	var header := _header_text()
+	var header_width := maxf(width - GRID_ORIGIN.x * 2.0, CARD_SIZE.x)
+	var header_size := TextScale.size(TextScale.SMALL)
+	var header_h := font.get_multiline_string_size(header, HORIZONTAL_ALIGNMENT_LEFT,
+			header_width, header_size).y
+	var top := HEADER_Y + header_h + HEADER_MARGIN
 	var ids: Array = _sub_areas.keys()
 	ids.sort()
-	var rows := int(ceil(ids.size() / float(GRID_COLS)))
+	var rows := maxi(1, int(ceil(ids.size() / float(GRID_COLS))))
+	var card := CARD_SIZE * TextScale.factor()
+	var col_w := maxf((width - GRID_ORIGIN.x * 2.0 - CARD_GAP * (GRID_COLS - 1)) / GRID_COLS, 1.0)
+	card.x = minf(card.x, col_w)
+	var row_h := (height - top - GRID_BOTTOM_MARGIN - CARD_GAP * (rows - 1)) / rows
+	card.y = minf(card.y, maxf(row_h, 1.0))
+	var rects := {}
 	for i: int in ids.size():
-		var id: int = ids[i]
 		var col := i % GRID_COLS
-		var row_from_south := int(floor(i / float(GRID_COLS)))
-		var row := (rows - 1) - row_from_south   # south at the bottom, north on top
-		var pos := GRID_ORIGIN + Vector2(
-				col * (CARD_SIZE.x + CARD_GAP), row * (CARD_SIZE.y + CARD_GAP))
-		_draw_sub_area_card(font, Rect2(pos, CARD_SIZE), id, alpha)
+		var row := (rows - 1) - int(floor(i / float(GRID_COLS)))   # south at the bottom, north on top
+		rects[ids[i]] = Rect2(Vector2(GRID_ORIGIN.x + col * (card.x + CARD_GAP),
+				top + row * (card.y + CARD_GAP)), card)
+	return { "header": header, "header_width": header_width, "card_size": card, "rects": rects }
+
+func _draw_card_grid(font: Font, alpha: float, layout: Dictionary) -> void:
+	var backdrop := COLOR_BACKDROP
+	backdrop.a *= alpha
+	draw_rect(Rect2(Vector2.ZERO, size), backdrop)
+	for id: int in layout["rects"]:
+		_draw_sub_area_card(font, layout["rects"][id], id, alpha)
 
 func _draw_sub_area_card(font: Font, rect: Rect2, sub_area_id: int, alpha: float) -> void:
 	var unlocked := is_sub_area_unlocked(sub_area_id)
@@ -445,16 +537,38 @@ func _draw_sub_area_card(font: Font, rect: Rect2, sub_area_id: int, alpha: float
 				_faded(Color.WHITE if unlocked else COLOR_LOCKED, alpha))
 	else:
 		draw_rect(rect, _faded(COLOR_UNLOCKED if unlocked else COLOR_LOCKED, alpha))
-	if sub_area_id == focused_sub_area_id:
+	if sub_area_id == focused_sub_area_id or sub_area_id == _hovered_card_id:
 		draw_rect(rect, _faded(Color.WHITE, alpha), false, 2.0)
 	var label := String(_sub_areas[sub_area_id].get("name", str(sub_area_id)))
+	var font_size := TextScale.size(TextScale.SMALL)
+	var text_width := rect.size.x - CARD_TEXT_INSET * 2.0
+	var label_h := font.get_multiline_string_size(label, HORIZONTAL_ALIGNMENT_LEFT,
+			text_width, font_size, CARD_MAX_NAME_LINES).y
 	if has_art:
-		draw_rect(Rect2(rect.position, Vector2(rect.size.x, 28.0)), _faded(COLOR_LABEL_SCRIM, alpha))
-	draw_string(font, rect.position + Vector2(8.0, 22.0), label,
-			HORIZONTAL_ALIGNMENT_LEFT, rect.size.x - 16.0, LABEL_FONT_SIZE,
+		draw_rect(Rect2(rect.position, Vector2(rect.size.x, label_h + CARD_TEXT_INSET)),
+				_faded(COLOR_LABEL_SCRIM, alpha))
+	draw_multiline_string(font, rect.position + Vector2(CARD_TEXT_INSET,
+			CARD_TEXT_INSET + font.get_ascent(font_size)), label, HORIZONTAL_ALIGNMENT_LEFT,
+			text_width, font_size, CARD_MAX_NAME_LINES,
 			_faded(COLOR_TEXT if unlocked else COLOR_TEXT_DIM, alpha))
 	if not unlocked:
 		_draw_lock_glyph(rect.position + rect.size - Vector2(24.0, 26.0), alpha)
+
+# The hover tooltip: name and summary in a wrapped panel beside the cursor,
+# clamped inside the control so it never runs off the viewport.
+func _draw_tooltip(font: Font, sub_area_id: int) -> void:
+	var font_size := TextScale.size(TextScale.SMALL)
+	var text_width := TextScale.size(roundi(TOOLTIP_WIDTH))
+	var text := summary_text(sub_area_id)
+	var text_size := font.get_multiline_string_size(text, HORIZONTAL_ALIGNMENT_LEFT,
+			text_width, font_size)
+	var panel := Vector2(text_width, text_size.y) + Vector2.ONE * TOOLTIP_PAD * 2.0
+	var pos := _hover_position + TOOLTIP_CURSOR_OFFSET
+	var bounds := size if size != Vector2.ZERO else Vector2(1280.0, FALLBACK_HEIGHT)
+	pos = pos.clamp(Vector2.ZERO, (bounds - panel).max(Vector2.ZERO))
+	draw_rect(Rect2(pos, panel), COLOR_TOOLTIP_BG)
+	draw_multiline_string(font, pos + Vector2(TOOLTIP_PAD, TOOLTIP_PAD + font.get_ascent(font_size)),
+			text, HORIZONTAL_ALIGNMENT_LEFT, text_width, font_size, -1, COLOR_TEXT)
 
 # A small padlock: shackle arc over a body rect (the lock indicator, PRD rule 5).
 func _draw_lock_glyph(at: Vector2, alpha: float) -> void:

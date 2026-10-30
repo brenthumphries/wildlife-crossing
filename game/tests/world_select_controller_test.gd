@@ -636,3 +636,61 @@ func test_hover_colour_is_distinct_from_overlay_and_ghosts() -> void:
 		WorldRenderer.COLOR_COMPLETED_CROSSING]
 	for other: Color in taken:
 		assert_false(WorldRenderer.COLOR_SEGMENT_HOVER.is_equal_approx(other))
+
+# --- hover summary and text scale (C30) ---
+
+const SEGMENTS := {
+	"s7_a": { "id": "s7_a", "sub_area_id": 7 },
+	"s7_b": { "id": "s7_b", "sub_area_id": 7 },
+	"s8_a": { "id": "s8_a", "sub_area_id": 8 },
+}
+
+func _attach_summary() -> void:
+	_c.attach_summary_source(SEGMENTS, func(id: int) -> int: return 1 if id == 7 else 0)
+
+func after_all() -> void:
+	TextScale.set_step(0)
+
+func test_summary_for_unlocked_sub_area_counts_segments_and_crossings() -> void:
+	_attach_summary()
+	assert_eq(_c.summary_text(7),
+			"Central Canadian Rockies\n2 segments · 1 existing crossing")
+
+func test_summary_for_locked_sub_area_shows_name_and_locked_note() -> void:
+	_attach_summary()
+	var text := _c.summary_text(8)
+	assert_true(text.begins_with("Peace River Break\n"), "name leads")
+	assert_string_contains(text, "Locked")
+	assert_false(text.contains("segment"), "a locked area reveals no counts")
+
+func test_summary_without_a_source_counts_zero() -> void:
+	assert_eq(_c.summary_text(7), "Central Canadian Rockies\n0 segments · 0 existing crossings")
+
+func test_card_at_finds_the_card_under_the_cursor() -> void:
+	_c.size = Vector2(1280.0, 720.0)
+	_c.enter_selection_mode()
+	var rect: Rect2 = _c._card_layout()["rects"][8]
+	assert_eq(_c.card_at(rect.get_center()), 8)
+	assert_eq(_c.card_at(Vector2(1.0, 1.0)), 0, "off the grid hits nothing")
+
+func test_hover_sets_and_clears_hovered_card() -> void:
+	_c.size = Vector2(1280.0, 720.0)
+	_c.enter_selection_mode()
+	var rect: Rect2 = _c._card_layout()["rects"][7]
+	_c.update_hover(rect.get_center())
+	assert_eq(_c._hovered_card_id, 7)
+	_c.update_hover(Vector2(1.0, 1.0))
+	assert_eq(_c._hovered_card_id, 0)
+
+func test_cards_fit_the_viewport_at_every_text_scale_step() -> void:
+	var many := {}
+	for id: int in range(1, 13):
+		many[id] = { "id": id, "name": "Sub-area number %d with a long name" % id }
+	_c.setup(many)
+	_c.size = Vector2(1280.0, 720.0)
+	_c.enter_selection_mode()
+	for step: int in TextScale.STEPS.size():
+		TextScale.set_step(step)
+		var bounds := Rect2(Vector2.ZERO, _c.size)
+		for rect: Rect2 in _c._card_layout()["rects"].values():
+			assert_true(bounds.encloses(rect), "card inside viewport at step %d" % step)
