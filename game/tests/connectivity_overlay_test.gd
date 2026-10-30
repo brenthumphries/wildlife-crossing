@@ -115,6 +115,51 @@ func test_pulse_alpha_starts_at_base_opacity() -> void:
 	_make_overlay(["forest", "road", "forest"], [_seg("s_a", [1])])
 	assert_almost_eq(_o.pulse_alpha(), ConnectivityOverlay.OVERLAY_OPACITY, 0.001)
 
+# --- hover labels (qualitative bands over the cached segment score) -----------
+
+func test_label_bands_cover_each_range() -> void:
+	assert_eq(ConnectivityOverlay.label_for_score(0.0), ConnectivityOverlay.LABEL_HIGH_FRAGMENTATION)
+	assert_eq(ConnectivityOverlay.label_for_score(0.2), ConnectivityOverlay.LABEL_HIGH_FRAGMENTATION)
+	assert_eq(ConnectivityOverlay.label_for_score(0.5), ConnectivityOverlay.LABEL_MODERATE_FRAGMENTATION)
+	assert_eq(ConnectivityOverlay.label_for_score(0.8), ConnectivityOverlay.LABEL_WELL_CONNECTED)
+	assert_eq(ConnectivityOverlay.label_for_score(1.0), ConnectivityOverlay.LABEL_WELL_CONNECTED)
+
+func test_label_band_thresholds_are_lower_inclusive() -> void:
+	assert_eq(ConnectivityOverlay.label_for_score(ConnectivityOverlay.BAND_HIGH_FRAGMENTATION_BELOW),
+			ConnectivityOverlay.LABEL_MODERATE_FRAGMENTATION, "first bound starts the moderate band")
+	assert_eq(ConnectivityOverlay.label_for_score(ConnectivityOverlay.BAND_MODERATE_FRAGMENTATION_BELOW),
+			ConnectivityOverlay.LABEL_WELL_CONNECTED, "second bound starts the connected band")
+
+func test_segment_label_reads_cached_score() -> void:
+	# Segment score 0.5 (see the mean-of-adjacent-patches test) → moderate.
+	_make_overlay(["forest", "forest", "road", "forest"], [_seg("s_a", [2])])
+	assert_eq(_o.segment_label("s_a"), ConnectivityOverlay.LABEL_MODERATE_FRAGMENTATION)
+
+func test_segment_label_follows_cache_rebuild_only() -> void:
+	_make_overlay(["forest", "forest", "road", "forest"], [_seg("s_a", [2])])
+	_graph.add_safe_link(
+			_graph.patch_at(Vector2i(0, 0)), _graph.patch_at(Vector2i(3, 0)))
+	assert_eq(_o.segment_label("s_a"), ConnectivityOverlay.LABEL_MODERATE_FRAGMENTATION,
+			"the label is a cache read: unchanged until the cache is rebuilt")
+	_o.rebuild_cache()
+	assert_eq(_o.segment_label("s_a"), ConnectivityOverlay.LABEL_WELL_CONNECTED)
+
+func test_segment_label_empty_without_cached_score() -> void:
+	_make_overlay(["forest", "road", "forest"], [_seg("s_elsewhere", [50])])
+	assert_eq(_o.segment_label("s_elsewhere"), "", "a segment splitting no habitat has no label")
+	assert_eq(_o.segment_label("unknown"), "")
+
+func test_attach_supplies_the_controller_its_label_source() -> void:
+	_make_overlay(["forest", "forest", "road", "forest"], [_seg("s_a", [2])])
+	_attach_controller()
+	_c.attach_hover_picker(
+			func(_at: Vector2) -> Dictionary: return _seg("s_a", [2]),
+			func(_coord: Vector2i) -> bool: return true)
+	_c.enter_selection_mode()
+	_zoom_to_px(float(SimulationConstants.SEGMENT_ZOOM_ACTIVATE_PX))
+	_c.update_hover(Vector2(10.0, 10.0))
+	assert_eq(_c.hover_label, ConnectivityOverlay.LABEL_MODERATE_FRAGMENTATION)
+
 # --- segment-mode-only visibility (PRD rule 7) ---------------------------------
 
 func _attach_controller() -> void:
