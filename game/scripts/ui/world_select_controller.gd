@@ -69,12 +69,20 @@ const COLOR_TOOLTIP_BG := Color(0.05, 0.07, 0.06, 0.95)
 const HEADER_OUTLINE_PX := 4                      # header legibility over the live world
 const COLOR_HEADER_OUTLINE := Color(0.0, 0.0, 0.0, 0.85)
 
+# --- hover tooltip: the cached connectivity label beside the cursor ---
+const TOOLTIP_OFFSET := Vector2(16.0, 20.0)       # cursor → tooltip top-left
+const TOOLTIP_PADDING := Vector2(8.0, 4.0)
+const COLOR_TOOLTIP_BACKING := Color(0.05, 0.07, 0.06, 0.85)
+
 var mode := Mode.INACTIVE
 var zoom := ZOOM_MIN
 var focused_sub_area_id := 0
 ## Tiles of the dangerous segment under the cursor; empty when nothing is
 ## highlighted. Only ever non-empty in segment mode.
 var hover_tiles: Array[Vector2i] = []
+## Short connectivity label for the highlighted segment; empty when nothing is
+## highlighted or the segment has no cached score. Cleared with the highlight.
+var hover_label := ""
 
 var _sub_areas: Dictionary = {}
 var _unlocked: Dictionary = {}
@@ -99,6 +107,10 @@ var _world_centre_of: Callable
 # none), and tile coordinate → whether that tile is impassable or hazardous.
 var _hover_pick: Callable
 var _tile_is_dangerous: Callable
+# Segment id → cached connectivity label ("" when unscored), supplied by the
+# connectivity overlay; a read of its cache, never a calculation.
+var _hover_label_of: Callable
+var _hover_screen_position := Vector2.ZERO
 var _camera_saved := false
 var _saved_camera_position := Vector2.ZERO
 var _saved_camera_zoom := Vector2.ONE
@@ -295,6 +307,12 @@ func attach_hover_picker(pick: Callable, is_dangerous: Callable) -> void:
 	_hover_pick = pick
 	_tile_is_dangerous = is_dangerous
 
+## Hand this controller the tooltip label source: `label_of(segment_id: String)
+## -> String` returns the segment's short connectivity label from the overlay's
+## cached scores, or "" when it has none.
+func attach_hover_label(label_of: Callable) -> void:
+	_hover_label_of = label_of
+
 ## Update the hover highlight for a cursor at `screen_position` (screen pixels).
 ## Segment mode only; anywhere else it clears.
 func update_hover(screen_position: Vector2) -> void:
@@ -311,7 +329,11 @@ func update_hover(screen_position: Vector2) -> void:
 		dangerous = dangerous or bool(_tile_is_dangerous.call(coord))
 	if not dangerous:
 		tiles.clear()
+	_hover_screen_position = screen_position
+	_set_hover_label(_label_for(seg) if dangerous else "")
 	_set_hover_tiles(tiles)
+	if not hover_label.is_empty():
+		queue_redraw()   # the tooltip follows the cursor
 
 ## Which card is under `screen_position`, or 0. Only while the card grid shows.
 func card_at(screen_position: Vector2) -> int:
@@ -337,7 +359,34 @@ func _on_event_bus_text_scale_changed(_factor: float) -> void:
 ## Drop the hover highlight.
 func clear_hover() -> void:
 	var none: Array[Vector2i] = []
+	_set_hover_label("")
 	_set_hover_tiles(none)
+
+func _label_for(seg: Dictionary) -> String:
+	if not _hover_label_of.is_valid() or not seg.has("id"):
+		return ""
+	return String(_hover_label_of.call(String(seg["id"])))
+
+func _set_hover_label(label: String) -> void:
+	if label == hover_label:
+		return
+	hover_label = label
+	queue_redraw()
+
+## Font size of the hover tooltip, at the live text-scale step.
+static func tooltip_font_size() -> int:
+	return TextScale.size(TextScale.SMALL)
+
+## Screen rect of the hover tooltip for a label of `text_size`, kept inside this
+## control; an empty rect when there is no label.
+func tooltip_rect(text_size: Vector2) -> Rect2:
+	if hover_label.is_empty():
+		return Rect2()
+	var box := text_size + TOOLTIP_PADDING * 2.0
+	var pos := _hover_screen_position + TOOLTIP_OFFSET
+	pos.x = clampf(pos.x, 0.0, maxf(0.0, size.x - box.x))
+	pos.y = clampf(pos.y, 0.0, maxf(0.0, size.y - box.y))
+	return Rect2(pos, box)
 
 func _set_hover_tiles(tiles: Array[Vector2i]) -> void:
 	if tiles == hover_tiles:
@@ -483,6 +532,19 @@ func _draw() -> void:
 			layout["header_width"], header_size, -1, COLOR_TEXT)
 	if card_alpha > 0.0 and _hovered_card_id != 0:
 		_draw_tooltip(font, _hovered_card_id)
+	_draw_hover_tooltip(font)
+
+func _draw_hover_tooltip(font: Font) -> void:
+	if hover_label.is_empty():
+		return
+	var font_size := tooltip_font_size()
+	var text_size := font.get_string_size(
+			hover_label, HORIZONTAL_ALIGNMENT_LEFT, -1.0, font_size)
+	var rect := tooltip_rect(text_size)
+	draw_rect(rect, COLOR_TOOLTIP_BACKING)
+	var baseline := rect.position + TOOLTIP_PADDING + Vector2(0.0, font.get_ascent(font_size))
+	draw_string(font, baseline, hover_label, HORIZONTAL_ALIGNMENT_LEFT, -1.0,
+			font_size, COLOR_TEXT)
 
 func _header_text() -> String:
 	var mode_name := "world view" if mode == Mode.WORLD else "segment mode"

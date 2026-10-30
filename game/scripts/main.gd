@@ -351,7 +351,16 @@ func _try_select_segment(screen_position: Vector2) -> void:
 	var bus := get_node_or_null("/root/EventBus")
 	if bus:
 		bus.segment_selected.emit(String(seg["id"]), int(seg["sub_area_id"]))
-	_confirm_panel.open(seg, sim.economy.budget, _cheapest_crossing_tile_cost())
+	_confirm_panel.open(seg, sim.economy.budget, _cheapest_crossing_tile_cost(),
+			_crossings_on_segment(String(seg["id"])))
+
+## Completed crossings on `segment_id`, counted from InfrastructureManager.
+func _crossings_on_segment(segment_id: String) -> int:
+	var count := 0
+	for crossing: Dictionary in sim.infrastructure.crossings():
+		if String(crossing["segment_id"]) == segment_id:
+			count += 1
+	return count
 
 ## The cost of one tile of the cheapest crossing type shipped in v0.1.0
 ## (`available_in_v1`), read from the registry. The confirm panel's gate asks
