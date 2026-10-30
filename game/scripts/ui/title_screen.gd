@@ -45,10 +45,12 @@ func _ready() -> void:
 	menu.set_version_line("v%s  ·  Godot %s" % [
 		_project_version(), String(Engine.get_version_info()["string"])])
 	menu.play_pressed.connect(_on_menu_play_pressed)
+	menu.continue_pressed.connect(_on_menu_continue_pressed)
 	menu.credits_pressed.connect(_on_menu_credits_pressed)
 	menu.quit_pressed.connect(_on_menu_quit_pressed)
 	menu.text_size_changed.connect(_on_menu_text_size_changed)
 	add_child(menu)
+	menu.set_continue_available(not SaveManager.continue_path().is_empty())
 
 	credits = CreditsScreen.new()
 	add_child(credits)
@@ -61,6 +63,13 @@ static func should_skip_menu(user_args: PackedStringArray) -> bool:
 	return user_args.has(SKIP_MENU_ARG)
 
 func _on_menu_play_pressed() -> void:
+	get_tree().change_scene_to_file(MAIN_SCENE_PATH)
+
+func _on_menu_continue_pressed() -> void:
+	var path := SaveManager.continue_path()
+	if path.is_empty():
+		return
+	SaveManager.pending_load_path = path
 	get_tree().change_scene_to_file(MAIN_SCENE_PATH)
 
 func _on_menu_credits_pressed() -> void:

@@ -9,12 +9,14 @@ extends GutTest
 const TEST_DIR := "user://test_saves"
 
 var _path: String
+var _path2: String
 
 func before_each() -> void:
 	_path = "%s/slot_%d.json" % [TEST_DIR, randi()]
+	_path2 = "%s/slot_%d.json" % [TEST_DIR, randi()]
 
 func after_each() -> void:
-	for p: String in [_path, _path + SaveManager.TEMP_SUFFIX]:
+	for p: String in [_path, _path + SaveManager.TEMP_SUFFIX, _path2, _path2 + SaveManager.TEMP_SUFFIX]:
 		if FileAccess.file_exists(p):
 			DirAccess.remove_absolute(p)
 
@@ -141,3 +143,55 @@ func test_slot_path_lives_in_the_user_data_directory() -> void:
 	assert_string_starts_with(SaveManager.slot_path(), "user://",
 		"saves go to the user data directory, never beside the binary (ADR 0005)")
 	assert_string_contains(SaveManager.slot_path("slot_2"), "slot_2", "the slot name is used")
+
+func test_autosave_slot_is_distinct_from_the_quick_save_slot() -> void:
+	assert_eq(SaveManager.slot_path(SaveManager.QUICKSAVE_SLOT), SaveManager.slot_path(), "quick save is the default slot")
+	assert_string_ends_with(SaveManager.autosave_path(), "/autosave.json", "the autosave slot is named autosave")
+	assert_ne(SaveManager.autosave_path(), SaveManager.slot_path(SaveManager.QUICKSAVE_SLOT), "they never share a file")
+
+# --- continue: the newer slot -----------------------------------------------
+
+func _payload_at(saved_at: int, budget: int = 45000) -> Dictionary:
+	var payload: Dictionary = _payload(budget)
+	(payload["meta"] as Dictionary)["saved_at_unix"] = saved_at
+	return payload
+
+func test_newest_save_path_picks_the_later_saved_at() -> void:
+	SaveManager.save(_payload_at(100), _path)
+	SaveManager.save(_payload_at(200), _path2)
+	assert_eq(SaveManager.newest_save_path([_path, _path2]), _path2, "the later save wins")
+	assert_eq(SaveManager.newest_save_path([_path2, _path]), _path2, "regardless of order")
+
+func test_newest_save_path_breaks_a_tie_towards_the_first_path() -> void:
+	SaveManager.save(_payload_at(100), _path)
+	SaveManager.save(_payload_at(100), _path2)
+	assert_eq(SaveManager.newest_save_path([_path, _path2]), _path, "ties go to the first listed")
+
+func test_newest_save_path_with_one_slot_present() -> void:
+	SaveManager.save(_payload_at(100), _path2)
+	assert_eq(SaveManager.newest_save_path([_path, _path2]), _path2, "the missing slot is ignored")
+
+func test_newest_save_path_is_empty_when_nothing_is_saved() -> void:
+	assert_eq(SaveManager.newest_save_path([_path, _path2]), "", "no save means nothing to continue")
+
+func test_a_corrupt_slot_does_not_beat_a_good_one() -> void:
+	var f := FileAccess.open(_path, FileAccess.WRITE)
+	f.store_string("not json")
+	f.close()
+	SaveManager.save(_payload_at(100), _path2)
+	assert_eq(SaveManager.newest_save_path([_path, _path2]), _path2, "the unreadable slot counts as absent")
+	assert_push_error("Save file is not valid JSON")
+
+func test_saved_at_reads_the_meta_stamp_and_is_minus_one_when_missing() -> void:
+	SaveManager.save(_payload_at(1234), _path)
+	assert_eq(SaveManager.saved_at(_path), 1234, "the stamp is read from meta")
+	assert_eq(SaveManager.saved_at(_path2), -1, "a missing file has no stamp")
+
+func test_an_autosave_survives_a_quick_save() -> void:
+	# Two slots under the temp dir stand in for autosave and quick save.
+	var auto_path: String = _path
+	var quick_path: String = _path2
+	SaveManager.save(_payload_at(100, 1111), auto_path)
+	SaveManager.save(_payload_at(200, 2222), quick_path)
+	var auto_loaded: Dictionary = SaveManager.load_save(auto_path)
+	assert_eq(int((auto_loaded["economy"] as Dictionary)["budget"]), 1111, "the autosave is untouched by the quick save")

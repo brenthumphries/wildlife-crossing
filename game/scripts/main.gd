@@ -162,6 +162,12 @@ func _ready() -> void:
 			+ "Press M for the world map. Press F1 for credits. " \
 			+ "F2 for Signal Chase, F3 for Snowpack Survey. I for information. F5 saves, F9 loads.")
 
+	# Continue from the title screen: the menu leaves the chosen slot here.
+	if not SaveManager.pending_load_path.is_empty():
+		var pending := SaveManager.pending_load_path
+		SaveManager.pending_load_path = ""
+		_load_from(pending)
+
 func _registries() -> Dictionary:
 	var r := get_node_or_null("/root/SpeciesRegistry")
 	return {
@@ -277,9 +283,31 @@ func _apply_text_size_key(event: InputEventKey) -> bool:
 ## owns the clock, economy and progression — `to_dict()` only sees the whole
 ## §14 shape once both halves are in it.
 func _quick_save() -> void:
+	var error := _save_to(SaveManager.slot_path(SaveManager.QUICKSAVE_SLOT))
+	if error == "no_game_state":
+		return
+	if error.is_empty():
+		_log("Game saved.")
+	else:
+		_log("Save failed — " + error)
+
+## Autosave on each season change. Writes only the autosave slot, so the player's
+## quick save is never overwritten; a failed write is a HUD message, not a crash.
+func _autosave() -> void:
+	var error := _save_to(SaveManager.autosave_path())
+	if error == "no_game_state":
+		return
+	if error.is_empty():
+		_log("Autosaved.")
+	else:
+		_log("Autosave failed — " + error)
+
+## Fold the simulation into GameState and write it to `path`. Returns SaveManager's
+## error string ("" on success), or "no_game_state" when there is no GameState.
+func _save_to(path: String) -> String:
 	var game_state := get_node_or_null("/root/GameState")
 	if game_state == null:
-		return
+		return "no_game_state"
 	var world_state: Dictionary = sim.save_state()
 	game_state.active_sub_area_id = int(world_state["active_sub_area_id"])
 	game_state.patches = world_state["patches"]
@@ -296,20 +324,20 @@ func _quick_save() -> void:
 	game_state.year = int(clock_state["year"])
 	game_state.season = String(clock_state["season"])
 	game_state.day_of_season = int(clock_state["day_of_season"])
-	var error: String = SaveManager.save(game_state.to_dict())
-	if error.is_empty():
-		_log("Game saved.")
-	else:
-		_log("Save failed — " + error)
+	return SaveManager.save(game_state.to_dict(), path)
 
 ## Read the slot, apply it to GameState, then rebuild the simulation from it.
 ## Nothing is mutated until the file has parsed and migrated cleanly, so a
 ## corrupt save leaves the running game exactly as it was.
 func _quick_load() -> void:
+	_load_from(SaveManager.slot_path(SaveManager.QUICKSAVE_SLOT))
+
+## Load the save at `path` (quick load, or Continue from the title screen).
+func _load_from(path: String) -> void:
 	var game_state := get_node_or_null("/root/GameState")
 	if game_state == null:
 		return
-	var data: Dictionary = SaveManager.load_save()
+	var data: Dictionary = SaveManager.load_save(path)
 	if data.is_empty():
 		_log("No save to load.")
 		return
@@ -586,6 +614,7 @@ func _on_hint_coach_hint_shown(_hint_id: String, text: String) -> void:
 
 func _on_event_bus_season_changed(_new_season: String) -> void:
 	_sync_calendar()
+	_autosave()
 
 ## Push the sim clock to the HUD calendar. Cheap enough to call every frame,
 ## which is how a day passing, or a load, reaches it.
