@@ -14,6 +14,7 @@
 ## C43 adds a dismissible hint banner at the foot of the stack for HintCoach.
 ## C36 puts the SeasonCalendar at the head of the stack, always visible.
 ## C34 adds the TimeControls row directly beneath it.
+## C42 adds the MilestoneTrack ("Corridor N/12" and the celebration banner) beneath that.
 class_name Hud
 extends BaseScreen
 
@@ -39,6 +40,7 @@ const HINT_DISMISS_TEXT := "Got it"
 var _stack: VBoxContainer
 var _calendar: SeasonCalendar
 var _time_controls: TimeControls
+var _milestone_track: MilestoneTrack
 var _build_status_label: Label
 var _message_label: Label
 var _cue_row: HBoxContainer
@@ -68,6 +70,9 @@ func _build_ui() -> void:
 	_time_controls = TimeControls.new()
 	_time_controls.speed_selected.connect(_on_time_controls_speed_selected)
 	_stack.add_child(_time_controls)
+
+	_milestone_track = MilestoneTrack.new()
+	_stack.add_child(_milestone_track)
 
 	_build_status_label = _add_label(Color.WHITE)
 	_build_status_label.hide()   # shown only while build mode is open
@@ -126,6 +131,18 @@ func set_clock(year: int, season: String, day_of_season: int) -> void:
 ## Highlight the running speed on the time controls; call on `time_speed_changed`.
 func set_time_speed(multiplier: float) -> void:
 	_time_controls.show_speed(multiplier)
+
+## Give the milestone track the milestone records (the registry's id -> record dictionary).
+func setup_milestones(milestones_registry: Dictionary) -> void:
+	_milestone_track.setup(milestones_registry)
+
+## Show which milestones are reached; cheap enough to call every frame, which is how a load reaches it.
+func set_milestones_reached(reached_ids: Array, capstone_reached: bool) -> void:
+	_milestone_track.set_reached(reached_ids, capstone_reached)
+
+## Celebrate a milestone with the banner on the track.
+func celebrate_milestone(milestone_id: String, is_capstone: bool) -> void:
+	_milestone_track.celebrate(milestone_id, is_capstone)
 
 ## Handle a Space / 1 / 2 / 3 press; true if it was a time-control key.
 func handle_time_key(keycode: Key) -> bool:

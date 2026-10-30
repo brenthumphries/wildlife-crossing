@@ -19,6 +19,8 @@ const CAMERA_FOCUS_COORD := Vector2i(13, 6)
 const CAMERA_ZOOM := 2.0
 const WORLD_SELECT_SCENE := preload("res://scenes/ui/WorldSelectMap.tscn")
 const CROSSING_CUE := preload("res://assets/audio/crossing_chime.wav")
+## The milestone celebration reuses the crossing chime, a fifth higher (no new audio asset).
+const MILESTONE_CHIME_PITCH := 1.5
 ## In-game shortcut to the credits/attributions overlay. Reachable from the
 ## title screen too; duplicated here so the licence notices are never more than
 ## one keypress away from wherever the player actually is (ADR 0017).
@@ -49,6 +51,7 @@ var _world_select: WorldSelectController
 var _overlay: ConnectivityOverlay
 var _confirm_panel: ConfirmPanel
 var _cue_player: AudioStreamPlayer
+var _milestone_player: AudioStreamPlayer
 var _debug: Node
 var _crossed_pending := 0
 var _coalesce_timer := 0.0
@@ -93,6 +96,11 @@ func _ready() -> void:
 	_cue_player.stream = CROSSING_CUE
 	add_child(_cue_player)
 
+	_milestone_player = AudioStreamPlayer.new()
+	_milestone_player.stream = CROSSING_CUE
+	_milestone_player.pitch_scale = MILESTONE_CHIME_PITCH
+	add_child(_milestone_player)
+
 	# Screen-space, so it survives camera pan/zoom — same reason WorldSelectMap
 	# and ConfirmPanel live under a CanvasLayer rather than as plain children.
 	var hud_layer := CanvasLayer.new()
@@ -100,6 +108,7 @@ func _ready() -> void:
 	_hud = Hud.new()
 	hud_layer.add_child(_hud)
 	_hud.set_budget(sim.economy.budget)
+	_hud.setup_milestones(_registries()["milestones"])
 
 	# Same layer as the HUD (bottom-left vs the HUD's top-left); the toolbar hides
 	# itself under every overlay, see `_update_toolbar`.
@@ -155,6 +164,7 @@ func _ready() -> void:
 		bus.budget_changed.connect(_on_budget_changed)
 		bus.season_changed.connect(_on_event_bus_season_changed)
 		bus.donation_received.connect(_on_donation_received)
+		bus.milestone_reached.connect(_on_milestone_reached)
 
 	# "Tutorial loaded" is asserted verbatim by tools/smoke_boot.sh — keep it
 	# leading this line.
@@ -609,6 +619,11 @@ func _on_donation_received(amount: int, _breakdown: Dictionary) -> void:
 func _on_crossing_completed(_segment_id: String, _crossing_type: String, _sub_area_id: int) -> void:
 	_hint_coach.notify(HintCoach.EVENT_CROSSING_COMPLETED)
 
+## A milestone fired: banner and a higher-pitched chime. Both are fire-and-forget, so input and the clock are untouched.
+func _on_milestone_reached(milestone_id: String, is_capstone: bool) -> void:
+	_hud.celebrate_milestone(milestone_id, is_capstone)
+	_milestone_player.play()
+
 func _on_hint_coach_hint_shown(_hint_id: String, text: String) -> void:
 	_hud.show_hint(text)
 
@@ -624,6 +639,7 @@ func _sync_calendar() -> void:
 func _process(delta: float) -> void:
 	_update_toolbar()
 	_sync_calendar()
+	_hud.set_milestones_reached(sim.milestones.reached, sim.milestones.capstone_reached)
 	if _coalesce_timer > 0.0:
 		_coalesce_timer -= delta
 		if _coalesce_timer <= 0.0 and _crossed_pending > 0:
