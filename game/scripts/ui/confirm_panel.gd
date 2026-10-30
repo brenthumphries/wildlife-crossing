@@ -12,6 +12,8 @@ signal confirmed(segment_id: String, sub_area_id: int)
 signal cancelled()
 
 const PANEL_MIN_SIZE := Vector2(320.0, 180.0)
+const NO_CROSSINGS_TEXT := "No crossings here yet"
+const CROSSINGS_TEXT := "Crossings here: %d"
 const GATE_NOTE_TEXT := "Insufficient budget for any crossing — you can keep browsing locations."
 
 var is_open := false
@@ -21,6 +23,7 @@ var _panel_box: PanelContainer
 var _segment_label: Label
 var _budget_label: Label
 var _note_label: Label
+var _crossing_count_label: Label
 var _gate_label: Label
 var _title_label: Label
 var _confirm_button: Button
@@ -44,6 +47,7 @@ func apply_text_scale() -> void:
 	_set_font_size(_segment_label, TextScale.BODY)
 	_set_font_size(_budget_label, TextScale.BODY)
 	_set_font_size(_note_label, TextScale.SMALL)
+	_set_font_size(_crossing_count_label, TextScale.SMALL)
 	_set_font_size(_gate_label, TextScale.SMALL)
 	_set_font_size(_confirm_button, TextScale.BODY)
 	_set_font_size(_cancel_button, TextScale.BODY)
@@ -51,13 +55,17 @@ func apply_text_scale() -> void:
 ## Present the panel for a selected segment record (segments.json shape),
 ## showing the player's remaining budget. `min_crossing_cost` drives the budget
 ## gate: below it, Confirm is disabled with an explanatory note (PRD rule 14).
-func open(segment: Dictionary, budget: int, min_crossing_cost: int) -> void:
+## `crossing_count` is the number of completed crossings already on the segment,
+## supplied by the caller so the panel needs no reference to the simulation.
+func open(segment: Dictionary, budget: int, min_crossing_cost: int, crossing_count: int = 0) -> void:
 	_segment = segment
 	is_open = true
 	_can_confirm = budget >= min_crossing_cost
 	_segment_label.text = String(segment.get("label", segment.get("id", "?")))
 	_budget_label.text = "Budget remaining: $%d" % budget
 	_note_label.text = String(segment.get("connectivity_note", ""))
+	_crossing_count_label.text = NO_CROSSINGS_TEXT if crossing_count <= 0 \
+			else CROSSINGS_TEXT % crossing_count
 	_gate_label.visible = not _can_confirm
 	_confirm_button.disabled = not _can_confirm
 	show()
@@ -166,6 +174,10 @@ func _build_ui() -> void:
 	_note_label = Label.new()
 	_note_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	column.add_child(_note_label)
+
+	_crossing_count_label = Label.new()
+	_crossing_count_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	column.add_child(_crossing_count_label)
 
 	_gate_label = Label.new()
 	_gate_label.text = GATE_NOTE_TEXT

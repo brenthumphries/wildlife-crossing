@@ -51,6 +51,22 @@ func test_open_shows_segment_budget_and_note() -> void:
 	assert_string_contains(_p._budget_label.text, "50000", "current budget shown")
 	assert_string_contains(_p._note_label.text, "Splits two forest patches")
 
+func test_crossing_count_zero_says_none_yet() -> void:
+	_p.open(SEGMENT, 50000, 0, 0)
+	assert_eq(_p._crossing_count_label.text, "No crossings here yet")
+
+func test_crossing_count_defaults_to_zero() -> void:
+	_p.open(SEGMENT, 50000, 0)
+	assert_eq(_p._crossing_count_label.text, "No crossings here yet")
+
+func test_crossing_count_one() -> void:
+	_p.open(SEGMENT, 50000, 0, 1)
+	assert_eq(_p._crossing_count_label.text, "Crossings here: 1")
+
+func test_crossing_count_many() -> void:
+	_p.open(SEGMENT, 50000, 0, 4)
+	assert_eq(_p._crossing_count_label.text, "Crossings here: 4")
+
 func test_open_falls_back_to_segment_id_without_label() -> void:
 	_p.open({ "id": "s9_x", "sub_area_id": 9 }, 100, 0)
 	assert_eq(_p._segment_label.text, "s9_x")
