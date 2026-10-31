@@ -1,7 +1,7 @@
 ---
 title: "0022 — Seasonal Terrain as a Hazard Overlay"
 date: 2026-10-30
-status: proposed
+status: accepted
 ---
 
 ## Context
@@ -132,8 +132,8 @@ Superseding this ADR with §6 as written needs, at minimum:
 
 ### Neutral / Follow-on work
 
-- `simulation-design` §6 and architecture §6 still describe re-derivation. If
-  this ADR is accepted, a docs item amends both to point here.
+- `simulation-design` §6 and architecture §6 still describe re-derivation. A
+  follow-on docs item amends both to point here.
 - The flood width is fixed at one tile by Q9 and implemented as the river's
   hex neighbours. A wider flood would need a ring search rather than a
   neighbour pass.
