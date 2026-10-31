@@ -61,6 +61,8 @@ func load_world(sub_area_id: int, registries: Dictionary, seed_value: int) -> vo
 
 	world = WorldData.new()
 	world.load_from_dict(WorldData.parse_file("res://data/world/sub_area_%d.json" % sub_area_id), registries["tiles"])
+	# The graph below reads the base flags only, so it is the same whatever the season.
+	world.apply_season(seasons.season)
 	graph = ConnectivityGraph.new()
 	graph.build(world, registries["biome_groups"])
 	habitat = HabitatManager.new()
@@ -230,6 +232,18 @@ func _assign_goal(a: Dictionary) -> void:
 	a["path"] = Pathfinding.find_path(world, a["coord"], goal, { "covered": infrastructure.coverage() })
 	a["idx"] = 0
 
+## Drop every living agent's cached path and re-route it from where it stands to
+## the goal it already had, against this season's terrain (ADR 0022). Keeping the
+## goal leaves `rng` untouched, so a season change does not reshuffle the stream.
+func _repath_agents() -> void:
+	for a in agents:
+		if not a["alive"]:
+			continue
+		var path: Array = a["path"]
+		var goal: Vector2i = path[-1] if not path.is_empty() else a["coord"]
+		a["path"] = Pathfinding.find_path(world, a["coord"], goal, { "covered": infrastructure.coverage() })
+		a["idx"] = 0
+
 func _step_agent(a: Dictionary) -> void:
 	if a["idx"] >= a["path"].size() - 1:
 		_assign_goal(a)
@@ -245,10 +259,10 @@ func _step_agent(a: Dictionary) -> void:
 	if a["in_crossing"]:
 		species.report_crossed(a["last_crossing"], a["species_id"])   # one traversal completed
 		a["in_crossing"] = false
-	if world.is_hazardous(coord):
+	if world.is_effective_hazard(coord):
 		information.record_attempt(coord)
-	if world.is_hazardous(coord) and species.rolls_death(coord):
-		species.report_died(a["species_id"], coord, world.tile_at(coord))
+	if world.is_effective_hazard(coord) and species.rolls_death(coord):
+		species.report_died(a["species_id"], coord, world.hazard_tile_at(coord))
 		a["alive"] = false
 
 # --- save / load (ADR 0014, data-schemas §14) ------------------------------
@@ -296,6 +310,8 @@ func restore_state(state: Dictionary, registries: Dictionary, seed_value: int) -
 	_restoring = false
 	population.season = seasons.season
 	species.season = seasons.season
+	world.apply_season(seasons.season)
+	_repath_agents()
 	resync_agents()
 
 func _patches_state() -> Array:
@@ -447,6 +463,10 @@ func _on_season_changed(new_season: String) -> void:
 	# Hibernators leave as winter starts and come back as it ends.
 	population.season = new_season
 	species.season = new_season
+	# Rivers freeze or flood. Only pathing and mortality see it: the graph, patch
+	# ids and population records are deliberately not re-derived (ADR 0022).
+	world.apply_season(new_season)
+	_repath_agents()
 	resync_agents()
 	var bus := _event_bus()
 	if bus:

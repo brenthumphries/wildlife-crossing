@@ -52,16 +52,17 @@ static func _edge_cost(world: WorldData, b: Vector2i, opts: Dictionary) -> float
 		return BASE_COST * float(opts.get("crossing_pref_mult", 1.0))
 	if world.is_impassable(b):
 		return INF
-	if world.is_hazardous(b):
+	if world.is_effective_hazard(b):
 		return BASE_COST * float(opts.get("hazard_mult", SimulationConstants.HAZARD_AVOIDANCE_MULT))
 	return BASE_COST
 
 ## True when the path steps onto any uncovered hazardous tile — i.e. it is not a
 ## zero-mortality route. Mortality probability itself is rolled by species_manager.
+## Both this and the edge cost read this season's effective hazard (ADR 0022).
 static func path_crosses_hazard(world: WorldData, path: Array, opts: Dictionary = {}) -> bool:
 	var covered: Dictionary = opts.get("covered", {})
 	for c in path:
-		if not covered.has(c) and world.is_hazardous(c):
+		if not covered.has(c) and world.is_effective_hazard(c):
 			return true
 	return false
 

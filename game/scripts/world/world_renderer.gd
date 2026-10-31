@@ -29,6 +29,17 @@ const COLOR_HOTSPOT := Color(1.0, 0.55, 0.0, 0.95)
 const HOTSPOT_RING_RADIUS_FRACTION := 0.5
 const HOTSPOT_RING_POINTS := 24
 const HOTSPOT_RING_WIDTH_PX := 2.0
+## Base terrain fills. A river and a road share the hazard red.
+const COLOR_IMPASSABLE := Color(0.30, 0.30, 0.30)
+const COLOR_HAZARD := Color(0.62, 0.20, 0.20)
+const COLOR_FOREST := Color(0.20, 0.50, 0.22)
+const COLOR_ALPINE := Color(0.60, 0.70, 0.82)
+const COLOR_OTHER := Color(0.40, 0.40, 0.40)
+## Seasonal terrain (ADR 0022): a frozen river is pale ice, a flooded bank is
+## brown floodwater — both distinct from the base river's hazard red and from
+## the alpine blue-grey.
+const COLOR_FROZEN_RIVER := Color(0.88, 0.95, 1.0)
+const COLOR_FLOODED := Color(0.45, 0.36, 0.22)
 
 var sim: Simulation
 ## Set by Main while a BuildMode is active (build-review B4); null otherwise.
@@ -49,7 +60,7 @@ func _draw() -> void:
 	if sim == null or sim.world == null:
 		return
 	for c in sim.world.all_coords():
-		draw_circle(px_at_coord(c), TILE_PX * 0.45, _tile_color(c))
+		draw_circle(px_at_coord(c), TILE_PX * 0.45, tile_color(sim.world, c))
 	for c in sim.infrastructure.coverage().keys():
 		draw_circle(px_at_coord(c), TILE_PX * 0.45, COLOR_COMPLETED_CROSSING)
 	for c in segment_hover_tiles:
@@ -115,15 +126,21 @@ static func coord_at_px(p: Vector2) -> Vector2i:
 	var q := (p.x - r * TILE_PX * 0.5) / TILE_PX
 	return Vector2i(roundi(q), roundi(r))
 
-func _tile_color(c: Vector2i) -> Color:
-	if sim.world.is_impassable(c):
-		return Color(0.30, 0.30, 0.30)
-	if sim.world.is_hazardous(c):
-		return Color(0.62, 0.20, 0.20)
-	match sim.world.biome_at(c):
+## The fill for tile `c` of `world` this season: seasonal terrain first, so a
+## frozen river and a flooded bank read apart from the base river.
+static func tile_color(world: WorldData, c: Vector2i) -> Color:
+	if world.is_impassable(c):
+		return COLOR_IMPASSABLE
+	if world.is_frozen(c):
+		return COLOR_FROZEN_RIVER
+	if world.is_flooded(c):
+		return COLOR_FLOODED
+	if world.is_hazardous(c):
+		return COLOR_HAZARD
+	match world.biome_at(c):
 		"forest":
-			return Color(0.20, 0.50, 0.22)
+			return COLOR_FOREST
 		"alpine":
-			return Color(0.60, 0.70, 0.82)
+			return COLOR_ALPINE
 		_:
-			return Color(0.40, 0.40, 0.40)
+			return COLOR_OTHER
