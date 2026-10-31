@@ -8,6 +8,9 @@ status: active
 > Weekly plan: what must be done to produce the next working build, and who
 > does each piece. Routed plan: [`docs/plan/week.json`](../../docs/plan/week.json).
 
+> [!success] Amendment 2026-10-30 — **C29, C30, C31, C34, C39, C40, C42 and V20 are merged.**
+> Merged 2026-10-29 and 2026-10-30 as #105, #106, #107, #108, #112, #110, #111 and #109. Rows 2, 5, 6, 7, 8, 9, 10 and 24 of the §3 table are done. ADR 0022 (accepted 2026-10-30) records C39's design; `simulation-design` §6 and `architecture` §6 still describe patch re-derivation (Linear ATT-82). #113 refreshed the suite figure to 44 scripts / 688 tests / 7,800 asserts. `week.json` is not edited midweek and still lists the eight as open. Still open: D6, D9, D4 (behind Q2), D8, V15 to V19, Q2, Q10, Q11, V5, D7, B9. See [[../daily-logs/2026-10-30]].
+
 > [!success] Amendment 2026-10-26 — **C37, C38 and C36 are merged, and #95 is cleared.**
 > Merged later the same day as #101, #102 and #103, with #100 and #95 also merged. Rows 1, 3 and 4 of the §3 table are done; "Merge or close #95" under *Yours this week* is done. `week.json` is not edited midweek and still lists them as open. See [[../daily-logs/2026-10-26]].
 
