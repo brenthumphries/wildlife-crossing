@@ -54,13 +54,15 @@ func rendered_agents(count: int) -> int:
 
 # --- mortality (simulation-design §4) --------------------------------------
 
-## Per-step death probability for entering `coord`: 0 if covered or non-hazard.
+## Per-step death probability for entering `coord`: 0 if covered or not a hazard
+## this season. A frozen river is safe; a flooded bank takes the river's rate
+## (ADR 0022).
 func mortality_chance(coord: Vector2i) -> float:
 	if _coverage.has(coord):
 		return 0.0
-	if not _world.is_hazardous(coord):
+	if not _world.is_effective_hazard(coord):
 		return 0.0
-	return _env.mortality_for(_world.tile_at(coord))
+	return _env.mortality_for(_world.hazard_tile_at(coord))
 
 ## Roll the seeded RNG against the tile's mortality chance.
 func rolls_death(coord: Vector2i) -> bool:
@@ -82,8 +84,8 @@ func walk(species_id: String, path: Array, crossing_id: String) -> bool:
 		if in_crossing:
 			animal_crossed.emit(crossing_id, species_id)
 			in_crossing = false
-		if _world.is_hazardous(coord) and rolls_death(coord):
-			animal_died.emit(species_id, coord, _world.tile_at(coord))
+		if _world.is_effective_hazard(coord) and rolls_death(coord):
+			animal_died.emit(species_id, coord, _world.hazard_tile_at(coord))
 			return false
 	if in_crossing:
 		animal_crossed.emit(crossing_id, species_id)
