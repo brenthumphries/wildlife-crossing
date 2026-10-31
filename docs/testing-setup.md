@@ -67,7 +67,11 @@ godot --headless -s addons/gut/gut_cmdln.gd -gdir=res://tests -ginclude_subdirs 
 Substitute the path to your local binary for `godot` (e.g.
 `../tools/godot/Godot_v4.6.3-stable_linux.arm64`). A clean run ends with
 `---- All tests passed! ----` and a summary; the suite currently reports
-**40 scripts / 577 tests / 7,372 asserts** passing (measured 2026-10-18, after
+**44 scripts / 688 tests / 7,800 asserts** passing (measured 2026-10-30 from CI run 41155009651 on `main` at 9425155, after
+C39's `seasonal_terrain_test.gd`, on top of C42's `milestone_track_test.gd`, on top of C40's autosave tests in `save_manager_test.gd` and Continue tests in `main_menu_test.gd`, on top of
+C34's `time_controls_test.gd`, on top of C31's connectivity tooltip tests in `connectivity_overlay_test.gd` and `world_select_controller_test.gd`, on top of C30's sub-area summary tests in `world_select_controller_test.gd`, on top of C29's crossing-count tests in `confirm_panel_test.gd`, on top of
+C36's `season_calendar_test.gd`, on top of C38's migration-reach tests in `species_manager_test.gd`, on top of C37's seasonal-absence tests in `population_model_test.gd`, `season_manager_test.gd` and `simulation_test.gd`, on top of
+the toolbar and trackpad-zoom fix tests in `toolbar_test.gd` and `world_select_controller_test.gd`, on top of
 C35's `season_manager_test.gd` and the clock tests in `simulation_test.gd` and `game_state_test.gd`, on top of
 C43's `hint_coach_test.gd` and the hint tests in `game_settings_test.gd`, `hud_test.gd` and `data_validation_test.gd`, on top of
 C41's `milestone_tracker_test.gd` and the milestone-bonus tests in `economy_manager_test.gd` and `simulation_test.gd`, on top of
