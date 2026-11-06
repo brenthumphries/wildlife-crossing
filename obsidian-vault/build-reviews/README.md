@@ -19,6 +19,7 @@ Notes are named `YYYY-MM-DD-next-build.md`. Newest first.
 
 <!-- Add one line per review, newest at top: -->
 <!-- - [[YYYY-MM-DD-next-build]] — one-line headline (N blockers) -->
+- [[2026-11-02-next-build]] — Next build, measured at `4a58683`. **No blocker open**; verdict ready. 11 items merged since 2026-10-26 (seasons chain, milestone track, C29 to C31, C34, V20). No code item left; the week is Brent's walks V16, V15, V18, V17, then Q10 and V19. New: D10 (docs for ADR 0022), Q12, Q13.
 - [[2026-10-26-next-build]] — Next build, measured at `7f2ad1e`. **No blocker open** (B7 closed 2026-10-25); verdict ready. Merged 2026-10-26 to 2026-10-30: C29 to C31, C34, C36 to C40, C42, V20 and #95. No code item is left to route; ATT-82 (docs §6) is queued. Yours: V15 to V19, Q2, Q10, Q11, V5; docs D6, D8, D9, D4.
 - [[2026-10-19-next-build]] — Next build, measured at `8248874`; Monday version of the Friday plan. **No blocker open as of 2026-10-25** (B7 closed: both binaries launch, run 40204770783); `week.json` still lists it until the next plan. v0.2.0 scope unchanged. 22 items closed since Friday (C19 to C28, C32, C33, C35, C41, C43, V3, V12 to V14, D1, D5, Q9). New: V20, D9, Q11. Next code picks: C37, C34.
 - [[2026-10-16-next-build]] — Next build, measured at `3f3d227`. **1 blocker open** (B7, Windows and Linux checks deferred). Phase 3's code is complete: C12 to C18 and D3 merged; Q3 to Q8 decided. Text size and Phase 2 completion are routed in [[2026-10-19-next-build]]. Open: Q2, V13, D5, V12, V3, D1, D4, V5.
