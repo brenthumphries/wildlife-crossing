@@ -225,7 +225,7 @@ named signal below.
 | `population_recovered` | `population_model` | `economy_manager`, `permissions_manager`, `milestone_tracker` | `patch_id`, `species_id`, `event_type` |
 | `donation_received` | `economy_manager` | `budget_hud`, `GameState` | `amount`, `breakdown` |
 | `budget_changed` | `economy_manager` | `budget_hud`, `confirm_panel`, `build_palette` | `new_balance` |
-| `season_changed` | `season_manager` | `species_manager`, `world_data` (terrain shifts), `connectivity_graph`, `population_model`, `season_calendar` | `new_season` |
+| `season_changed` | `season_manager` | `species_manager`, `world_data` (terrain overlay), `Simulation` (re-paths agents), `population_model`, `season_calendar` | `new_season` |
 | `time_speed_changed` | `time_controller` | `season_manager`, `time_controls` | `multiplier` |
 | `text_scale_changed` | `TextScale` (`ui/text_scale.gd`, static) | every screen that sets a font size, to re-apply `TextScale.size()` live | `factor` |
 | `information_purchased` | `information_manager` | `inspect_panel`, `connectivity_overlay`, `entity_profile`, `permissions_manager` | `product`, `area_or_entity_id` |
@@ -247,7 +247,7 @@ Each row of the PRD interaction table is realised by a signal chain:
 | Animals successfully cross → connectivity & quality recompute upward | `animal_crossed` (usage) + `crossing_completed` → `connectivity_recomputed` → `habitat_quality_changed` |
 | Populations recover → donations rise; recovery milestones fire | `population_recovered` → `economy_manager` (income up) + `milestone_reached` |
 | Recovery milestones fire → trust rises with entities that value them | `population_recovered` / `milestone_reached` → `permissions_manager` → `trust_changed` |
-| Season shifts → migration motivation rises; usage spikes; hazards shift | `season_changed` → `species_manager` (motivation), `world_data` (terrain), `connectivity_graph` |
+| Season shifts → migration motivation rises; usage spikes; hazards shift | `season_changed` → `species_manager` (motivation), `world_data` (terrain overlay), `Simulation` (re-paths agents) |
 | Player buys information → better placement; higher effectiveness | `information_purchased` → overlay/inspect reveal → better player choices |
 | Trust threshold reached → sub-area unlocks; loop expands | `trust_changed` (crosses threshold) → `sub_area_unlocked` |
 | First Nations partnership formed → free corridor data; habitat bonus; hints | `partnership_formed` → `information_manager` + `habitat_manager` + `world_select_controller` |
@@ -262,7 +262,7 @@ document's acceptance criterion.
 Connectivity is a **patch-adjacency graph** ([ADR 0004](adr/0004-connectivity-patch-adjacency-graph.md)):
 nodes are habitat patches, edges are safe links (contiguous habitat or a
 completed same-type crossing chain). It is built per sub-area at load and
-recomputed **only** on `crossing_completed` and `season_changed` — never per
+recomputed **only** on `crossing_completed` — never on `season_changed` (seasonal terrain is an overlay, [ADR 0022](adr/0022-seasonal-terrain-overlay.md)), never per
 frame, never on pan/zoom.
 
 **Budget.** Let `P` = patches in a sub-area (tens), `L` = safe links (tens):
@@ -271,12 +271,12 @@ frame, never on pan/zoom.
   `O(P + L)` — a localised graph update plus a bounded re-derivation of affected
   habitat-quality scores. Runs synchronously inside one tick's end-of-tick phase;
   target < 2 ms.
-- `season_changed`: the heaviest event, because terrain shifts (frozen rivers,
-  spring floods) can split or merge patches. Patch re-derivation for one
-  sub-area is `O(tiles_in_sub_area)` once, then `O(P + L)` for the graph; target
-  < 16 ms (one frame) for the active sub-area, with inactive sub-areas recomputed
-  lazily on first view. Because season changes occur every 15 minutes, this cost
-  is amortised to ~0 per frame.
+- `season_changed`: rebuilds the seasonal terrain overlay on `WorldData`
+  (frozen rivers in winter, one-tile floods in spring) in `O(tiles)`, then
+  re-paths every living agent with one A* each. The graph, patches and
+  population records are not re-derived ([ADR 0022](adr/0022-seasonal-terrain-overlay.md));
+  target < 16 ms (one frame). Because season changes occur every 15 minutes,
+  this cost is amortised to ~0 per frame.
 
 The overlay, habitat-quality `connectivity_bonus`, and permission "stewardship"
 metrics all **read cached values** from the graph; they never trigger a
