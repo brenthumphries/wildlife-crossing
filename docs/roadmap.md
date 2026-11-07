@@ -542,6 +542,15 @@ cadence on `season_changed`).
 > `seasonal_migration` pattern has no absence season. C37 follows this
 > block, as its text says, and C38's 1.5 stands. `docs/simulation-design.md` §6 is not yet amended.
 
+> **Decision logged (2026-11-07): `docs/simulation-design.md` §6 amended per
+> ADR 0022.** Supersedes the sentence "`docs/simulation-design.md` §6 is not yet
+> amended" in the Q9 block above, which stays as written. §6 now describes seasonal
+> terrain as a hazard overlay derived from the current season and never saved:
+> winter clears river hazard, spring widens it by one tile, summer and fall use
+> the base terrain. Patches are not re-derived on `season_changed`; agents are
+> re-pathed. See [ADR 0022](adr/0022-seasonal-terrain-overlay.md), accepted
+> 2026-10-30. `docs/architecture.md` §6 is amended to match.
+
 ---
 
 ## Phase 5 — Permissions + narrative (post cultural review)
