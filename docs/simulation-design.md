@@ -298,14 +298,18 @@ apply modifiers:
   toward distant patches increases, raising barrier-crossing attempts — so a
   crossing built *before* a migration season sees a usage spike. Implemented as a
   season-scaled multiplier on goal-distance willingness in goal selection.
-- **Terrain shifts.** Winter freezes rivers (a frozen river tile temporarily
-  clears `is_hazardous`, opening a free crossing option); spring floods widen
-  river hazard zones by one tile. Terrain shifts re-derive the affected patches,
-  so `season_changed` is the heaviest recompute event (architecture §6).
+- **Terrain shifts.** Seasonal terrain is a hazard overlay, not a change to the
+  map. Winter clears the hazard on river tiles (a frozen river is a free route
+  for pathing and mortality); spring widens river hazard zones by one tile;
+  summer and fall use the base terrain. Terrain shifts do not re-derive patches.
 
-Because terrain can split or merge patches seasonally, `connectivity_graph`
-re-derives patch identity for the active sub-area on `season_changed`; inactive
-sub-areas recompute lazily on next view.
+The overlay is derived from the current season, never saved, and read only by
+pathing, mortality and the renderer. The base `is_hazardous` and `is_impassable`
+flags do not change with the season, so `connectivity_graph`, patch identity and
+population records are not re-derived on `season_changed`; agents are re-pathed
+instead. A frozen river therefore does not merge patches, and the connectivity
+overlay shows the base, year-round picture. See
+[ADR 0022](adr/0022-seasonal-terrain-overlay.md).
 
 ---
 
