@@ -1,20 +1,20 @@
 {
   "schema": 1,
-  "week_of": "2026-11-02",
-  "written_at": "2026-11-02T12:35:00+00:00",
-  "written_by": "weekly-plan skill (sonnet), Monday 2026-11-02, unattended, Cowork mount",
+  "week_of": "2026-11-09",
+  "written_at": "2026-11-09T17:30:00+00:00",
+  "written_by": "weekly-plan skill (sonnet), Monday 2026-11-09, unattended, Cowork mount",
   "measured_against": {
-    "head_sha": "4a5868371d6197d3281b54f0f9d78f51739d70be",
-    "head_date": "2026-10-30T21:08:27-05:00",
-    "github_state_read_at": "2026-11-02T12:26:50+00:00"
+    "head_sha": "f33dfa9839e36c5c4b1cec8eb6f58fc59bf44aa6",
+    "head_date": "2026-11-07T12:49:42-06:00",
+    "github_state_read_at": "2026-11-09T17:22:58+00:00"
   },
   "build_case": "next",
   "readiness": {
     "verdict": "ready",
     "blockers_open": [],
-    "summary": "v0.1.0 is published and CI is green on main at 4a58683 (run 41158618415, 2026-10-31). No item with blocker true is open, so by the skill rule the verdict is ready, which is narrow: it says nothing blocks a release, not that v0.2.0 is cut. Since the 2026-10-26 plan 11 items merged: the seasons chain C36 to C40, the milestone track C42, C29 to C31, C34 and V20 (pull requests #101 to #112), and #113 refreshed the suite figure to 44 scripts / 688 tests / 7,800 asserts. No code item is left in the plan. Everything between here and v0.2.0 is a windowed walk (V15 to V19), a decision (Q10, Q12, Q13 and the older Q2, Q11), the release notes (D7) or the cut (B9), so the week sits with Brent. Phase 5 stays held behind the cultural-advisor review."
+    "summary": "v0.1.0 is published and CI is green on main at f33dfa9 (run 42403207922, 2026-11-07). No item with blocker true is open, so by the skill rule the verdict is ready, which is narrow: nothing blocks a release, but v0.2.0 is not cut. Since the 2026-11-02 plan one item closed: D10 (pull request #116, the ADR 0022 docs half); #115 landed last week's plan. No daily log is newer than 2026-10-30, so none of V15 to V18 has been recorded as walked. No code item is open. The week is still Brent's windowed walks, V16 first."
   },
-  "note": "obsidian-vault/build-reviews/2026-11-02-next-build.md",
+  "note": "obsidian-vault/build-reviews/2026-11-09-next-build.md",
   "items": [
     {
       "blocker": false,
@@ -1946,7 +1946,7 @@
         "docs/adr/0022-seasonal-terrain-overlay.md",
         "obsidian-vault/daily-logs/2026-10-30.md"
       ],
-      "status": "open"
+      "status": "done"
     },
     {
       "id": "Q12",

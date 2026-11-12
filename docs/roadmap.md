@@ -489,6 +489,14 @@ systems).
 > 40204770783, and the title-screen screenshots were checked by hand. B7 no
 > longer blocks a release (daily log 2026-10-25).*
 
+> **Decision logged (2026-11-11): the 3D presentation layer in
+> [ADR 0023](adr/0023-3d-presentation-layer.md) waits until after v0.2.0.**
+> Brent's call. v0.2.0 ships on the current 2D view layer (`WorldRenderer`,
+> `Camera2D`, `WorldSelectController`), so the scope in the 2026-10-16 block above
+> is unchanged and the feature freeze and the V15 to V19 walks do not depend on 3D.
+> ADR 0023 stays `proposed`; no engine or art spike starts before the v0.2.0 cut.
+> Whether to accept it, and as which phase, is decided after the release.
+
 ---
 
 ## Phase 4 — Seasons
