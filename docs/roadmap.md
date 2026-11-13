@@ -252,6 +252,50 @@ zoom threshold measured flat-to-flat).
 > is not reachable in this build*, next to the look-only and Bow-Valley-only
 > scope already recorded above.
 
+> **Decision logged (2026-11-11): Phase 2's fourth exit criterion is now
+> reachable in the build on `main`; the wording "met in tests, not reachable in
+> the shipped build" is retired for that build.** Records build-review D6, after
+> Brent walked V16 windowed on the Mac on 2026-11-11 (daily log
+> [[2026-11-11]]). The 2026-09-23 block said the criterion becomes reachable
+> when the in-map segment renderer lands; C24 to C27 landed it and the walk saw
+> it work.
+>
+> **What the walk saw (Bow Valley, text size 100%, Apple M4).** The toolbar's
+> "Add crossing" opens the map and hides the toolbar. Scrolling or pinching in
+> reaches segment mode with the live world, no card grid and no loading screen.
+> Hovering a road highlights it and shows a connectivity label; hovering plain
+> terrain highlights nothing and shows no label. A click on a road opens the
+> confirm panel with its crossing count (zero); Confirm opens build mode on that
+> segment. Escape exits selection mode from the confirm panel, from segment
+> mode and from the world view; Cancel returns to segment mode with the overlay
+> still on (PRD rules 12 and 13). With a corridor study bought, build mode
+> marks the hotspot tiles. A click on plain terrain does nothing, a click in
+> world view is swallowed, and a click next to a segment picks it
+> (`SEGMENT_PICK_RADIUS` 1; Q11 is open).
+>
+> **Which exit criteria that covers.**
+>
+> - *Fourth criterion (confirm passes the segment; click-outside and Escape):*
+>   reachable. Click-outside was not walked.
+> - *Continuous zoom, no loading screens:* reachable. The px/tile figure read at
+>   the switch (about 11) does not match the 16 / 12 px thresholds, and the
+>   unit of that figure is not settled (daily log 2026-11-11, open questions).
+> - *Overlay appears only in segment mode and clears on exit:* appears in
+>   segment mode and clears on Escape from the world view. Its colours were hard
+>   to tell apart, and the pulse on the worst three was not checked. The
+>   criterion says the overlay clears on cancel; the PRD (rule 12) and the build
+>   keep it on after Cancel. This block does not settle that and leaves the
+>   criterion as written.
+> - *Locked sub-areas desaturated, zoom blocked:* not exercised, since Bow
+>   Valley is the only playable sub-area.
+>
+> **What did not change.** `v0.1.0` as released is unchanged and keeps the
+> 2026-09-23 wording. The new wording applies to the build the v0.2.0 release is
+> cut from, and only where this block's walk supports it. The hover extras
+> (sub-area summary on hover) and a crossing count above zero were not walked.
+> Phase 2 completion stays unfinished in the roadmap until V15 and V19 have
+> exercised the rest at every text step.
+
 ---
 
 ## Phase 3 — Economy + information
