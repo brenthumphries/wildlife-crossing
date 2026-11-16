@@ -144,6 +144,38 @@ func test_hint_banner_follows_text_scale() -> void:
 	assert_eq(_h._hint_label.get_theme_font_size("font_size"), TextScale.size(TextScale.BODY))
 	assert_eq(_h._hint_label.custom_minimum_size.x, float(TextScale.size(Hud.HINT_WIDTH_BASE)))
 
+## The union of a node's own rect and every visible descendant Control's rect:
+## what the widget actually draws, which a plain Control's own rect can understate.
+func _drawn_rect(node: Control) -> Rect2:
+	var rect: Rect2 = node.get_global_rect()
+	for child: Node in node.find_children("*", "Control", true, false):
+		var control: Control = child as Control
+		if control.is_visible_in_tree():
+			rect = rect.merge(control.get_global_rect())
+	return rect
+
+func _assert_stack_rows_clear(step_label: String) -> void:
+	var rows: Array[Control] = []
+	for child: Node in _h._stack.get_children():
+		var control: Control = child as Control
+		if control.visible:
+			rows.append(control)
+	for i in range(rows.size() - 1):
+		assert_false(_drawn_rect(rows[i]).intersects(_drawn_rect(rows[i + 1])),
+				"stack rows %d and %d overlap at %s" % [i, i + 1, step_label])
+
+func test_stack_rows_never_overlap_with_a_migration_clock_and_a_banner() -> void:
+	add_child(_h)
+	_h.setup_milestones({ "first_crossing_sub1": { "id": "first_crossing_sub1",
+			"display_name": "First crossing", "is_capstone": false } })
+	_h.set_clock(1, "fall", 3)   # a migration season: the calendar shows its migration line
+	_h.celebrate_milestone("first_crossing_sub1", false)
+	for step: int in [0, TextScale.STEPS.size() - 1]:
+		TextScale.set_step(step)
+		await get_tree().process_frame
+		await get_tree().process_frame
+		_assert_stack_rows_clear("step %d" % step)
+
 # ATT-172: the map's CanvasLayer is added after the HUD's and its controller
 # accepts every press, so the HUD must sit on a higher layer to get the click.
 func test_hud_layer_is_above_the_map_layer_and_below_the_modals() -> void:
