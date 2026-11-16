@@ -84,7 +84,7 @@ func test_seen_hints_are_not_written_to_a_save() -> void:
 func test_game_started_shows_the_first_step_hint() -> void:
 	_coach.notify(HintCoach.EVENT_GAME_STARTED)
 	assert_eq(_coach.current_id, "first_step")
-	assert_true(_coach.text_for("first_step").begins_with("Welcome to Bow Valley."))
+	assert_true(_coach.text_for("first_step").begins_with("Welcome. Click Add crossing"))
 
 func test_first_step_stays_until_dismissed() -> void:
 	_coach.notify(HintCoach.EVENT_GAME_STARTED)
