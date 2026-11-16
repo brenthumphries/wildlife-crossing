@@ -45,14 +45,16 @@ func test_font_sizes_follow_text_scale() -> void:
 		assert_eq(_t._add_crossing_button.get_theme_font_size("font_size"), expected)
 		assert_eq(_t._info_button.get_theme_font_size("font_size"), expected)
 
-func test_bar_is_anchored_bottom_left_clear_of_the_hud_stack() -> void:
+func test_bar_is_anchored_bottom_left_clear_of_the_hud_zones() -> void:
 	var hud := Hud.new()
 	autofree(hud)
 	assert_eq(_t._bar.anchor_top, 1.0, "toolbar hugs the bottom edge")
 	assert_eq(_t._bar.anchor_bottom, 1.0)
-	assert_eq(hud._stack.anchor_bottom, 0.0, "HUD stack hugs the top edge")
+	assert_eq(hud._clock_panel.anchor_bottom, 0.0, "clock zone hugs the top edge")
+	assert_eq(hud._resource_panel.anchor_bottom, 0.0, "resource zone hugs the top edge")
+	assert_eq(hud._toast_panel.anchor_left, 1.0, "toast zone hugs the right edge")
 
-func test_bar_sits_inside_the_window_and_clear_of_the_hud_at_every_text_scale_step() -> void:
+func test_bar_sits_inside_the_window_and_clear_of_every_hud_zone_at_every_text_scale_step() -> void:
 	# A real 1280x720 viewport, so anchors resolve to pixels. The bar's anchors
 	# alone do not prove it fits: it was built before its buttons existed and grew
 	# downward past the bottom edge (V16, 2026-10-18).
@@ -78,16 +80,10 @@ func test_bar_sits_inside_the_window_and_clear_of_the_hud_at_every_text_scale_st
 		assert_almost_eq(bar.position.x, Toolbar.BAR_MARGIN, 0.5, "hugs the left at step %d" % step)
 		assert_almost_eq(bar.end.y, view.end.y - Toolbar.BAR_MARGIN, 0.5,
 				"keeps its bottom margin at step %d" % step)
-		var stack := hud._stack.get_global_rect()
-		if step == TextScale.STEPS.size() - 1 and bar.intersects(stack):
-			# The HUD stack now reports its true height (656 px), so at the largest
-			# text step it reaches the bottom-left toolbar in a 720 px window. The layout
-			# is fixed by ATT-146 (HUD zones rebuild), ATT-148 (minimum window per text
-			# step) and ATT-169 (larger default window); every other step still asserts.
-			pending("step %d: HUD stack %s meets the toolbar %s; pending ATT-146, ATT-148, ATT-169" % [step, stack, bar])
-		else:
-			assert_false(bar.intersects(stack),
-					"bar %s clear of the HUD stack %s at step %d" % [bar, stack, step])
+		for zone: Control in [hud._clock_panel, hud._resource_panel, hud._toast_panel]:
+			assert_true(zone.visible, "%s showing at step %d" % [zone.name, step])
+			assert_false(bar.intersects(zone.get_global_rect()),
+					"bar %s clear of the HUD zone %s at step %d" % [bar, zone.get_global_rect(), step])
 	window.remove_child(_t)   # after_each frees it directly
 
 func test_toolbar_does_not_block_the_world_outside_its_buttons() -> void:

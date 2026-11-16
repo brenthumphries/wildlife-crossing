@@ -3,6 +3,10 @@
 ## time rather than left stuck on screen.
 extends GutTest
 
+const WINDOW_SIZE := Vector2i(1280, 720)
+## The longest text in data/hints.json (the build-mode hint), the toast stack's worst case.
+const LONGEST_HINT := "Click tiles across the highway to place the crossing. Each tile costs money, and the total is shown at the top. Press Enter to confirm."
+
 var _h: Hud
 
 func before_each() -> void:
@@ -81,10 +85,13 @@ func test_build_status_hidden_until_set_and_cleared_again() -> void:
 	_h.clear_build_status()
 	assert_false(_h._build_status_label.visible)
 
-func test_every_text_lives_in_the_one_stack() -> void:
-	for node: Node in [_h._build_status_label, _h._message_label, _h._cue_row,
-			_h._budget_label, _h._donation_label]:
-		assert_eq(node.get_parent(), _h._stack)
+func test_every_text_lives_in_its_zone_stack() -> void:
+	for node: Node in [_h._build_status_label, _h._message_label, _h._cue_row, _h._hint_panel]:
+		assert_eq(node.get_parent(), _h._toast_stack)
+	for node: Node in [_h._budget_label, _h._donation_label]:
+		assert_eq(node.get_parent(), _h._resource_stack)
+	for node: Node in [_h._calendar, _h._time_controls, _h._milestone_track]:
+		assert_eq(node.get_parent(), _h._clock_stack)
 	assert_eq(_h._cue_label.get_parent(), _h._cue_row)
 	assert_eq(_h._cue_icon.get_parent(), _h._cue_row)
 
@@ -141,7 +148,7 @@ func test_hint_banner_never_blocks_the_mouse() -> void:
 func test_hint_banner_follows_text_scale() -> void:
 	TextScale.set_step(3)
 	_h.apply_text_scale()
-	assert_eq(_h._hint_label.get_theme_font_size("font_size"), TextScale.size(TextScale.BODY))
+	assert_eq(_h._hint_label.get_theme_font_size("font_size"), TextScale.size(TextScale.SMALL))
 	assert_eq(_h._hint_label.custom_minimum_size.x, float(TextScale.size(Hud.HINT_WIDTH_BASE)))
 
 ## The union of a node's own rect and every visible descendant Control's rect:
@@ -154,15 +161,15 @@ func _drawn_rect(node: Control) -> Rect2:
 			rect = rect.merge(control.get_global_rect())
 	return rect
 
-func _assert_stack_rows_clear(step_label: String) -> void:
+func _assert_stack_rows_clear(stack: Control, step_label: String) -> void:
 	var rows: Array[Control] = []
-	for child: Node in _h._stack.get_children():
+	for child: Node in stack.get_children():
 		var control: Control = child as Control
 		if control.visible:
 			rows.append(control)
 	for i in range(rows.size() - 1):
 		assert_false(_drawn_rect(rows[i]).intersects(_drawn_rect(rows[i + 1])),
-				"stack rows %d and %d overlap at %s" % [i, i + 1, step_label])
+				"%s rows %d and %d overlap at %s" % [stack.name, i, i + 1, step_label])
 
 func test_stack_rows_never_overlap_with_a_migration_clock_and_a_banner() -> void:
 	add_child(_h)
@@ -174,7 +181,157 @@ func test_stack_rows_never_overlap_with_a_migration_clock_and_a_banner() -> void
 		TextScale.set_step(step)
 		await get_tree().process_frame
 		await get_tree().process_frame
-		_assert_stack_rows_clear("step %d" % step)
+		_assert_stack_rows_clear(_h._clock_stack, "step %d" % step)
+
+# ATT-146: zones. A real 1280x720 viewport so anchors resolve to pixels.
+func _hud_in_window(everything_showing: bool, stress: bool = true) -> Hud:
+	var window := SubViewport.new()
+	window.size = WINDOW_SIZE
+	add_child_autofree(window)
+	var hud := Hud.new()
+	hud.setup_milestones({ "first_crossing_sub1": { "id": "first_crossing_sub1",
+			"display_name": "First crossing", "is_capstone": false } })
+	hud.set_clock(1, "fall", 3)
+	if everything_showing:
+		hud.celebrate_milestone("first_crossing_sub1", false)
+		hud.set_last_donation(250)
+		hud.show_hint(LONGEST_HINT)
+		hud.show_message("Overpass complete — the highway is now a safe crossing.")
+		if stress:   # a rejection reason on the status line and a crossing cue on top
+			hud.set_build_status("Build overpass — 3 tile(s) selected, $300 — budget $9000  (needs a tile on each side of the highway)")
+			hud.show_crossing_cue(12)
+		else:   # what build mode really has up: its status, its hint and the last message
+			hud.set_build_status("Build overpass — 3 tile(s) selected, $300 — budget $9000")
+	window.add_child(hud)
+	return hud
+
+func _settle(step: int, hud: Hud) -> void:
+	TextScale.set_step(step)
+	hud.apply_text_scale()
+	await get_tree().process_frame
+	await get_tree().process_frame
+
+func test_each_cluster_sits_in_its_corner_at_every_text_scale_step() -> void:
+	var hud: Hud = _hud_in_window(true)
+	var view := Rect2(Vector2.ZERO, Vector2(WINDOW_SIZE))
+	for step: int in TextScale.STEPS.size():
+		await _settle(step, hud)
+		var clock: Rect2 = hud._clock_panel.get_global_rect()
+		var resources: Rect2 = hud._resource_panel.get_global_rect()
+		var toasts: Rect2 = hud._toast_panel.get_global_rect()
+		assert_almost_eq(clock.position.x, Hud.STACK_MARGIN, 0.5, "clock hugs the left at step %d" % step)
+		assert_almost_eq(clock.position.y, Hud.STACK_MARGIN, 0.5, "clock hugs the top at step %d" % step)
+		assert_almost_eq(resources.end.x, view.end.x - Hud.STACK_MARGIN, 0.5, "resources hug the right at step %d" % step)
+		assert_almost_eq(resources.position.y, Hud.STACK_MARGIN, 0.5, "resources hug the top at step %d" % step)
+		assert_almost_eq(toasts.end.x, view.end.x - Hud.STACK_MARGIN, 0.5, "toasts hug the right at step %d" % step)
+		assert_almost_eq(toasts.end.y, view.end.y - Hud.STACK_MARGIN, 0.5, "toasts hug the bottom at step %d" % step)
+		for rect: Rect2 in [clock, resources, toasts]:
+			assert_true(view.encloses(rect), "%s inside the window at step %d" % [rect, step])
+
+func test_the_three_panels_never_overlap_while_build_mode_is_up_at_every_text_scale_step() -> void:
+	var hud: Hud = _hud_in_window(true, false)
+	for step: int in TextScale.STEPS.size():
+		await _settle(step, hud)
+		_assert_panels_apart(hud, step)
+
+# Every toast at once, with a rejection reason and a cue: more than the game puts up together.
+# At the largest step it does not fit a 720 px window, which ATT-148 (minimum window per text
+# step) and ATT-169 (larger default window) own; the steps below it still assert.
+func test_the_three_panels_never_overlap_with_every_toast_up_at_every_text_scale_step() -> void:
+	var hud: Hud = _hud_in_window(true)
+	for step: int in TextScale.STEPS.size():
+		await _settle(step, hud)
+		if step == TextScale.STEPS.size() - 1 and hud._clock_panel.get_global_rect().intersects(hud._toast_panel.get_global_rect()):
+			pending("step %d: clock %s meets the toast stack %s with every toast up; pending ATT-148, ATT-169" % [
+					step, hud._clock_panel.get_global_rect(), hud._toast_panel.get_global_rect()])
+		else:
+			_assert_panels_apart(hud, step)
+
+func _assert_panels_apart(hud: Hud, step: int) -> void:
+	var panels: Array[Control] = [hud._clock_panel, hud._resource_panel, hud._toast_panel]
+	for a in panels.size():
+		assert_true(panels[a].visible, "panel %d visible at step %d" % [a, step])
+		for b in range(a + 1, panels.size()):
+			assert_false(panels[a].get_global_rect().intersects(panels[b].get_global_rect()),
+					"panels %d and %d overlap at step %d" % [a, b, step])
+	_assert_stack_rows_clear(hud._toast_stack, "step %d" % step)
+	_assert_stack_rows_clear(hud._clock_stack, "step %d" % step)
+
+func test_milestone_track_sits_directly_under_the_time_controls() -> void:
+	var hud: Hud = _hud_in_window(true)
+	assert_eq(hud._time_controls.get_index() + 1, hud._milestone_track.get_index(), "next sibling")
+	for step: int in TextScale.STEPS.size():
+		await _settle(step, hud)
+		var controls_bottom: float = hud._time_controls.get_global_rect().end.y
+		var track_top: float = hud._milestone_track.get_global_rect().position.y
+		assert_almost_eq(track_top - controls_bottom, float(Hud.STACK_SEPARATION), 0.5,
+				"only the stack separation between them at step %d" % step)
+
+func test_budget_and_donation_update_in_the_top_right_panel() -> void:
+	var hud: Hud = _hud_in_window(false)
+	await _settle(0, hud)
+	hud.set_budget(777)
+	hud.set_last_donation(55)
+	await _settle(0, hud)
+	assert_eq(hud._budget_label.get_parent().get_parent(), hud._resource_panel)
+	assert_true(hud._resource_panel.get_global_rect().encloses(hud._budget_label.get_global_rect()))
+	assert_true(hud._resource_panel.get_global_rect().encloses(hud._donation_label.get_global_rect()))
+	assert_eq(hud._budget_label.text, "Budget: $777")
+	assert_eq(hud._donation_label.text, "Last donation: $55")
+
+func test_every_cluster_has_a_semi_opaque_panel() -> void:
+	for panel: PanelContainer in [_h._clock_panel, _h._resource_panel, _h._toast_panel]:
+		var style: StyleBoxFlat = panel.get_theme_stylebox("panel") as StyleBoxFlat
+		assert_not_null(style)
+		assert_gt(style.bg_color.a, 0.0, "backing is visible")
+		assert_lt(style.bg_color.a, 1.0, "backing lets the map show through")
+		assert_eq(panel.mouse_filter, Control.MOUSE_FILTER_IGNORE)
+
+func test_toast_panel_is_hidden_until_a_toast_shows_and_hides_again() -> void:
+	assert_false(_h._toast_panel.visible, "nothing to toast at start")
+	_h.show_message("Hello")
+	assert_true(_h._toast_panel.visible)
+	_h._process(Hud.MESSAGE_FADE_SECONDS)
+	assert_false(_h._message_label.visible)
+	assert_false(_h._toast_panel.visible, "faded message leaves no empty panel")
+	_h.show_crossing_cue(2)
+	assert_true(_h._toast_panel.visible)
+	_h._process(Hud.CUE_FLASH_SECONDS)
+	assert_false(_h._toast_panel.visible)
+	_h.set_build_status("Build mode")
+	assert_true(_h._toast_panel.visible)
+	_h.clear_build_status()
+	assert_false(_h._toast_panel.visible)
+	_h.show_hint("A hint")
+	assert_true(_h._toast_panel.visible)
+	_h._hint_button.pressed.emit()
+	assert_false(_h._toast_panel.visible)
+
+func test_toasts_stay_up_while_any_one_is_showing() -> void:
+	_h.show_hint("A hint")
+	_h.show_message("Hello")
+	_h._process(Hud.MESSAGE_FADE_SECONDS)
+	assert_true(_h._toast_panel.visible, "the hint keeps the stack up")
+
+func test_build_status_wraps_inside_the_toast_stack() -> void:
+	var hud: Hud = _hud_in_window(false)
+	hud.set_build_status("Build overpass — 3 tile(s) selected, $300 — budget $9000  (needs a tile on each side of the highway)")
+	for step: int in TextScale.STEPS.size():
+		await _settle(step, hud)
+		var label: Label = hud._build_status_label
+		assert_ne(label.autowrap_mode, TextServer.AUTOWRAP_OFF)
+		assert_true(hud._toast_panel.get_global_rect().encloses(label.get_global_rect()),
+				"the wrapped readout stays inside its panel at step %d" % step)
+		assert_gt(label.get_global_rect().size.y, float(label.get_line_height()) * 1.5,
+				"long text wrapped onto a second line at step %d" % step)
+
+func test_hint_got_it_button_stays_inside_the_window_and_takes_the_mouse() -> void:
+	var hud: Hud = _hud_in_window(true)
+	var view := Rect2(Vector2.ZERO, Vector2(WINDOW_SIZE))
+	for step: int in TextScale.STEPS.size():
+		await _settle(step, hud)
+		assert_true(view.encloses(hud._hint_button.get_global_rect()), "Got it on screen at step %d" % step)
+		assert_eq(hud._hint_button.mouse_filter, Control.MOUSE_FILTER_STOP)
 
 # ATT-172: the map's CanvasLayer is added after the HUD's and its controller
 # accepts every press, so the HUD must sit on a higher layer to get the click.
