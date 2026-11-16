@@ -143,3 +143,29 @@ func test_hint_banner_follows_text_scale() -> void:
 	_h.apply_text_scale()
 	assert_eq(_h._hint_label.get_theme_font_size("font_size"), TextScale.size(TextScale.BODY))
 	assert_eq(_h._hint_label.custom_minimum_size.x, float(TextScale.size(Hud.HINT_WIDTH_BASE)))
+
+# ATT-172: the map's CanvasLayer is added after the HUD's and its controller
+# accepts every press, so the HUD must sit on a higher layer to get the click.
+func test_hud_layer_is_above_the_map_layer_and_below_the_modals() -> void:
+	assert_gt(Main.HUD_LAYER, Main.MAP_LAYER, "HUD gets input before the map")
+	var modals: Array[int] = [Main.CREDITS_LAYER, Main.TELEMETRY_LAYER, Main.SNOWPACK_LAYER, Main.INFO_LAYER]
+	var previous: int = Main.HUD_LAYER
+	for layer: int in modals:
+		assert_gt(layer, previous, "modals stay above the HUD, in order")
+		previous = layer
+
+func test_only_buttons_take_the_mouse_so_clicks_fall_through_to_the_map() -> void:
+	var hud: Hud = add_child_autofree(Hud.new())
+	hud.show_hint("hint")
+	var takers: Array[Control] = []
+	_collect_mouse_takers(hud, takers)
+	assert_gt(takers.size(), 0, "the hint's Got it button takes the mouse")
+	for taker: Control in takers:
+		assert_true(taker is Button, "%s must ignore the mouse (only buttons take it)" % taker.name)
+
+func _collect_mouse_takers(node: Node, out: Array[Control]) -> void:
+	for child: Node in node.get_children():
+		var control := child as Control
+		if control != null and control.mouse_filter == Control.MOUSE_FILTER_STOP:
+			out.append(control)
+		_collect_mouse_takers(child, out)
