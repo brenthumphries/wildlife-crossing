@@ -556,8 +556,8 @@ func _build_ui() -> void:
 	sidebar.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	row.add_child(sidebar)
 
-	# The sidebar scrolls so a large text step never pushes copy off screen; the
-	# controls line stays pinned below it, always visible.
+	# The sidebar's reading copy scrolls so a large text step never pushes it off
+	# screen; the tool line, verdict buttons and controls line stay pinned below it.
 	_scroll = ScrollContainer.new()
 	_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
@@ -577,14 +577,18 @@ func _build_ui() -> void:
 	content.add_child(_intro_label)
 	_date_label = _make_label("", TextScale.BODY)
 	content.add_child(_date_label)
+
+	# The active tool and the verdict buttons are pinned below the scroll, not
+	# inside it: at the larger text steps the title and intro are taller than the
+	# window, and anything inside the scroll would sit below the fold.
 	_tool_label = _make_label("", TextScale.BODY)
 	_tool_label.add_theme_color_override("font_color", GOLD)
-	content.add_child(_tool_label)
+	sidebar.add_child(_tool_label)
 
 	var buttons := HBoxContainer.new()
 	buttons.add_theme_constant_override("separation", BUTTON_SEPARATION)
 	buttons.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	content.add_child(buttons)
+	sidebar.add_child(buttons)
 	for verdict: SnowpackProfile.Verdict in [SnowpackProfile.Verdict.VIABLE,
 			SnowpackProfile.Verdict.MARGINAL, SnowpackProfile.Verdict.NOT_VIABLE]:
 		var button := Button.new()
