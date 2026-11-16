@@ -1,9 +1,10 @@
-## Tests for HintCoach: four first-time hints, each shown once, stored in settings and not in saves.
+## Tests for HintCoach: five first-time hints, each shown once, stored in settings and not in saves.
 extends GutTest
 
 const GameStateScript: GDScript = preload("res://scripts/systems/game_state.gd")
 const SETTINGS_PATH := "user://hint_coach_test.cfg"
 const EVENTS: Array[String] = [
+	HintCoach.EVENT_GAME_STARTED,
 	HintCoach.EVENT_OVERLAY_SHOWN,
 	HintCoach.EVENT_BUILD_MODE_OPENED,
 	HintCoach.EVENT_CROSSING_COMPLETED,
@@ -32,8 +33,8 @@ func _make_coach() -> HintCoach:
 	coach.hint_shown.connect(func(hint_id: String, _text: String) -> void: _shown.append(hint_id))
 	return coach
 
-func test_data_file_has_four_hints_each_with_text() -> void:
-	assert_eq(_coach.hint_ids().size(), 4)
+func test_data_file_has_five_hints_each_with_text() -> void:
+	assert_eq(_coach.hint_ids().size(), 5)
 	for hint_id: String in _coach.hint_ids():
 		assert_ne(_coach.text_for(hint_id).strip_edges(), "", "hint %s has text" % hint_id)
 
@@ -79,6 +80,52 @@ func test_seen_hints_are_not_written_to_a_save() -> void:
 	var state: Node = GameStateScript.new()
 	assert_false(JSON.stringify(state.to_dict()).contains("hint"))
 	state.free()
+
+func test_game_started_shows_the_first_step_hint() -> void:
+	_coach.notify(HintCoach.EVENT_GAME_STARTED)
+	assert_eq(_coach.current_id, "first_step")
+	assert_true(_coach.text_for("first_step").begins_with("Welcome. Click Add crossing"))
+
+func test_first_step_stays_until_dismissed() -> void:
+	_coach.notify(HintCoach.EVENT_GAME_STARTED)
+	_coach.notify("unrelated")
+	assert_eq(_coach.current_id, "first_step")
+
+func test_dismiss_if_current_clears_the_matching_hint() -> void:
+	watch_signals(_coach)
+	_coach.notify(HintCoach.EVENT_GAME_STARTED)
+	_coach.dismiss_if_current("first_step")
+	assert_eq(_coach.current_id, "")
+	assert_signal_emitted(_coach, "hint_cleared")
+
+func test_dismiss_if_current_leaves_another_hint_alone() -> void:
+	_coach.notify(HintCoach.EVENT_OVERLAY_SHOWN)
+	_coach.dismiss_if_current("first_step")
+	assert_eq(_coach.current_id, "overlay_colors")
+
+func test_dismiss_before_build_hint_lets_it_show_next() -> void:
+	_coach.notify(HintCoach.EVENT_GAME_STARTED)
+	_coach.dismiss_if_current("first_step")
+	_coach.notify(HintCoach.EVENT_BUILD_MODE_OPENED)
+	assert_eq(_coach.current_id, "build_mode")
+
+func test_first_step_does_not_return_once_seen() -> void:
+	_coach.notify(HintCoach.EVENT_GAME_STARTED)
+	_coach.dismiss()
+	var later: HintCoach = _make_coach()
+	_shown.clear()
+	later.notify(HintCoach.EVENT_GAME_STARTED)
+	assert_eq(_shown.size(), 0)
+	assert_eq(later.current_id, "")
+
+func test_first_step_is_seen_when_shown_and_stays_seen_after_self_dismiss() -> void:
+	_coach.notify(HintCoach.EVENT_GAME_STARTED)
+	assert_true(_coach.has_seen("first_step"), "marked seen when shown")
+	_coach.dismiss_if_current("first_step")
+	assert_true(_coach.has_seen("first_step"), "dismiss does not unmark it")
+	assert_true(_settings.load_seen_hints().has("first_step"))
+	_coach.notify(HintCoach.EVENT_GAME_STARTED)
+	assert_eq(_coach.current_id, "", "dismiss does not re-queue it")
 
 func test_queued_hint_is_not_in_settings_until_shown() -> void:
 	_coach.notify(HintCoach.EVENT_OVERLAY_SHOWN)

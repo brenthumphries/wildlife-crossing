@@ -8,6 +8,7 @@ signal hint_cleared()
 const DEFAULT_HINTS_PATH := "res://data/hints.json"
 
 ## The event names `notify` takes; each is the `event` field in hints.json.
+const EVENT_GAME_STARTED := "game_started"
 const EVENT_OVERLAY_SHOWN := "overlay_shown"
 const EVENT_BUILD_MODE_OPENED := "build_mode_opened"
 const EVENT_CROSSING_COMPLETED := "crossing_completed"
@@ -49,6 +50,11 @@ func dismiss() -> void:
 	current_id = ""
 	hint_cleared.emit()
 	_show_next()
+
+## Dismisses the banner only if `hint_id` is the one on screen.
+func dismiss_if_current(hint_id: String) -> void:
+	if current_id == hint_id:
+		dismiss()
 
 ## True once the hint has been shown.
 func has_seen(hint_id: String) -> bool:

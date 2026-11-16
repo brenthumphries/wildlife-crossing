@@ -13,6 +13,8 @@ const TUTORIAL_SEGMENT := "s7_trans_canada_bow_a"
 ## `available_in_v1`): overpass is the only crossing type shipped, so build
 ## mode has no type selector yet. Add one when underpass/corridor ship.
 const BUILD_CROSSING_TYPE := "overpass"
+## The hint id (hints.json) that opening the map or build mode dismisses.
+const FIRST_STEP_HINT_ID := "first_step"
 ## Opening camera framing: a tile on the tutorial highway, so the first view
 ## shows the crossing site. Projected through `WorldRenderer.px_at_coord`.
 const CAMERA_FOCUS_COORD := Vector2i(13, 6)
@@ -189,6 +191,8 @@ func _ready() -> void:
 		var pending := SaveManager.pending_load_path
 		SaveManager.pending_load_path = ""
 		_load_from(pending)
+	else:
+		_hint_coach.notify(HintCoach.EVENT_GAME_STARTED)
 
 func _registries() -> Dictionary:
 	var r := get_node_or_null("/root/SpeciesRegistry")
@@ -495,6 +499,7 @@ func _enter_build_mode(segment_id: String, _sub_area_id: int) -> void:
 	_renderer.information = sim.information
 	_renderer.hotspot_area_id = sim.active_sub_area_id
 	_update_build_status_label()
+	_hint_coach.dismiss_if_current(FIRST_STEP_HINT_ID)
 	_hint_coach.notify(HintCoach.EVENT_BUILD_MODE_OPENED)
 	_log("Build mode — click tiles across the corridor. Enter to confirm, Escape to cancel.")
 
@@ -585,6 +590,7 @@ func _update_toolbar() -> void:
 ## Open the crossing-location-selection map (lazily instanced on first use).
 ## Reached from the M key and the toolbar's Add crossing button (PRD rule 1).
 func _open_world_select() -> void:
+	_hint_coach.dismiss_if_current(FIRST_STEP_HINT_ID)
 	if _world_select == null:
 		_world_select = WORLD_SELECT_SCENE.instantiate()
 		var layer := CanvasLayer.new()

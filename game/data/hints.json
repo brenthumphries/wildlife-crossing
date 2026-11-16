@@ -1,6 +1,8 @@
 {
   "data_version": 1,
   "hints": [
+    { "id": "first_step", "event": "game_started",
+      "text": "Welcome. Click Add crossing, or press M, to open the map and choose where animals should cross." },
     { "id": "overlay_colors", "event": "overlay_shown",
       "text": "Orange tiles are cut off from the habitat around them. Teal tiles are well connected. Look for orange along the highway." },
     { "id": "build_mode", "event": "build_mode_opened",
