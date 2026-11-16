@@ -776,3 +776,44 @@ func test_cards_fit_the_viewport_at_every_text_scale_step() -> void:
 		var bounds := Rect2(Vector2.ZERO, _c.size)
 		for rect: Rect2 in _c._card_layout()["rects"].values():
 			assert_true(bounds.encloses(rect), "card inside viewport at step %d" % step)
+
+# --- map header copy (ATT-176) ---
+
+func test_header_world_view_is_exact_approved_copy() -> void:
+	_c.enter_selection_mode()
+	_c.set_focused_sub_area(7)
+	var expected: String = "Central Canadian Rockies — zoom in to pick a road to cross (%.1f px/tile) · Esc to exit" % _c.tile_px()
+	assert_eq(_c._header_text(), expected, "world view header copy")
+
+func test_header_segment_mode_is_exact_approved_copy() -> void:
+	_enter_mid_zoom(true)
+	_c.set_focused_sub_area(7)
+	var expected: String = "Central Canadian Rockies — click a road to pick it (%.1f px/tile) · scroll or pinch to zoom · Esc to exit" % _c.tile_px()
+	assert_eq(_c._header_text(), expected, "segment mode header copy")
+
+func test_header_names_focused_area_in_both_modes() -> void:
+	var name_text: String = "Central Canadian Rockies"
+	_c.enter_selection_mode()
+	_c.set_focused_sub_area(7)
+	var world_header: String = _c._header_text()
+	assert_true(world_header.contains(name_text), "world view header names the area")
+	assert_true(world_header.contains("zoom in to pick a road"), "world view header says zoom in")
+	_c.free()
+	before_each()
+	_enter_mid_zoom(true)
+	_c.set_focused_sub_area(7)
+	var segment_header: String = _c._header_text()
+	assert_true(segment_header.contains(name_text), "segment mode header names the area")
+	assert_true(segment_header.contains("click a road to pick it"), "segment mode header says click a road")
+
+func test_header_keeps_px_tile_readout_and_esc_hint_in_both_modes() -> void:
+	_enter_mid_zoom(false)
+	var world_header: String = _c._header_text()
+	assert_true(world_header.contains("(%.1f px/tile)" % _c.tile_px()), "world view header has the px/tile readout")
+	assert_true(world_header.contains("Esc to exit"), "world view header has the Esc hint")
+	_c.free()
+	before_each()
+	_enter_mid_zoom(true)
+	var segment_header: String = _c._header_text()
+	assert_true(segment_header.contains("(%.1f px/tile)" % _c.tile_px()), "segment header has the px/tile readout")
+	assert_true(segment_header.contains("Esc to exit"), "segment header has the Esc hint")
