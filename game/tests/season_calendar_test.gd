@@ -72,3 +72,22 @@ func test_text_sizes_come_from_text_scale() -> void:
 	_cal.apply_text_scale()
 	assert_eq(_cal._season_label.get_theme_font_size("font_size"), TextScale.size(TextScale.BODY))
 	assert_eq(_cal._migration_label.get_theme_font_size("font_size"), TextScale.size(TextScale.SMALL))
+
+func test_reserved_height_covers_the_migration_line_in_every_season() -> void:
+	_cal.set_clock(1, "summer", 10)
+	var summer: float = _cal.custom_minimum_size.y
+	_cal.set_clock(1, "fall", 0)
+	assert_eq(_cal.custom_minimum_size.y, summer, "reservation does not change when the clock moves")
+	assert_true(_cal.custom_minimum_size.y >= _cal._row.get_combined_minimum_size().y)
+
+func test_reservation_covers_both_lines_once_in_the_tree_at_every_text_scale_step() -> void:
+	add_child(_cal)   # fonts resolve in the tree; the reservation must follow
+	_cal.set_clock(1, "fall", 3)
+	for step: int in [0, TextScale.STEPS.size() - 1]:
+		TextScale.set_step(step)
+		_cal.apply_text_scale()
+		await get_tree().process_frame
+		await get_tree().process_frame
+		var lines: float = _cal._season_label.size.y + _cal._migration_label.size.y
+		assert_true(_cal.custom_minimum_size.y >= lines,
+				"reserved %s covers both lines (%s) at step %d" % [_cal.custom_minimum_size.y, lines, step])
