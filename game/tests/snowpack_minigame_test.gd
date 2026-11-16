@@ -193,3 +193,35 @@ func test_controls_text_fits_the_viewport_at_every_text_scale_step() -> void:
 		await get_tree().process_frame
 		assert_true(view.encloses(_m._controls_label.get_global_rect()),
 				"controls text within the viewport at step %d: %s" % [i, _m._controls_label.get_global_rect()])
+
+## The smallest pit worth playing, px: below this the layers are too thin to click.
+const MIN_PLAYABLE_PIT_PX := 300.0
+
+func test_pit_and_buttons_are_on_screen_and_usable_at_every_text_scale_step() -> void:
+	_m.start(SEED)
+	var view := get_viewport().get_visible_rect()
+	for i in TextScale.STEPS.size():
+		TextScale.set_step(i)
+		await get_tree().process_frame
+		await get_tree().process_frame
+		var pit: Rect2 = _m._pit_rect()
+		assert_true(view.encloses(pit), "pit within the viewport at step %d: %s" % [i, pit])
+		assert_gt(pit.size.x, MIN_PLAYABLE_PIT_PX, "pit wide enough at step %d" % i)
+		assert_gt(pit.size.y, MIN_PLAYABLE_PIT_PX, "pit tall enough at step %d" % i)
+		var tool_rect: Rect2 = _m._tool_label.get_global_rect()
+		assert_true(view.encloses(tool_rect), "tool line within the viewport at step %d: %s" % [i, tool_rect])
+		for verdict: SnowpackProfile.Verdict in _m._verdict_buttons:
+			var button: Button = _m._verdict_buttons[verdict]
+			assert_true(view.encloses(button.get_global_rect()),
+					"%s button within the viewport at step %d: %s" % [button.text, i, button.get_global_rect()])
+			assert_false(_m._scroll.get_global_rect().intersects(button.get_global_rect()),
+					"%s button is not inside the scrolling pane at step %d" % [button.text, i])
+		# Usable: a click in the middle of the pit applies the crystal card.
+		_m.select_tool(SnowpackMinigame.Tool.CRYSTAL_CARD)
+		var click := InputEventMouseButton.new()
+		click.button_index = MOUSE_BUTTON_LEFT
+		click.pressed = true
+		click.position = pit.get_center()
+		_m._gui_input(click)
+		assert_true(_m.grain_known.has(true), "a click in the pit reveals a layer at step %d" % i)
+		_m.start(SEED)
