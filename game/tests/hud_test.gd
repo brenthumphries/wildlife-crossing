@@ -143,3 +143,61 @@ func test_hint_banner_follows_text_scale() -> void:
 	_h.apply_text_scale()
 	assert_eq(_h._hint_label.get_theme_font_size("font_size"), TextScale.size(TextScale.BODY))
 	assert_eq(_h._hint_label.custom_minimum_size.x, float(TextScale.size(Hud.HINT_WIDTH_BASE)))
+
+## The union of a node's own rect and every visible descendant Control's rect:
+## what the widget actually draws, which a plain Control's own rect can understate.
+func _drawn_rect(node: Control) -> Rect2:
+	var rect: Rect2 = node.get_global_rect()
+	for child: Node in node.find_children("*", "Control", true, false):
+		var control: Control = child as Control
+		if control.is_visible_in_tree():
+			rect = rect.merge(control.get_global_rect())
+	return rect
+
+func _assert_stack_rows_clear(step_label: String) -> void:
+	var rows: Array[Control] = []
+	for child: Node in _h._stack.get_children():
+		var control: Control = child as Control
+		if control.visible:
+			rows.append(control)
+	for i in range(rows.size() - 1):
+		assert_false(_drawn_rect(rows[i]).intersects(_drawn_rect(rows[i + 1])),
+				"stack rows %d and %d overlap at %s" % [i, i + 1, step_label])
+
+func test_stack_rows_never_overlap_with_a_migration_clock_and_a_banner() -> void:
+	add_child(_h)
+	_h.setup_milestones({ "first_crossing_sub1": { "id": "first_crossing_sub1",
+			"display_name": "First crossing", "is_capstone": false } })
+	_h.set_clock(1, "fall", 3)   # a migration season: the calendar shows its migration line
+	_h.celebrate_milestone("first_crossing_sub1", false)
+	for step: int in [0, TextScale.STEPS.size() - 1]:
+		TextScale.set_step(step)
+		await get_tree().process_frame
+		await get_tree().process_frame
+		_assert_stack_rows_clear("step %d" % step)
+
+# ATT-172: the map's CanvasLayer is added after the HUD's and its controller
+# accepts every press, so the HUD must sit on a higher layer to get the click.
+func test_hud_layer_is_above_the_map_layer_and_below_the_modals() -> void:
+	assert_gt(Main.HUD_LAYER, Main.MAP_LAYER, "HUD gets input before the map")
+	var modals: Array[int] = [Main.CREDITS_LAYER, Main.TELEMETRY_LAYER, Main.SNOWPACK_LAYER, Main.INFO_LAYER]
+	var previous: int = Main.HUD_LAYER
+	for layer: int in modals:
+		assert_gt(layer, previous, "modals stay above the HUD, in order")
+		previous = layer
+
+func test_only_buttons_take_the_mouse_so_clicks_fall_through_to_the_map() -> void:
+	var hud: Hud = add_child_autofree(Hud.new())
+	hud.show_hint("hint")
+	var takers: Array[Control] = []
+	_collect_mouse_takers(hud, takers)
+	assert_gt(takers.size(), 0, "the hint's Got it button takes the mouse")
+	for taker: Control in takers:
+		assert_true(taker is Button, "%s must ignore the mouse (only buttons take it)" % taker.name)
+
+func _collect_mouse_takers(node: Node, out: Array[Control]) -> void:
+	for child: Node in node.get_children():
+		var control := child as Control
+		if control != null and control.mouse_filter == Control.MOUSE_FILTER_STOP:
+			out.append(control)
+		_collect_mouse_takers(child, out)

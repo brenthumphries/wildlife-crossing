@@ -29,15 +29,16 @@ func _init(settings: GameSettings = null, hints_path: String = DEFAULT_HINTS_PAT
 	_seen = _settings.load_seen_hints()
 	_load_hints(hints_path)
 
-## An event the game just saw. Queues every unseen hint tied to it, marks it
-## seen right away (so it never repeats), and shows it if nothing else is up.
+## An event the game just saw. Queues every unseen hint tied to it (skipping one
+## already waiting or on screen) and shows it if nothing else is up. A hint is
+## only marked seen once it is shown, so a queued hint lost on quit comes back.
 func notify(event: String) -> void:
 	for hint_id: String in _hints:
 		var record: Dictionary = _hints[hint_id]
 		if record["event"] != event or _seen.has(hint_id):
 			continue
-		_seen.append(hint_id)
-		_settings.mark_hint_seen(hint_id)
+		if _queue.has(hint_id) or current_id == hint_id:
+			continue
 		_queue.append(hint_id)
 	if current_id == "":
 		_show_next()
@@ -71,6 +72,8 @@ func _show_next() -> void:
 	if _queue.is_empty():
 		return
 	current_id = _queue.pop_front()
+	_seen.append(current_id)
+	_settings.mark_hint_seen(current_id)
 	hint_shown.emit(current_id, text_for(current_id))
 
 func _load_hints(hints_path: String) -> void:
