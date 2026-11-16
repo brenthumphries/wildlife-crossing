@@ -79,3 +79,31 @@ func test_seen_hints_are_not_written_to_a_save() -> void:
 	var state: Node = GameStateScript.new()
 	assert_false(JSON.stringify(state.to_dict()).contains("hint"))
 	state.free()
+
+func test_queued_hint_is_not_in_settings_until_shown() -> void:
+	_coach.notify(HintCoach.EVENT_OVERLAY_SHOWN)
+	_coach.notify(HintCoach.EVENT_BUILD_MODE_OPENED)
+	var waiting: String = _shown[0]
+	assert_eq(_shown.size(), 1)
+	var on_disk: Array[String] = _settings.load_seen_hints()
+	assert_eq(on_disk.size(), 1, "only the shown hint is written")
+	assert_true(on_disk.has(waiting))
+	_coach.dismiss()
+	assert_eq(_settings.load_seen_hints().size(), 2, "the second hint is written once shown")
+
+func test_same_event_twice_before_dismiss_queues_once() -> void:
+	_coach.notify(HintCoach.EVENT_DONATION_RECEIVED)
+	_coach.notify(HintCoach.EVENT_DONATION_RECEIVED)
+	_coach.dismiss()
+	assert_eq(_shown.size(), 1, "the hint is not shown a second time")
+	assert_eq(_coach.current_id, "")
+
+func test_hint_queued_but_never_shown_appears_in_a_new_coach() -> void:
+	_coach.notify(HintCoach.EVENT_OVERLAY_SHOWN)
+	_coach.notify(HintCoach.EVENT_BUILD_MODE_OPENED)
+	var lost: String = _coach._queue[0]
+	_shown.clear()
+	var later: HintCoach = _make_coach()
+	assert_false(later.has_seen(lost))
+	later.notify(HintCoach.EVENT_BUILD_MODE_OPENED)
+	assert_eq(_shown, [lost], "the queued, never-shown hint still appears")
