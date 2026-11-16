@@ -41,6 +41,17 @@ const SNOWPACK_KEY := KEY_F3
 ## The Info panel, where information products are bought and read (roadmap Phase 3,
 ## decision logged 2026-10-16). `I` rather than F4: a Mac laptop needs fn for F-keys.
 const INFO_KEY := KEY_I
+## CanvasLayer order, lowest first. A later-added layer at the same index gets
+## input first, so the map (added lazily, after the HUD) swallowed every click
+## meant for the HUD's "Got it" button; the HUD sits above the map instead. Its
+## other controls ignore the mouse, so clicks still reach the map. The modals
+## stay above the HUD, in their old relative order.
+const MAP_LAYER := 1
+const HUD_LAYER := 2
+const CREDITS_LAYER := 3
+const TELEMETRY_LAYER := 4
+const SNOWPACK_LAYER := 5
+const INFO_LAYER := 6
 
 var sim: Simulation
 var _renderer: WorldRenderer
@@ -104,6 +115,7 @@ func _ready() -> void:
 	# Screen-space, so it survives camera pan/zoom — same reason WorldSelectMap
 	# and ConfirmPanel live under a CanvasLayer rather than as plain children.
 	var hud_layer := CanvasLayer.new()
+	hud_layer.layer = HUD_LAYER
 	add_child(hud_layer)
 	_hud = Hud.new()
 	hud_layer.add_child(_hud)
@@ -120,7 +132,7 @@ func _ready() -> void:
 	# Own CanvasLayer above the HUD's: the credits overlay is a modal that must
 	# cover the message channel and build readout, not sit beside them.
 	var credits_layer := CanvasLayer.new()
-	credits_layer.layer = 2
+	credits_layer.layer = CREDITS_LAYER
 	add_child(credits_layer)
 	_credits = CreditsScreen.new()
 	credits_layer.add_child(_credits)
@@ -128,19 +140,19 @@ func _ready() -> void:
 	# Same arrangement as the credits: its own CanvasLayer above the HUD, and
 	# modal while open (see `_unhandled_input`).
 	var telemetry_layer := CanvasLayer.new()
-	telemetry_layer.layer = 3
+	telemetry_layer.layer = TELEMETRY_LAYER
 	add_child(telemetry_layer)
 	_telemetry = TelemetryMinigame.new()
 	telemetry_layer.add_child(_telemetry)
 
 	var snowpack_layer := CanvasLayer.new()
-	snowpack_layer.layer = 4
+	snowpack_layer.layer = SNOWPACK_LAYER
 	add_child(snowpack_layer)
 	_snowpack = SnowpackMinigame.new()
 	snowpack_layer.add_child(_snowpack)
 
 	var info_layer := CanvasLayer.new()
-	info_layer.layer = 5
+	info_layer.layer = INFO_LAYER
 	add_child(info_layer)
 	_info_panel = InformationPanel.new()
 	info_layer.add_child(_info_panel)
@@ -576,6 +588,7 @@ func _open_world_select() -> void:
 	if _world_select == null:
 		_world_select = WORLD_SELECT_SCENE.instantiate()
 		var layer := CanvasLayer.new()
+		layer.layer = MAP_LAYER
 		layer.add_child(_world_select)
 		add_child(layer)
 		_overlay.attach(_world_select)
