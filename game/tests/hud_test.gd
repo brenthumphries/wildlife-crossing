@@ -145,6 +145,14 @@ func test_hint_banner_never_blocks_the_mouse() -> void:
 	assert_eq(_h._hint_panel.mouse_filter, Control.MOUSE_FILTER_IGNORE)
 	assert_eq(_h._hint_label.mouse_filter, Control.MOUSE_FILTER_IGNORE)
 
+func test_hint_text_is_body_except_small_at_the_largest_step() -> void:
+	var last: int = TextScale.STEPS.size() - 1
+	for step: int in TextScale.STEPS.size():
+		TextScale.set_step(step)
+		_h.apply_text_scale()
+		var base: int = TextScale.SMALL if step == last else TextScale.BODY
+		assert_eq(_h._hint_label.get_theme_font_size("font_size"), TextScale.size(base), "step %d" % step)
+
 func test_hint_banner_follows_text_scale() -> void:
 	TextScale.set_step(3)
 	_h.apply_text_scale()

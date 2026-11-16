@@ -143,8 +143,10 @@ func apply_text_scale() -> void:
 	_set_font_size(_cue_label, TextScale.BODY)
 	_set_font_size(_budget_label, TextScale.BODY)
 	_set_font_size(_donation_label, TextScale.SMALL)
-	# SMALL, not BODY: the longest hint at 175% would otherwise reach the clock panel in a 720 px window.
-	_set_font_size(_hint_label, TextScale.SMALL)
+	# BODY, except SMALL at the largest step: at 175% in 720 px the longest hint at BODY
+	# reaches the clock panel. ATT-148 and ATT-169 give more room; then this exception can go.
+	var largest_step: bool = TextScale.step() == TextScale.STEPS.size() - 1
+	_set_font_size(_hint_label, TextScale.SMALL if largest_step else TextScale.BODY)
 	_hint_button.add_theme_font_size_override("font_size", TextScale.size(TextScale.BODY))
 	_hint_label.custom_minimum_size.x = TextScale.size(HINT_WIDTH_BASE)
 	_cue_icon.custom_minimum_size = Vector2.ONE * TextScale.size(roundi(CUE_ICON_BASE_SIZE))
