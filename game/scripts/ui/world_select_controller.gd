@@ -546,10 +546,15 @@ func _draw_hover_tooltip(font: Font) -> void:
 	draw_string(font, baseline, hover_label, HORIZONTAL_ALIGNMENT_LEFT, -1.0,
 			font_size, COLOR_TEXT)
 
+## The header for the current mode: names the focused area, says what to do next,
+## and keeps the px/tile readout and the Esc hint (ATT-176).
 func _header_text() -> String:
-	var mode_name := "world view" if mode == Mode.WORLD else "segment mode"
-	return "Select a crossing location — %s (%.1f px/tile) · scroll or pinch to zoom · Esc to exit" \
-			% [mode_name, tile_px()]
+	var area_name := String(_sub_areas.get(focused_sub_area_id, {}).get("name", str(focused_sub_area_id)))
+	if mode == Mode.WORLD:
+		return "%s — zoom in to pick a road to cross (%.1f px/tile) · Esc to exit" \
+				% [area_name, tile_px()]
+	return "%s — click a road to pick it (%.1f px/tile) · scroll or pinch to zoom · Esc to exit" \
+			% [area_name, tile_px()]
 
 # Header text, and the card grid it pushes down: card size scales with TextScale,
 # then shrinks vertically if needed so every row fits the control (1280x720 at the

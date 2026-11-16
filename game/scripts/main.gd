@@ -589,7 +589,7 @@ func _open_world_select() -> void:
 		layer.add_child(_confirm_panel)
 	if _world_select.mode == WorldSelectController.Mode.INACTIVE:
 		_world_select.enter_selection_mode()
-		_log("Crossing location selection — scroll wheel, trackpad scroll or pinch to zoom, Escape to exit.")
+		_log("Crossing location selection — zoom in to pick a road to cross, Escape to exit.")
 
 ## Completed crossings in one sub-area, for the world-select hover summary.
 func _crossings_in_sub_area(sub_area_id: int) -> int:
