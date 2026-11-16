@@ -88,6 +88,7 @@ func _build_ui() -> void:
 	_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_row.add_theme_constant_override("separation", ROW_SEPARATION)
 	add_child(_row)
+	_row.minimum_size_changed.connect(_reserve_height)
 
 	_ring = Control.new()
 	_ring.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -123,7 +124,7 @@ func set_clock(year: int, season: String, day_of_season: int) -> void:
 	_day = day_of_season
 	_season_label.text = season_text(year, season, day_of_season)
 	_migration_label.text = migration_text(season, day_of_season)
-	_migration_label.visible = not _migration_label.text.is_empty()
+	# The migration line stays visible, empty or not, so its height is always reserved.
 	_ring.queue_redraw()
 
 ## Re-size the texts and the ring from TextScale's current step.
@@ -131,8 +132,12 @@ func apply_text_scale() -> void:
 	_season_label.add_theme_font_size_override("font_size", TextScale.size(TextScale.BODY))
 	_migration_label.add_theme_font_size_override("font_size", TextScale.size(TextScale.SMALL))
 	_ring.custom_minimum_size = Vector2.ONE * TextScale.size(roundi(RING_BASE_SIZE))
-	# A plain Control does not size to its children, so a parent container
-	# only reserves the row's height and width if we say so.
+	_reserve_height()
+
+## A plain Control does not size to its children, so a parent container only
+## reserves the row's size if we say so. Runs again whenever the row's own
+## minimum size changes (fonts load once in the tree, text or lines change).
+func _reserve_height() -> void:
 	custom_minimum_size = _row.get_combined_minimum_size()
 
 func _on_event_bus_text_scale_changed(_factor: float) -> void:
