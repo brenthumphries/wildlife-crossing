@@ -38,6 +38,7 @@ func _build_ui() -> void:
 	_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_row.add_theme_constant_override("separation", ROW_SEPARATION)
 	add_child(_row)
+	_row.minimum_size_changed.connect(_reserve_height)
 
 	_add_button(TimeController.PAUSED, PAUSE_LABEL)
 	for multiplier: float in SPEED_LABELS:
@@ -86,8 +87,12 @@ func handle_key(keycode: Key) -> bool:
 func apply_text_scale() -> void:
 	for button: Button in _buttons.values():
 		button.add_theme_font_size_override("font_size", TextScale.size(TextScale.BODY))
-	# A plain Control does not size to its children, so a parent container
-	# only reserves the row's height and width if we say so.
+	_reserve_height()
+
+## A plain Control does not size to its children, so a parent container only
+## reserves the row's size if we say so. Runs again whenever the row's own
+## minimum size changes (button fonts resolve once the row is in the tree).
+func _reserve_height() -> void:
 	custom_minimum_size = _row.get_combined_minimum_size()
 
 func _add_button(multiplier: float, text: String) -> void:
