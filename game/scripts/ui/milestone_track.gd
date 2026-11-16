@@ -17,6 +17,7 @@ const BANNER_COLOR := Color(0.95, 0.85, 0.45)
 var _milestones: Array = []
 var _reached: Array[String] = []
 var _capstone_reached: bool = false
+var _column: VBoxContainer
 var _row: HBoxContainer
 var _corridor_label: Label
 var _capstone_node: Label
@@ -51,14 +52,15 @@ static func sub_area_reached(milestones: Array, reached_ids: Array) -> int:
 func _build_ui() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 
-	var column := VBoxContainer.new()
-	column.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_child(column)
+	_column = VBoxContainer.new()
+	_column.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_column)
+	_column.minimum_size_changed.connect(_reserve_height)
 
 	_row = HBoxContainer.new()
 	_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_row.add_theme_constant_override("separation", ROW_SEPARATION)
-	column.add_child(_row)
+	_column.add_child(_row)
 
 	_corridor_label = Label.new()
 	_corridor_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -74,7 +76,7 @@ func _build_ui() -> void:
 	_banner_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_banner_label.add_theme_color_override("font_color", BANNER_COLOR)
 	_banner_label.modulate.a = 0.0
-	column.add_child(_banner_label)
+	_column.add_child(_banner_label)
 
 	_refresh()
 	apply_text_scale()
@@ -119,8 +121,13 @@ func apply_text_scale() -> void:
 	_corridor_label.add_theme_font_size_override("font_size", TextScale.size(TextScale.BODY))
 	_capstone_node.add_theme_font_size_override("font_size", TextScale.size(TextScale.TITLE))
 	_banner_label.add_theme_font_size_override("font_size", TextScale.size(TextScale.BODY))
-	# A plain Control does not size to its children; reserve the track's size.
-	custom_minimum_size = _row.get_combined_minimum_size()
+	_reserve_height()
+
+## A plain Control does not size to its children; reserve the whole column, the
+## Corridor row and the banner line under it (the banner line counts when empty).
+## Runs again whenever the column's minimum size changes.
+func _reserve_height() -> void:
+	custom_minimum_size = _column.get_combined_minimum_size()
 
 func _process(delta: float) -> void:
 	if _banner_timer > 0.0:

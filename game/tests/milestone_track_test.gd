@@ -84,3 +84,20 @@ func test_text_sizes_come_from_text_scale() -> void:
 	_t.apply_text_scale()
 	assert_eq(_t._corridor_label.get_theme_font_size("font_size"), TextScale.size(TextScale.BODY))
 	assert_eq(_t._capstone_node.get_theme_font_size("font_size"), TextScale.size(TextScale.TITLE))
+
+func test_reserved_height_covers_the_banner_line_before_and_after_celebrate() -> void:
+	var needed: float = _t._row.get_combined_minimum_size().y \
+			+ _t._banner_label.get_combined_minimum_size().y
+	assert_true(_t.custom_minimum_size.y >= needed, "reserved before any celebration")
+	_t.celebrate("first_crossing_sub1", false)
+	assert_true(_t.custom_minimum_size.y >= _t._row.get_combined_minimum_size().y
+			+ _t._banner_label.get_combined_minimum_size().y, "reserved while the banner shows")
+
+func test_reservation_covers_row_and_banner_once_in_the_tree() -> void:
+	add_child(_t)
+	_t.celebrate("first_crossing_sub1", false)
+	await get_tree().process_frame
+	await get_tree().process_frame
+	var drawn: float = _t._row.size.y + _t._banner_label.size.y
+	assert_true(_t.custom_minimum_size.y >= drawn,
+			"reserved %s covers row and banner (%s)" % [_t.custom_minimum_size.y, drawn])
