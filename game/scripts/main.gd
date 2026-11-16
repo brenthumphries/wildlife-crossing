@@ -41,6 +41,17 @@ const SNOWPACK_KEY := KEY_F3
 ## The Info panel, where information products are bought and read (roadmap Phase 3,
 ## decision logged 2026-10-16). `I` rather than F4: a Mac laptop needs fn for F-keys.
 const INFO_KEY := KEY_I
+## CanvasLayer order, lowest first. A later-added layer at the same index gets
+## input first, so the map (added lazily, after the HUD) swallowed every click
+## meant for the HUD's "Got it" button; the HUD sits above the map instead. Its
+## other controls ignore the mouse, so clicks still reach the map. The modals
+## stay above the HUD, in their old relative order.
+const MAP_LAYER := 1
+const HUD_LAYER := 2
+const CREDITS_LAYER := 3
+const TELEMETRY_LAYER := 4
+const SNOWPACK_LAYER := 5
+const INFO_LAYER := 6
 
 var sim: Simulation
 var _renderer: WorldRenderer
@@ -104,6 +115,7 @@ func _ready() -> void:
 	# Screen-space, so it survives camera pan/zoom — same reason WorldSelectMap
 	# and ConfirmPanel live under a CanvasLayer rather than as plain children.
 	var hud_layer := CanvasLayer.new()
+	hud_layer.layer = HUD_LAYER
 	add_child(hud_layer)
 	_hud = Hud.new()
 	hud_layer.add_child(_hud)
@@ -120,7 +132,7 @@ func _ready() -> void:
 	# Own CanvasLayer above the HUD's: the credits overlay is a modal that must
 	# cover the message channel and build readout, not sit beside them.
 	var credits_layer := CanvasLayer.new()
-	credits_layer.layer = 2
+	credits_layer.layer = CREDITS_LAYER
 	add_child(credits_layer)
 	_credits = CreditsScreen.new()
 	credits_layer.add_child(_credits)
@@ -128,19 +140,19 @@ func _ready() -> void:
 	# Same arrangement as the credits: its own CanvasLayer above the HUD, and
 	# modal while open (see `_unhandled_input`).
 	var telemetry_layer := CanvasLayer.new()
-	telemetry_layer.layer = 3
+	telemetry_layer.layer = TELEMETRY_LAYER
 	add_child(telemetry_layer)
 	_telemetry = TelemetryMinigame.new()
 	telemetry_layer.add_child(_telemetry)
 
 	var snowpack_layer := CanvasLayer.new()
-	snowpack_layer.layer = 4
+	snowpack_layer.layer = SNOWPACK_LAYER
 	add_child(snowpack_layer)
 	_snowpack = SnowpackMinigame.new()
 	snowpack_layer.add_child(_snowpack)
 
 	var info_layer := CanvasLayer.new()
-	info_layer.layer = 5
+	info_layer.layer = INFO_LAYER
 	add_child(info_layer)
 	_info_panel = InformationPanel.new()
 	info_layer.add_child(_info_panel)
@@ -356,6 +368,7 @@ func _load_from(path: String) -> void:
 		return
 	if _build_mode != null:
 		_exit_build_mode()   # the span being placed belongs to the world being replaced
+	_reset_crossing_window()   # crossings counted in the old world must not show in the first cue
 	sim.restore_state({
 		"active_sub_area_id": game_state.active_sub_area_id,
 		"patches": game_state.patches,
@@ -575,6 +588,7 @@ func _open_world_select() -> void:
 	if _world_select == null:
 		_world_select = WORLD_SELECT_SCENE.instantiate()
 		var layer := CanvasLayer.new()
+		layer.layer = MAP_LAYER
 		layer.add_child(_world_select)
 		add_child(layer)
 		_overlay.attach(_world_select)
@@ -607,7 +621,29 @@ func _sub_area_centre_px(_sub_area_id: int) -> Vector2:
 
 func _on_animal_crossed(_crossing_id: String, _species_id: String) -> void:
 	_crossed_pending += 1
-	_coalesce_timer = SimulationConstants.CROSSING_FEEDBACK_COALESCE_SECONDS
+	# A fixed window: only the first pending crossing starts the clock. Resetting
+	# it on every crossing made this a trailing debounce that never fired under
+	# steady crossings (ATT-173).
+	if _coalesce_timer <= 0.0:
+		_coalesce_timer = SimulationConstants.CROSSING_FEEDBACK_COALESCE_SECONDS
+
+## Advance the crossing-cue window by `delta` real seconds. Returns the count to
+## announce when the window ends (and clears it), else 0.
+func _advance_crossing_window(delta: float) -> int:
+	if _coalesce_timer <= 0.0:
+		return 0
+	_coalesce_timer -= delta
+	if _coalesce_timer > 0.0:
+		return 0
+	_coalesce_timer = 0.0
+	var count := _crossed_pending
+	_crossed_pending = 0
+	return count
+
+## Drop any pending crossing count, e.g. when the world is replaced by a load.
+func _reset_crossing_window() -> void:
+	_crossed_pending = 0
+	_coalesce_timer = 0.0
 
 func _on_budget_changed(new_balance: int) -> void:
 	_hud.set_budget(new_balance)
@@ -640,16 +676,14 @@ func _process(delta: float) -> void:
 	_update_toolbar()
 	_sync_calendar()
 	_hud.set_milestones_reached(sim.milestones.reached, sim.milestones.capstone_reached)
-	if _coalesce_timer > 0.0:
-		_coalesce_timer -= delta
-		if _coalesce_timer <= 0.0 and _crossed_pending > 0:
-			# The coalesced crossing cue: visual + audio together, once per
-			# 2s window (Phase 1 exit criterion; wildlife-overpass-crossing PRD).
-			_log("+%d crossed safely" % _crossed_pending)
-			_cue_player.play()
-			if _hud:
-				_hud.show_crossing_cue(_crossed_pending)
-			_crossed_pending = 0
+	var crossed := _advance_crossing_window(delta)
+	if crossed > 0:
+		# The coalesced crossing cue: visual + audio together, once per
+		# 2s window (Phase 1 exit criterion; wildlife-overpass-crossing PRD).
+		_log("+%d crossed safely" % crossed)
+		_cue_player.play()
+		if _hud:
+			_hud.show_crossing_cue(crossed)
 	if _build_mode != null:
 		_renderer.build_hover = _renderer.coord_at_px(_renderer.get_global_mouse_position())
 		_update_build_status_label()
