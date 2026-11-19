@@ -9,9 +9,9 @@ const RING_POINTS := 24   # polyline points per segment arc
 const ROW_SEPARATION := 8
 const TRACK_COLOR := Color(1, 1, 1, 0.18)
 const FILL_COLOR := Color(0.95, 0.85, 0.45)
-const MIGRATION_TRACK_COLOR := Color(0.35, 0.85, 0.55, 0.4)
-const MIGRATION_FILL_COLOR := Color(0.35, 0.85, 0.55)
-const MIGRATION_TEXT_COLOR := Color(0.35, 0.85, 0.55)
+## Migration: sky blue, for the migration text and the migration arc (ATT-147).
+const MIGRATION_COLOR := Color(0.45, 0.72, 0.95)
+const MIGRATION_TRACK_COLOR := Color(MIGRATION_COLOR, 0.4)
 
 var _row: HBoxContainer
 var _ring: Control
@@ -103,7 +103,7 @@ func _build_ui() -> void:
 	column.add_child(_season_label)
 
 	_migration_label = Label.new()
-	_migration_label.add_theme_color_override("font_color", MIGRATION_TEXT_COLOR)
+	_migration_label.add_theme_color_override("font_color", MIGRATION_COLOR)
 	column.add_child(_migration_label)
 
 	set_clock(_year, _season, _day)
@@ -161,4 +161,4 @@ func _draw_ring() -> void:
 				MIGRATION_TRACK_COLOR if is_migration else TRACK_COLOR, width)
 		if fills[i] > 0.0:
 			_ring.draw_arc(center, radius, start, start + span * fills[i], RING_POINTS,
-					MIGRATION_FILL_COLOR if is_migration else FILL_COLOR, width)
+					MIGRATION_COLOR if is_migration else FILL_COLOR, width)

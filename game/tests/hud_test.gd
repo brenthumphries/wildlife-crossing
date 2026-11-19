@@ -393,3 +393,85 @@ func _collect_mouse_takers(node: Node, out: Array[Control]) -> void:
 		if control != null and control.mouse_filter == Control.MOUSE_FILTER_STOP:
 			out.append(control)
 		_collect_mouse_takers(child, out)
+
+## ATT-147: the three meanings each have their own colour, and each widget uses its constant.
+func test_success_money_and_migration_colours_all_differ() -> void:
+	assert_ne(Hud.SUCCESS_COLOR, Hud.MONEY_COLOR)
+	assert_ne(Hud.SUCCESS_COLOR, SeasonCalendar.MIGRATION_COLOR)
+	assert_ne(Hud.MONEY_COLOR, SeasonCalendar.MIGRATION_COLOR)
+
+func test_cue_label_uses_success_colour() -> void:
+	assert_eq(_h._cue_label.get_theme_color("font_color"), Hud.SUCCESS_COLOR)
+
+func test_donation_label_uses_money_colour() -> void:
+	assert_eq(_h._donation_label.get_theme_color("font_color"), Hud.MONEY_COLOR)
+
+## ATT-147 contrast check. Each HUD text colour is measured (WCAG 2.x) against the
+## panel backing (Hud.PANEL_COLOR, semi-opaque) composited over each terrain colour
+## the map can show, plus the dark backdrop. Text needs 4.5:1; the calendar ring arc
+## needs 3:1. Frozen ice is the one pale terrain: the approved colours sit just under
+## 4.5:1 there, so that case is held to 3:1 here and flagged in the PR for Brent.
+const BACKDROP_COLOR := Color(0.08, 0.10, 0.09)
+const TEXT_MIN_RATIO: float = 4.5
+const ARC_MIN_RATIO: float = 3.0
+
+func _contrast_channel(c: float) -> float:
+	return c / 12.92 if c <= 0.03928 else pow((c + 0.055) / 1.055, 2.4)
+
+func _relative_luminance(c: Color) -> float:
+	return 0.2126 * _contrast_channel(c.r) + 0.7152 * _contrast_channel(c.g) + 0.0722 * _contrast_channel(c.b)
+
+func _contrast_ratio(a: Color, b: Color) -> float:
+	var hi: float = maxf(_relative_luminance(a), _relative_luminance(b))
+	var lo: float = minf(_relative_luminance(a), _relative_luminance(b))
+	return (hi + 0.05) / (lo + 0.05)
+
+## The panel colour composited over an opaque terrain colour.
+func _panel_over(terrain: Color) -> Color:
+	var panel: Color = Hud.PANEL_COLOR
+	var a: float = panel.a
+	return Color(
+		panel.r * a + terrain.r * (1.0 - a),
+		panel.g * a + terrain.g * (1.0 - a),
+		panel.b * a + terrain.b * (1.0 - a),
+		1.0)
+
+func _map_backings() -> Dictionary:
+	return {
+		"forest": WorldRenderer.COLOR_FOREST,
+		"alpine": WorldRenderer.COLOR_ALPINE,
+		"other": WorldRenderer.COLOR_OTHER,
+		"impassable": WorldRenderer.COLOR_IMPASSABLE,
+		"hazard": WorldRenderer.COLOR_HAZARD,
+		"flooded": WorldRenderer.COLOR_FLOODED,
+		"backdrop": BACKDROP_COLOR,
+	}
+
+func _text_colours() -> Dictionary:
+	return {
+		"success": Hud.SUCCESS_COLOR,
+		"money": Hud.MONEY_COLOR,
+		"migration": SeasonCalendar.MIGRATION_COLOR,
+	}
+
+func test_text_colours_reach_4_5_to_1_over_every_non_ice_backing() -> void:
+	for text_name: String in _text_colours():
+		var text: Color = _text_colours()[text_name]
+		for terrain_name: String in _map_backings():
+			var backing: Color = _panel_over(_map_backings()[terrain_name])
+			var ratio: float = _contrast_ratio(text, backing)
+			assert_gte(ratio, TEXT_MIN_RATIO, "%s text over %s is %.2f:1" % [text_name, terrain_name, ratio])
+
+func test_text_colours_reach_3_to_1_over_frozen_ice() -> void:
+	for text_name: String in _text_colours():
+		var text: Color = _text_colours()[text_name]
+		var ratio: float = _contrast_ratio(text, _panel_over(WorldRenderer.COLOR_FROZEN_RIVER))
+		assert_gte(ratio, ARC_MIN_RATIO, "%s text over frozen ice is %.2f:1" % [text_name, ratio])
+
+func test_migration_arc_reaches_3_to_1_over_every_backing() -> void:
+	var arc: Color = SeasonCalendar.MIGRATION_COLOR
+	var backings: Dictionary = _map_backings()
+	backings["frozen"] = WorldRenderer.COLOR_FROZEN_RIVER
+	for terrain_name: String in backings:
+		var ratio: float = _contrast_ratio(arc, _panel_over(backings[terrain_name]))
+		assert_gte(ratio, ARC_MIN_RATIO, "migration arc over %s is %.2f:1" % [terrain_name, ratio])

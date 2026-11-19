@@ -91,3 +91,12 @@ func test_reservation_covers_both_lines_once_in_the_tree_at_every_text_scale_ste
 		var lines: float = _cal._season_label.size.y + _cal._migration_label.size.y
 		assert_true(_cal.custom_minimum_size.y >= lines,
 				"reserved %s covers both lines (%s) at step %d" % [_cal.custom_minimum_size.y, lines, step])
+
+## ATT-147: migration text and arc use the migration colour, not the success green.
+func test_migration_label_uses_migration_colour() -> void:
+	assert_eq(_cal._migration_label.get_theme_color("font_color"), SeasonCalendar.MIGRATION_COLOR)
+
+func test_migration_track_is_the_migration_colour_faded() -> void:
+	var track: Color = SeasonCalendar.MIGRATION_TRACK_COLOR
+	assert_eq(Color(track.r, track.g, track.b), Color(SeasonCalendar.MIGRATION_COLOR.r, SeasonCalendar.MIGRATION_COLOR.g, SeasonCalendar.MIGRATION_COLOR.b))
+	assert_almost_eq(track.a, 0.4, 0.001)
