@@ -813,7 +813,7 @@ func _real_sub_areas() -> Dictionary:
 		records[int(record["id"])] = record
 	return records
 
-func test_no_card_name_is_truncated_at_any_text_scale_step() -> void:
+func test_every_card_name_sits_inside_its_card_at_every_text_scale_step() -> void:
 	var records: Dictionary = _real_sub_areas()
 	_c.setup(records)
 	_c.size = Vector2(WindowFixture.content_size())
@@ -830,7 +830,8 @@ func test_no_card_name_is_truncated_at_any_text_scale_step() -> void:
 			var full: Vector2 = font.get_multiline_string_size(label, HORIZONTAL_ALIGNMENT_LEFT, text_width, font_size, -1)
 			var shown: Vector2 = font.get_multiline_string_size(label, HORIZONTAL_ALIGNMENT_LEFT, text_width, font_size, WorldSelectController.CARD_MAX_NAME_LINES)
 			assert_eq(shown.y, full.y, "'%s' is cut by the line cap at step %d" % [label, step])
-			assert_lte(WorldSelectController.CARD_TEXT_INSET + full.y, rect.size.y, "'%s' runs past the card bottom at step %d" % [label, step])
+			var name_rect := Rect2(rect.position + Vector2.ONE * WorldSelectController.CARD_TEXT_INSET, Vector2(text_width, full.y))
+			assert_true(rect.encloses(name_rect), "'%s' name %s spills out of its card %s at step %d" % [label, name_rect, rect, step])
 	TextScale.set_step(0)
 
 # --- map header copy (ATT-176) ---
@@ -980,3 +981,27 @@ func test_no_card_meets_a_hud_panel_or_the_header_zone_at_every_text_scale_step(
 			assert_false(rect.intersects(clock), "card %s meets the clock panel at step %d" % [rect, step])
 			assert_false(rect.intersects(budget), "card %s meets the budget panel at step %d" % [rect, step])
 			assert_false(rect.intersects(zone), "card %s meets the header zone at step %d" % [rect, step])
+
+# The confirm panel (segment mode, open) must clear the HUD's clock and budget panels and the header zone.
+func test_confirm_panel_clears_the_clock_budget_and_header_zone_at_every_text_scale_step() -> void:
+	var hud: Hud = _header_rig()
+	var confirm := ConfirmPanel.new()
+	_c.get_parent().add_child(confirm)
+	autofree(confirm)
+	confirm.attach(_c)
+	_c.enter_selection_mode()
+	_c.set_zoom((ACTIVATE_PX + 4.0) / WorldSelectController.BASE_TILE_FLAT_TO_FLAT_PX)
+	assert_eq(_c.mode, WorldSelectController.Mode.SEGMENT, "precondition: segment mode")
+	confirm.open({ "id": "s7_trans_canada_bow_a", "sub_area_id": 7,
+			"label": "Trans-Canada Hwy, Bow Valley sector A",
+			"connectivity_note": "Splits two forest patches; a full span reconnects them." }, 9000, 300, 4)
+	assert_true(confirm.is_open, "precondition: panel open")
+	for step: int in TextScale.STEPS.size():
+		await _settle_header_rig(step, hud)
+		confirm.apply_text_scale()
+		await get_tree().process_frame
+		var box: Rect2 = confirm._panel_box.get_global_rect()
+		assert_false(box.intersects(hud._clock_panel.get_global_rect()), "confirm panel %s meets the clock panel at step %d" % [box, step])
+		assert_false(box.intersects(hud._resource_panel.get_global_rect()), "confirm panel %s meets the budget panel at step %d" % [box, step])
+		assert_false(box.intersects(_c._card_layout()["header_rect"]), "confirm panel %s meets the header zone at step %d" % [box, step])
+	TextScale.set_step(0)

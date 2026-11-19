@@ -67,7 +67,7 @@ godot --headless -s addons/gut/gut_cmdln.gd -gdir=res://tests -ginclude_subdirs 
 Substitute the path to your local binary for `godot` (e.g.
 `../tools/godot/Godot_v4.6.3-stable_linux.arm64`). A clean run ends with
 `---- All tests passed! ----` and a summary; the suite currently reports
-**45 scripts / 747 tests / 8,691 asserts** passing (measured 2026-11-18 locally by ATT-169 from `gut_results.xml` on `main` at 9f5dfa8; the earlier 2026-10-30 CI run 41155009651 at 9425155 was after
+**45 scripts / 747 tests / 8,725 asserts** passing (measured 2026-11-18 locally by ATT-169 from `gut_results.xml` on `main` at 9f5dfa8; the earlier 2026-10-30 CI run 41155009651 at 9425155 was after
 C39's `seasonal_terrain_test.gd`, on top of C42's `milestone_track_test.gd`, on top of C40's autosave tests in `save_manager_test.gd` and Continue tests in `main_menu_test.gd`, on top of
 C34's `time_controls_test.gd`, on top of C31's connectivity tooltip tests in `connectivity_overlay_test.gd` and `world_select_controller_test.gd`, on top of C30's sub-area summary tests in `world_select_controller_test.gd`, on top of C29's crossing-count tests in `confirm_panel_test.gd`, on top of
 C36's `season_calendar_test.gd`, on top of C38's migration-reach tests in `species_manager_test.gd`, on top of C37's seasonal-absence tests in `population_model_test.gd`, `season_manager_test.gd` and `simulation_test.gd`, on top of

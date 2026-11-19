@@ -280,7 +280,7 @@ func _assert_panels_apart(hud: Hud, step: int) -> void:
 	_assert_stack_rows_clear(hud._toast_stack, "step %d" % step)
 	_assert_stack_rows_clear(hud._clock_stack, "step %d" % step)
 
-func test_clock_panel_width_ignores_the_milestone_banner_at_every_text_scale_step() -> void:
+func test_clock_panel_size_ignores_the_milestone_banner_at_every_text_scale_step() -> void:
 	var window := SubViewport.new()
 	window.size = WINDOW_SIZE
 	add_child_autofree(window)
@@ -289,21 +289,36 @@ func test_clock_panel_width_ignores_the_milestone_banner_at_every_text_scale_ste
 			"display_name": "First crossing — Stikine–Nass–Skeena Headwaters", "is_capstone": false } })
 	hud.set_clock(1, "fall", 3)
 	window.add_child(hud)
-	var before: Array[float] = []
+	var before: Array[Vector2] = []
 	for step: int in TextScale.STEPS.size():
 		await _settle(step, hud)
-		before.append(hud._clock_panel.size.x)
+		before.append(hud._clock_panel.size)
 	hud.celebrate_milestone("first_crossing_sub11", false)
-	var banner: Label = hud._milestone_track._banner_label
 	for step: int in TextScale.STEPS.size():
 		await _settle(step, hud)
-		assert_almost_eq(hud._clock_panel.size.x, before[step], 0.5, "clock panel width changed when the banner showed at step %d" % step)
-		var font: Font = banner.get_theme_default_font()
-		var font_size: int = banner.get_theme_font_size("font_size")
-		var needed: float = font.get_multiline_string_size(banner.text, HORIZONTAL_ALIGNMENT_LEFT, banner.size.x, font_size).y
-		assert_gte(banner.size.y + 0.5, needed, "banner text is clipped at step %d" % step)
-		assert_gte(hud._clock_panel.get_global_rect().end.x + 0.5, banner.get_global_rect().end.x, "banner runs outside the clock panel at step %d" % step)
+		assert_eq(hud._clock_panel.size, before[step], "clock panel size changed when the banner showed at step %d" % step)
+		assert_true(hud._milestone_label.visible, "the banner is a toast at step %d" % step)
+		assert_true(hud._toast_panel.visible, "the toast panel shows for it at step %d" % step)
+		assert_true(hud._toast_panel.get_global_rect().encloses(hud._milestone_label.get_global_rect()), "banner inside the toast panel at step %d" % step)
+		var font: Font = hud._milestone_label.get_theme_default_font()
+		var font_size: int = hud._milestone_label.get_theme_font_size("font_size")
+		var needed: float = font.get_multiline_string_size(hud._milestone_label.text, HORIZONTAL_ALIGNMENT_LEFT, hud._milestone_label.size.x, font_size).y
+		assert_gte(hud._milestone_label.size.y + 0.5, needed, "banner text is clipped at step %d" % step)
 	TextScale.set_step(0)
+
+func test_milestone_banner_toast_fades_out_and_ignores_the_mouse() -> void:
+	add_child(_h)
+	_h.setup_milestones({ "first_crossing_sub1": { "id": "first_crossing_sub1",
+			"display_name": "First crossing", "is_capstone": false } })
+	_h.celebrate_milestone("first_crossing_sub1", false)
+	assert_eq(_h._milestone_label.text, "Milestone reached: First crossing")
+	assert_eq(_h._milestone_label.modulate.a, 1.0)
+	assert_eq(_h._milestone_label.mouse_filter, Control.MOUSE_FILTER_IGNORE)
+	assert_true(_h._toast_panel.visible)
+	_h._process(MilestoneTrack.BANNER_FADE_SECONDS)
+	assert_eq(_h._milestone_label.modulate.a, 0.0)
+	assert_false(_h._milestone_label.visible)
+	assert_false(_h._toast_panel.visible, "nothing else is up, so the panel goes")
 
 func test_milestone_track_sits_directly_under_the_time_controls() -> void:
 	var hud: Hud = _hud_in_window(true)

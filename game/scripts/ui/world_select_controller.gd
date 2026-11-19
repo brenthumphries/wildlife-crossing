@@ -640,10 +640,10 @@ func _card_layout() -> Dictionary:
 	var card := CARD_SIZE * TextScale.factor()
 	var col_w := maxf((width - GRID_ORIGIN.x * 2.0 - CARD_GAP * (GRID_COLS - 1)) / GRID_COLS, 1.0)
 	card.x = minf(card.x, col_w)
-	# Room for a full name on every card: the line cap's worth of text plus the insets above and below.
-	card.y = maxf(card.y, font.get_height(TextScale.size(TextScale.SMALL)) * CARD_MAX_NAME_LINES + CARD_TEXT_INSET * 2.0)
 	var row_h := (height - top - GRID_BOTTOM_MARGIN - CARD_GAP * (rows - 1)) / rows
 	card.y = minf(card.y, maxf(row_h, 1.0))
+	# Every name must fit inside its card: never shorter than the tallest wrapped name plus the insets.
+	card.y = maxf(card.y, _tallest_name_height(font, card.x - CARD_TEXT_INSET * 2.0) + CARD_TEXT_INSET * 2.0)
 	var rects := {}
 	for i: int in ids.size():
 		var col := i % GRID_COLS
@@ -651,6 +651,16 @@ func _card_layout() -> Dictionary:
 		rects[ids[i]] = Rect2(Vector2(GRID_ORIGIN.x + col * (card.x + CARD_GAP),
 				top + row * (card.y + CARD_GAP)), card)
 	return { "header": header, "header_width": header_zone["text_width"], "header_rect": header_rect, "card_size": card, "rects": rects }
+
+## The height of the tallest sub-area name wrapped to `text_width` at the current small size,
+## capped at CARD_MAX_NAME_LINES lines.
+func _tallest_name_height(font: Font, text_width: float) -> float:
+	var tallest := 0.0
+	for sub_area: Dictionary in _sub_areas.values():
+		var label := String(sub_area.get("name", ""))
+		tallest = maxf(tallest, font.get_multiline_string_size(label, HORIZONTAL_ALIGNMENT_LEFT,
+				text_width, TextScale.size(TextScale.SMALL), CARD_MAX_NAME_LINES).y)
+	return tallest
 
 func _draw_card_grid(font: Font, alpha: float, layout: Dictionary) -> void:
 	var backdrop := COLOR_BACKDROP
