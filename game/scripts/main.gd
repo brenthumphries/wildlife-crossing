@@ -599,6 +599,7 @@ func _open_world_select() -> void:
 		add_child(layer)
 		_overlay.attach(_world_select)
 		_world_select.attach_world_camera(_camera, _sub_area_centre_px)
+		_world_select.attach_reserved_zones(_hud.top_zone_rects)
 		_world_select.segment_clicked.connect(_try_select_segment)
 		_world_select.attach_hover_picker(_pick_segment_at, _is_dangerous_tile)
 		_world_select.attach_summary_source(_registries()["segments"], _crossings_in_sub_area)

@@ -57,8 +57,12 @@ const COLOR_TEXT_DIM := Color(0.70, 0.70, 0.70)
 const COLOR_LABEL_SCRIM := Color(0.0, 0.0, 0.0, 0.45)   # legibility backing over card art
 const CARD_TEXT_INSET := 8.0
 const CARD_MAX_NAME_LINES := 2
-const HEADER_Y := 40.0
-const HEADER_MARGIN := 12.0                       # gap under the header before the grid
+const HEADER_MARGIN := 12.0                       # gap under the header zone before the grid
+## The header's own zone (ATT-168): top-centre, between the HUD's clock panel and
+## budget panel, on a backing like theirs. Its edges come from the HUD panels'
+## real rectangles (`attach_reserved_zones`), never from a fixed pixel.
+const HEADER_ZONE_GAP := 12.0                     # clear space between the header zone and each HUD panel
+const HEADER_MIN_WIDTH := 160.0                   # narrowest the zone gets when the panels leave little room
 const GRID_BOTTOM_MARGIN := 12.0
 ## Layout height assumed before the control has a size (1280x720 viewport).
 const FALLBACK_HEIGHT := 720.0
@@ -66,8 +70,6 @@ const TOOLTIP_WIDTH := 260.0                      # at TextScale step 1.0
 const TOOLTIP_PAD := 8.0
 const TOOLTIP_CURSOR_OFFSET := Vector2(16.0, 16.0)
 const COLOR_TOOLTIP_BG := Color(0.05, 0.07, 0.06, 0.95)
-const HEADER_OUTLINE_PX := 4                      # header legibility over the live world
-const COLOR_HEADER_OUTLINE := Color(0.0, 0.0, 0.0, 0.85)
 
 # --- hover tooltip: the cached connectivity label beside the cursor ---
 const TOOLTIP_OFFSET := Vector2(16.0, 20.0)       # cursor → tooltip top-left
@@ -113,6 +115,10 @@ var _tile_is_dangerous: Callable
 # connectivity overlay; a read of its cache, never a calculation.
 var _hover_label_of: Callable
 var _hover_screen_position := Vector2.ZERO
+# Supplied by Main: `() -> Array[Rect2]`, the HUD's top-left and top-right panels
+# in screen pixels. The header sits between them.
+var _reserved_zones: Callable
+var _reserved_zones_seen: Array[Rect2] = []
 var _camera_saved := false
 var _saved_camera_position := Vector2.ZERO
 var _saved_camera_zoom := Vector2.ONE
@@ -305,6 +311,13 @@ func attach_world_camera(camera: Camera2D, centre_of: Callable) -> void:
 	_camera_saved = false
 	_sync_world_camera()
 
+## Hand this controller the HUD panels the header must stay clear of:
+## `zones() -> Array[Rect2]` returns their rectangles in screen pixels. The HUD
+## sits on a layer above this one, so the header takes the gap they leave.
+func attach_reserved_zones(zones: Callable) -> void:
+	_reserved_zones = zones
+	queue_redraw()
+
 ## Hand this controller the hover resolvers (PRD rules 8–9). `pick(screen_position)
 ## -> Dictionary` returns the segment record under a screen point, or {};
 ## `is_dangerous(coord: Vector2i) -> bool` is true for an `is_impassable` or
@@ -359,6 +372,16 @@ func _update_card_hover(screen_position: Vector2) -> void:
 	_hovered_card_id = id
 	_hover_position = screen_position
 	queue_redraw()
+
+## The HUD panels resize a frame after a text-scale change; redraw when they move.
+func _process(_delta: float) -> void:
+	if mode == Mode.INACTIVE or not _reserved_zones.is_valid():
+		return
+	var zones: Array[Rect2] = []
+	zones.assign(_reserved_zones.call())
+	if zones != _reserved_zones_seen:
+		_reserved_zones_seen = zones
+		queue_redraw()
 
 func _on_event_bus_text_scale_changed(_factor: float) -> void:
 	queue_redraw()
@@ -536,12 +559,16 @@ func _draw() -> void:
 	var layout := _card_layout()
 	if card_alpha > 0.0:
 		_draw_card_grid(font, card_alpha, layout)
-	# Outlined rather than backed: over the live world a scrim would cover it.
+	# Backed like the HUD's clusters: over the live world the panel keeps it readable.
 	var header_size := TextScale.size(TextScale.SMALL)
-	var header_pos := Vector2(GRID_ORIGIN.x, HEADER_Y)
-	draw_multiline_string_outline(font, header_pos, layout["header"], HORIZONTAL_ALIGNMENT_LEFT,
-			layout["header_width"], header_size, -1, HEADER_OUTLINE_PX, COLOR_HEADER_OUTLINE)
-	draw_multiline_string(font, header_pos, layout["header"], HORIZONTAL_ALIGNMENT_LEFT,
+	var zone: Rect2 = layout["header_rect"]
+	var style := StyleBoxFlat.new()
+	style.bg_color = Hud.PANEL_COLOR
+	style.set_corner_radius_all(Hud.PANEL_CORNER_RADIUS)
+	draw_style_box(style, zone)
+	var text_pos := zone.position + Vector2(float(Hud.PANEL_PADDING),
+			float(Hud.PANEL_PADDING) + font.get_ascent(header_size))
+	draw_multiline_string(font, text_pos, layout["header"], HORIZONTAL_ALIGNMENT_CENTER,
 			layout["header_width"], header_size, -1, COLOR_TEXT)
 	if card_alpha > 0.0 and _hovered_card_id != 0:
 		_draw_tooltip(font, _hovered_card_id)
@@ -569,19 +596,44 @@ func _header_text() -> String:
 	return "%s — click a road to pick it (%.1f px/tile) · scroll or pinch to zoom · Esc to exit" \
 			% [area_name, tile_px()]
 
-# Header text, and the card grid it pushes down: card size scales with TextScale,
+## The header zone: the gap between the HUD's left and right panels, at the HUD's
+## top margin, tall enough for the header wrapped to that width (ATT-168).
+## Returns { rect: Rect2, text_width: float, panels_bottom: float } (the lowest edge of the HUD panels, 0 when none). Without HUD panels it spans the
+## control between the HUD margins.
+func _header_zone(font: Font, header: String, width: float) -> Dictionary:
+	var left := Hud.STACK_MARGIN
+	var right := width - Hud.STACK_MARGIN
+	var panels_bottom := 0.0
+	if _reserved_zones.is_valid():
+		var zones: Array = _reserved_zones.call()
+		for zone: Rect2 in zones:
+			panels_bottom = maxf(panels_bottom, zone.end.y)
+			if zone.get_center().x < width * 0.5:
+				left = maxf(left, zone.end.x + HEADER_ZONE_GAP)
+			else:
+				right = minf(right, zone.position.x - HEADER_ZONE_GAP)
+	if right - left < HEADER_MIN_WIDTH:   # the panels leave no room: keep a readable strip
+		right = left + HEADER_MIN_WIDTH
+	var pad := float(Hud.PANEL_PADDING)
+	var text_width := right - left - pad * 2.0
+	var header_h := font.get_multiline_string_size(header, HORIZONTAL_ALIGNMENT_CENTER,
+			text_width, TextScale.size(TextScale.SMALL)).y
+	return { "rect": Rect2(left, Hud.STACK_MARGIN, right - left, header_h + pad * 2.0),
+			"text_width": text_width, "panels_bottom": panels_bottom }
+
+# Header zone, and the card grid it pushes down: card size scales with TextScale,
 # then shrinks vertically if needed so every row fits the control (1280x720 at the
-# largest step). Returns { header, header_width, card_size, rects: id → Rect2 }.
+# largest step). Returns { header, header_width, header_rect, card_size, rects: id → Rect2 }.
 func _card_layout() -> Dictionary:
 	var font := ThemeDB.fallback_font
 	var width := size.x if size.x > 0.0 else GRID_ORIGIN.x * 2.0 + GRID_COLS * (CARD_SIZE.x * TextScale.factor() + CARD_GAP)
 	var height := size.y if size.y > 0.0 else FALLBACK_HEIGHT
 	var header := _header_text()
-	var header_width := maxf(width - GRID_ORIGIN.x * 2.0, CARD_SIZE.x)
-	var header_size := TextScale.size(TextScale.SMALL)
-	var header_h := font.get_multiline_string_size(header, HORIZONTAL_ALIGNMENT_LEFT,
-			header_width, header_size).y
-	var top := HEADER_Y + header_h + HEADER_MARGIN
+	var header_zone := _header_zone(font, header, width)
+	var header_rect: Rect2 = header_zone["rect"]
+	# The grid starts below the header zone and below the HUD's top panels, which sit
+	# on a layer above it and would cover the top-left cards (ATT-168).
+	var top := maxf(header_rect.end.y, float(header_zone["panels_bottom"])) + HEADER_MARGIN
 	var ids: Array = _sub_areas.keys()
 	ids.sort()
 	var rows := maxi(1, int(ceil(ids.size() / float(GRID_COLS))))
@@ -596,7 +648,7 @@ func _card_layout() -> Dictionary:
 		var row := (rows - 1) - int(floor(i / float(GRID_COLS)))   # south at the bottom, north on top
 		rects[ids[i]] = Rect2(Vector2(GRID_ORIGIN.x + col * (card.x + CARD_GAP),
 				top + row * (card.y + CARD_GAP)), card)
-	return { "header": header, "header_width": header_width, "card_size": card, "rects": rects }
+	return { "header": header, "header_width": header_zone["text_width"], "header_rect": header_rect, "card_size": card, "rects": rects }
 
 func _draw_card_grid(font: Font, alpha: float, layout: Dictionary) -> void:
 	var backdrop := COLOR_BACKDROP

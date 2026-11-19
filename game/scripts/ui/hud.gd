@@ -226,6 +226,11 @@ func _build_hint_banner() -> void:
 	_hint_button.pressed.connect(_on_hint_button_pressed)
 	column.add_child(_hint_button)
 
+## The top-left (clock) and top-right (resources) panels in screen pixels: the
+## space the map's header zone sits between (ATT-168).
+func top_zone_rects() -> Array[Rect2]:
+	return [_clock_panel.get_global_rect(), _resource_panel.get_global_rect()]
+
 func _on_time_controls_speed_selected(multiplier: float) -> void:
 	time_speed_selected.emit(multiplier)
 
