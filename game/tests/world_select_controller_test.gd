@@ -817,3 +817,87 @@ func test_header_keeps_px_tile_readout_and_esc_hint_in_both_modes() -> void:
 	var segment_header: String = _c._header_text()
 	assert_true(segment_header.contains("(%.1f px/tile)" % _c.tile_px()), "segment header has the px/tile readout")
 	assert_true(segment_header.contains("Esc to exit"), "segment header has the Esc hint")
+
+# --- header zone (ATT-168) ---
+
+const HEADER_WINDOW := Vector2i(1280, 720)
+
+# A real HUD and the controller in one 1280x720 viewport, so the panels have the
+# rectangles the player sees. The controller is wired the way Main wires it.
+func _header_rig() -> Hud:
+	var window := SubViewport.new()
+	window.size = HEADER_WINDOW
+	add_child_autofree(window)
+	var hud := Hud.new()
+	hud.setup_milestones({ "first_crossing_sub1": { "id": "first_crossing_sub1",
+			"display_name": "First crossing", "is_capstone": false } })
+	hud.set_clock(1, "fall", 3)
+	hud.set_last_donation(250)
+	window.add_child(hud)
+	_c.free()
+	_c = WorldSelectController.new()
+	_c.setup(SUB_AREAS)
+	_c.size = Vector2(HEADER_WINDOW)
+	window.add_child(_c)
+	autofree(_c)
+	_c.attach_reserved_zones(hud.top_zone_rects)
+	return hud
+
+func _settle_header_rig(step: int, hud: Hud) -> void:
+	TextScale.set_step(step)
+	hud.apply_text_scale()
+	await get_tree().process_frame
+	await get_tree().process_frame
+
+func test_header_zone_clears_both_hud_panels_at_every_text_scale_step() -> void:
+	var hud: Hud = _header_rig()
+	var view := Rect2(Vector2.ZERO, Vector2(HEADER_WINDOW))
+	_c.enter_selection_mode()
+	for segment: bool in [false, true]:
+		_c.set_zoom((ACTIVATE_PX + 4.0 if segment else 1.0) / WorldSelectController.BASE_TILE_FLAT_TO_FLAT_PX)
+		assert_eq(_c.mode, WorldSelectController.Mode.SEGMENT if segment else WorldSelectController.Mode.WORLD)
+		for step: int in TextScale.STEPS.size():
+			await _settle_header_rig(step, hud)
+			var zone: Rect2 = _c._card_layout()["header_rect"]
+			var label := "step %d, mode %d" % [step, _c.mode]
+			assert_false(zone.intersects(hud._clock_panel.get_global_rect()), "header clear of the clock panel, %s" % label)
+			assert_false(zone.intersects(hud._resource_panel.get_global_rect()), "header clear of the budget panel, %s" % label)
+			assert_true(view.encloses(zone), "header inside the window, %s" % label)
+			assert_gt(zone.size.x, 0.0, "header has width, %s" % label)
+
+func test_header_zone_sits_between_the_panels_not_at_a_fixed_position() -> void:
+	var hud: Hud = _header_rig()
+	_c.enter_selection_mode()
+	await _settle_header_rig(0, hud)
+	var zone: Rect2 = _c._card_layout()["header_rect"]
+	assert_gte(zone.position.x, hud._clock_panel.get_global_rect().end.x, "starts right of the clock panel")
+	assert_lte(zone.end.x, hud._resource_panel.get_global_rect().position.x, "ends left of the budget panel")
+
+func test_header_text_wraps_inside_its_zone_at_every_text_scale_step() -> void:
+	var hud: Hud = _header_rig()
+	_c.enter_selection_mode()
+	var font := ThemeDB.fallback_font
+	for step: int in TextScale.STEPS.size():
+		await _settle_header_rig(step, hud)
+		var layout: Dictionary = _c._card_layout()
+		var zone: Rect2 = layout["header_rect"]
+		var text_h: float = font.get_multiline_string_size(layout["header"], HORIZONTAL_ALIGNMENT_CENTER,
+				layout["header_width"], TextScale.size(TextScale.SMALL)).y
+		assert_lte(float(layout["header_width"]) + Hud.PANEL_PADDING * 2.0, zone.size.x + 0.01, "text width fits the zone at step %d" % step)
+		assert_lte(text_h + Hud.PANEL_PADDING * 2.0, zone.size.y + 0.01, "zone holds the wrapped text at step %d" % step)
+
+func test_cards_fit_the_viewport_below_the_header_zone_at_every_text_scale_step() -> void:
+	var hud: Hud = _header_rig()
+	var many := {}
+	for id: int in range(1, 13):
+		many[id] = { "id": id, "name": "Sub-area number %d with a long name" % id }
+	_c.setup(many)
+	_c.enter_selection_mode()
+	var bounds := Rect2(Vector2.ZERO, Vector2(HEADER_WINDOW))
+	for step: int in TextScale.STEPS.size():
+		await _settle_header_rig(step, hud)
+		var layout: Dictionary = _c._card_layout()
+		var zone: Rect2 = layout["header_rect"]
+		for rect: Rect2 in layout["rects"].values():
+			assert_true(bounds.encloses(rect), "card inside viewport at step %d" % step)
+			assert_gte(rect.position.y, zone.end.y, "card below the header zone at step %d" % step)
