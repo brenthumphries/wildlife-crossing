@@ -86,6 +86,8 @@ var hover_label := ""
 
 var _sub_areas: Dictionary = {}
 var _unlocked: Dictionary = {}
+## sub-area id -> Texture2D, loaded in setup() so `_draw` never loads (see card_texture).
+var _card_textures: Dictionary = {}
 # Summary sources: segment records (id → record) and a `(sub_area_id) -> int`
 # resolver for completed crossings, both supplied by Main.
 var _segments: Dictionary = {}
@@ -131,8 +133,13 @@ func _ready() -> void:
 func setup(sub_areas: Dictionary) -> void:
 	_sub_areas = sub_areas
 	_unlocked = {}
+	_card_textures = {}
 	var ids: Array = sub_areas.keys()
 	ids.sort()
+	for id: int in ids:
+		var path := card_image_path(id)
+		if not path.is_empty():
+			_card_textures[id] = load(path)
 	for id: int in ids:
 		_unlocked[id] = bool(sub_areas[id].get("starts_unlocked", false))
 	focused_sub_area_id = 0
@@ -415,6 +422,12 @@ func card_image_path(sub_area_id: int) -> String:
 	var value = _sub_areas.get(sub_area_id, {}).get("card_image")
 	return "" if value == null else String(value)
 
+## The sub-area's card art, loaded ahead of time by `setup()`, or null when it
+## has none. It is loaded there and not inside `_draw` because a texture loaded
+## for the first time mid-draw is drawn solid white in that frame (ATT-180).
+func card_texture(sub_area_id: int) -> Texture2D:
+	return _card_textures.get(sub_area_id) as Texture2D
+
 ## Mark a sub-area unlocked. Lock state is *driven* by the permissions system
 ## (Phase 5); this controller only reflects it (PRD non-goal).
 func unlock_sub_area(sub_area_id: int) -> void:
@@ -594,13 +607,13 @@ func _draw_card_grid(font: Font, alpha: float, layout: Dictionary) -> void:
 
 func _draw_sub_area_card(font: Font, rect: Rect2, sub_area_id: int, alpha: float) -> void:
 	var unlocked := is_sub_area_unlocked(sub_area_id)
-	var image_path := card_image_path(sub_area_id)
-	var has_art := not image_path.is_empty()
+	var texture := card_texture(sub_area_id)
+	var has_art := texture != null
 	if has_art:
 		# Reuse the existing locked/unlocked colors as a tint rather than a fill —
 		# COLOR_LOCKED darkens the art to the same desaturated-lock treatment the
 		# placeholder cards use (PRD rule 5), with no shader needed.
-		draw_texture_rect(load(image_path), rect, false,
+		draw_texture_rect(texture, rect, false,
 				_faded(Color.WHITE if unlocked else COLOR_LOCKED, alpha))
 	else:
 		draw_rect(rect, _faded(COLOR_UNLOCKED if unlocked else COLOR_LOCKED, alpha))
