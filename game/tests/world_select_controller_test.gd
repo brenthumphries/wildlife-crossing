@@ -97,6 +97,35 @@ func test_bow_valley_card_art_resolves_to_a_loadable_texture() -> void:
 	var texture: Texture2D = load(_c.card_image_path(7))
 	assert_not_null(texture, "world_map_bow_valley.png must be importable at its data path")
 
+# --- card art is loaded ahead of drawing (ATT-180) ---
+#
+# A texture loaded for the first time inside `_draw` rendered solid white in a
+# windowed run, so setup() loads it and `_draw` only reads the cache.
+
+func test_unlocked_card_art_is_ready_before_the_first_draw() -> void:
+	var texture: Texture2D = _c.card_texture(7)
+	assert_not_null(texture, "setup() must have loaded sub-area 7's art")
+	assert_eq(texture.get_size(), Vector2(1376.0, 768.0))
+	var image: Image = texture.get_image()
+	var first: Color = image.get_pixel(0, 0)
+	var varied := false
+	for point: Vector2i in [Vector2i(700, 400), Vector2i(1300, 700), Vector2i(100, 600)]:
+		if image.get_pixelv(point) != first:
+			varied = true
+	assert_true(varied, "the card art must be a picture, not one flat colour")
+
+func test_cards_without_art_have_no_texture() -> void:
+	assert_null(_c.card_texture(8), "no card_image key")
+	assert_null(_c.card_texture(9), "JSON null card_image")
+	assert_null(_c.card_texture(99), "unknown sub-area")
+
+func test_locked_tint_dims_the_art_and_unlocked_leaves_it_alone() -> void:
+	var locked: Color = WorldSelectController._faded(WorldSelectController.COLOR_LOCKED, 1.0)
+	var unlocked: Color = WorldSelectController._faded(Color.WHITE, 1.0)
+	assert_eq(unlocked, Color.WHITE)
+	assert_lt(locked.r, 0.5, "locked art is darkened")
+	assert_eq(locked.r, locked.g, "and desaturated")
+
 # --- lock state from registry-parsed data (regression, 2026-09-02) ---
 #
 # SUB_AREAS above is hand-built with int keys. Production data arrives through
