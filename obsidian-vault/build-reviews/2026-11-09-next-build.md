@@ -18,6 +18,9 @@ status: active
 > asserts** (unchanged since 2026-11-02). Latest run on `main`: **success** on
 > `f33dfa9` at 2026-11-07T18:49:44Z. Previous plan: [[2026-11-02-next-build]].
 
+> [!success] Amendment 2026-11-18 — **V16, V17, V18, D6, Q11, Q12 and Q13 are closed; the freeze list is merged.**
+> Rows 1, 2, 4, 5, 6, 7 and 16 of the §3 table are done. V16 and V18 were walked windowed (2026-11-11, 2026-11-12), V17 on 2026-11-15; D6 merged as #119. Q11 kept the pick radius at 1, Q12 needs no change for v0.2.0 (Bow Valley has no river tiles), Q13 keeps the milestone track top-left with no click-through. Q10 is decided as a rule, not yet called: the freeze starts when the freeze list is merged and the V15 and V18 re-walks pass; the list is merged (#125 to #138, 14 items), the start date is still to be written. V15 was walked on 2026-11-11 and failed; its re-walk is partly done (ATT-149). `week.json` is not edited midweek and still lists them as open. Still open: V15, Q10, V19, D8, D7, B9, D9, Q2, D4, V5. See [[../daily-logs/2026-11-18]].
+
 ## 1. Readiness
 
 **Build case: next.** v0.1.0 is published and CI is green on the measured SHA.
