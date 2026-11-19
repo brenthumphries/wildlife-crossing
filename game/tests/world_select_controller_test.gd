@@ -778,14 +778,14 @@ func test_summary_without_a_source_counts_zero() -> void:
 	assert_eq(_c.summary_text(7), "Central Canadian Rockies\n0 segments · 0 existing crossings")
 
 func test_card_at_finds_the_card_under_the_cursor() -> void:
-	_c.size = Vector2(1280.0, 720.0)
+	_c.size = Vector2(WindowFixture.content_size())
 	_c.enter_selection_mode()
 	var rect: Rect2 = _c._card_layout()["rects"][8]
 	assert_eq(_c.card_at(rect.get_center()), 8)
 	assert_eq(_c.card_at(Vector2(1.0, 1.0)), 0, "off the grid hits nothing")
 
 func test_hover_sets_and_clears_hovered_card() -> void:
-	_c.size = Vector2(1280.0, 720.0)
+	_c.size = Vector2(WindowFixture.content_size())
 	_c.enter_selection_mode()
 	var rect: Rect2 = _c._card_layout()["rects"][7]
 	_c.update_hover(rect.get_center())
@@ -798,7 +798,7 @@ func test_cards_fit_the_viewport_at_every_text_scale_step() -> void:
 	for id: int in range(1, 13):
 		many[id] = { "id": id, "name": "Sub-area number %d with a long name" % id }
 	_c.setup(many)
-	_c.size = Vector2(1280.0, 720.0)
+	_c.size = Vector2(WindowFixture.content_size())
 	_c.enter_selection_mode()
 	for step: int in TextScale.STEPS.size():
 		TextScale.set_step(step)
@@ -849,11 +849,11 @@ func test_header_keeps_px_tile_readout_and_esc_hint_in_both_modes() -> void:
 
 # --- header zone (ATT-168) ---
 
-const HEADER_WINDOW := Vector2i(1280, 720)
+var HEADER_WINDOW: Vector2i = WindowFixture.content_size()
 ## Shortest card that still holds a two-line name at the SMALL size.
 const MIN_USABLE_CARD_HEIGHT := 40
 
-# A real HUD and the controller in one 1280x720 viewport, so the panels have the
+# A real HUD and the controller in one content-size viewport, so the panels have the
 # rectangles the player sees. The controller is wired the way Main wires it.
 func _header_rig() -> Hud:
 	var window := SubViewport.new()

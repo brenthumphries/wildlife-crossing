@@ -3,7 +3,7 @@
 ## time rather than left stuck on screen.
 extends GutTest
 
-const WINDOW_SIZE := Vector2i(1280, 720)
+var WINDOW_SIZE: Vector2i = WindowFixture.content_size()
 ## The longest text in data/hints.json (the build-mode hint), the toast stack's worst case.
 const LONGEST_HINT := "Click tiles across the highway to place the crossing. Each tile costs money, and the total is shown at the top. Press Enter to confirm."
 
@@ -212,7 +212,7 @@ func test_stack_rows_never_overlap_with_a_migration_clock_and_a_banner() -> void
 		await get_tree().process_frame
 		_assert_stack_rows_clear(_h._clock_stack, "step %d" % step)
 
-# ATT-146: zones. A real 1280x720 viewport so anchors resolve to pixels.
+# ATT-146: zones. A real content-size viewport so anchors resolve to pixels.
 func _hud_in_window(everything_showing: bool, stress: bool = true) -> Hud:
 	var window := SubViewport.new()
 	window.size = WINDOW_SIZE
@@ -261,26 +261,14 @@ func test_the_three_panels_never_overlap_while_build_mode_is_up_at_every_text_sc
 	var hud: Hud = _hud_in_window(true, false)
 	for step: int in TextScale.STEPS.size():
 		await _settle(step, hud)
-		# ATT-175's keys line adds one row; with the hint and a message also up, at the largest step
-		# the stack then meets the clock in a 720 px window (about 24 px). ATT-148 / ATT-169 own that.
-		if step == TextScale.STEPS.size() - 1 and hud._clock_panel.get_global_rect().intersects(hud._toast_panel.get_global_rect()):
-			pending("step %d: clock %s meets the toast stack %s in build mode with the hint and a message up; pending ATT-148, ATT-169" % [
-					step, hud._clock_panel.get_global_rect(), hud._toast_panel.get_global_rect()])
-		else:
-			_assert_panels_apart(hud, step)
+		_assert_panels_apart(hud, step)
 
 # Every toast at once, with a rejection reason and a cue: more than the game puts up together.
-# At the largest step it does not fit a 720 px window, which ATT-148 (minimum window per text
-# step) and ATT-169 (larger default window) own; the steps below it still assert.
 func test_the_three_panels_never_overlap_with_every_toast_up_at_every_text_scale_step() -> void:
 	var hud: Hud = _hud_in_window(true)
 	for step: int in TextScale.STEPS.size():
 		await _settle(step, hud)
-		if step == TextScale.STEPS.size() - 1 and hud._clock_panel.get_global_rect().intersects(hud._toast_panel.get_global_rect()):
-			pending("step %d: clock %s meets the toast stack %s with every toast up; pending ATT-148, ATT-169" % [
-					step, hud._clock_panel.get_global_rect(), hud._toast_panel.get_global_rect()])
-		else:
-			_assert_panels_apart(hud, step)
+		_assert_panels_apart(hud, step)
 
 func _assert_panels_apart(hud: Hud, step: int) -> void:
 	var panels: Array[Control] = [hud._clock_panel, hud._resource_panel, hud._toast_panel]
