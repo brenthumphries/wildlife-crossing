@@ -585,14 +585,16 @@ func _header_text() -> String:
 
 ## The header zone: the gap between the HUD's left and right panels, at the HUD's
 ## top margin, tall enough for the header wrapped to that width (ATT-168).
-## Returns { rect: Rect2, text_width: float }. Without HUD panels it spans the
+## Returns { rect: Rect2, text_width: float, panels_bottom: float } (the lowest edge of the HUD panels, 0 when none). Without HUD panels it spans the
 ## control between the HUD margins.
 func _header_zone(font: Font, header: String, width: float) -> Dictionary:
 	var left := Hud.STACK_MARGIN
 	var right := width - Hud.STACK_MARGIN
+	var panels_bottom := 0.0
 	if _reserved_zones.is_valid():
 		var zones: Array = _reserved_zones.call()
 		for zone: Rect2 in zones:
+			panels_bottom = maxf(panels_bottom, zone.end.y)
 			if zone.get_center().x < width * 0.5:
 				left = maxf(left, zone.end.x + HEADER_ZONE_GAP)
 			else:
@@ -604,7 +606,7 @@ func _header_zone(font: Font, header: String, width: float) -> Dictionary:
 	var header_h := font.get_multiline_string_size(header, HORIZONTAL_ALIGNMENT_CENTER,
 			text_width, TextScale.size(TextScale.SMALL)).y
 	return { "rect": Rect2(left, Hud.STACK_MARGIN, right - left, header_h + pad * 2.0),
-			"text_width": text_width }
+			"text_width": text_width, "panels_bottom": panels_bottom }
 
 # Header zone, and the card grid it pushes down: card size scales with TextScale,
 # then shrinks vertically if needed so every row fits the control (1280x720 at the
@@ -616,7 +618,9 @@ func _card_layout() -> Dictionary:
 	var header := _header_text()
 	var header_zone := _header_zone(font, header, width)
 	var header_rect: Rect2 = header_zone["rect"]
-	var top := header_rect.end.y + HEADER_MARGIN
+	# The grid starts below the header zone and below the HUD's top panels, which sit
+	# on a layer above it and would cover the top-left cards (ATT-168).
+	var top := maxf(header_rect.end.y, float(header_zone["panels_bottom"])) + HEADER_MARGIN
 	var ids: Array = _sub_areas.keys()
 	ids.sort()
 	var rows := maxi(1, int(ceil(ids.size() / float(GRID_COLS))))

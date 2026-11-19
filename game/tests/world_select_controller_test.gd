@@ -821,6 +821,8 @@ func test_header_keeps_px_tile_readout_and_esc_hint_in_both_modes() -> void:
 # --- header zone (ATT-168) ---
 
 const HEADER_WINDOW := Vector2i(1280, 720)
+## Shortest card that still holds a two-line name at the SMALL size.
+const MIN_USABLE_CARD_HEIGHT := 40
 
 # A real HUD and the controller in one 1280x720 viewport, so the panels have the
 # rectangles the player sees. The controller is wired the way Main wires it.
@@ -901,3 +903,24 @@ func test_cards_fit_the_viewport_below_the_header_zone_at_every_text_scale_step(
 		for rect: Rect2 in layout["rects"].values():
 			assert_true(bounds.encloses(rect), "card inside viewport at step %d" % step)
 			assert_gte(rect.position.y, zone.end.y, "card below the header zone at step %d" % step)
+
+func test_no_card_meets_a_hud_panel_or_the_header_zone_at_every_text_scale_step() -> void:
+	var hud: Hud = _header_rig()
+	var many := {}
+	for id: int in range(1, 13):
+		many[id] = { "id": id, "name": "Sub-area number %d with a long name" % id }
+	_c.setup(many)
+	_c.enter_selection_mode()
+	for step: int in TextScale.STEPS.size():
+		await _settle_header_rig(step, hud)
+		var layout: Dictionary = _c._card_layout()
+		var zone: Rect2 = layout["header_rect"]
+		var clock: Rect2 = hud._clock_panel.get_global_rect()
+		var budget: Rect2 = hud._resource_panel.get_global_rect()
+		var card_h: float = (layout["card_size"] as Vector2).y
+		gut.p("step %d: card %s" % [step, layout["card_size"]])
+		assert_gte(card_h, float(MIN_USABLE_CARD_HEIGHT), "cards stay usable at step %d" % step)
+		for rect: Rect2 in layout["rects"].values():
+			assert_false(rect.intersects(clock), "card %s meets the clock panel at step %d" % [rect, step])
+			assert_false(rect.intersects(budget), "card %s meets the budget panel at step %d" % [rect, step])
+			assert_false(rect.intersects(zone), "card %s meets the header zone at step %d" % [rect, step])
