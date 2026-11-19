@@ -30,9 +30,12 @@ signal time_speed_selected(multiplier: float)
 const MESSAGE_FADE_SECONDS := 4.0
 const CUE_FLASH_SECONDS := 1.2
 const CUE_ICON := preload("res://assets/sprites/crossing_cue.png")
+## Crossing success: the cue label. Green means success here only (ATT-147).
+const SUCCESS_COLOR := Color(0.35, 0.85, 0.55)
+## Money: the last-donation label. Amber, so it does not read as success or migration (ATT-147).
+const MONEY_COLOR := Color(1.0, 0.65, 0.2)
 ## Placeholder art (game/CLAUDE.md asset pipeline: no Aseprite `_src/` --
 ## generated as a flat-colour stand-in, not exported from source art).
-const CUE_COLOR := Color(0.35, 0.85, 0.55)
 const STACK_MARGIN := 16.0
 const STACK_SEPARATION := 4
 ## Padding inside each cluster's backing panel, in px.
@@ -93,7 +96,7 @@ func _build_ui() -> void:
 	_budget_label = _add_label(Color.WHITE, _resource_stack)
 	set_budget(EconomyConstants.STARTING_BUDGET)
 
-	_donation_label = _add_label(CUE_COLOR, _resource_stack)
+	_donation_label = _add_label(MONEY_COLOR, _resource_stack)
 	_donation_label.hide()   # nothing to show until a donation arrives
 
 	_toast_stack = _add_zone(Control.PRESET_BOTTOM_RIGHT)
@@ -123,7 +126,7 @@ func _build_ui() -> void:
 	_cue_row.add_child(_cue_icon)
 
 	_cue_label = Label.new()
-	_cue_label.add_theme_color_override("font_color", CUE_COLOR)
+	_cue_label.add_theme_color_override("font_color", SUCCESS_COLOR)
 	_cue_label.modulate.a = 0.0
 	_cue_row.add_child(_cue_label)
 
