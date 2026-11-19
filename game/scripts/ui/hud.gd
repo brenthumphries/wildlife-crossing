@@ -15,6 +15,11 @@
 ## C36 puts the SeasonCalendar at the head of the stack, always visible.
 ## C34 adds the TimeControls row directly beneath it.
 ## C42 adds the MilestoneTrack ("Corridor N/12" and the celebration banner) beneath that.
+## ATT-146 splits the one stack into three zones, each on a semi-opaque panel:
+## top-left the clock (calendar, time controls, milestone track), top-right the
+## resources (budget, last donation), bottom-right a toast stack (build status,
+## message line, crossing cue, hint banner) that shows only while a toast is up.
+## The bottom-left belongs to the Toolbar. Every panel ignores the mouse; only buttons take it.
 class_name Hud
 extends BaseScreen
 
@@ -30,6 +35,13 @@ const CUE_ICON := preload("res://assets/sprites/crossing_cue.png")
 const CUE_COLOR := Color(0.35, 0.85, 0.55)
 const STACK_MARGIN := 16.0
 const STACK_SEPARATION := 4
+## Padding inside each cluster's backing panel, in px.
+const PANEL_PADDING := 10
+const PANEL_CORNER_RADIUS := 6
+## Semi-opaque so text reads over the map and the map still shows through.
+const PANEL_COLOR := Color(0.06, 0.08, 0.07, 0.72)
+## The toast stack's width in px at text-scale step 1.0; scaled with the text.
+const TOAST_WIDTH_BASE := 480
 const CUE_ROW_SEPARATION := 8
 ## The cue icon's edge in px at text-scale step 1.0; scaled with the text.
 const CUE_ICON_BASE_SIZE := 24.0
@@ -37,7 +49,12 @@ const CUE_ICON_BASE_SIZE := 24.0
 const HINT_WIDTH_BASE := 420
 const HINT_DISMISS_TEXT := "Got it"
 
-var _stack: VBoxContainer
+var _clock_panel: PanelContainer
+var _clock_stack: VBoxContainer
+var _resource_panel: PanelContainer
+var _resource_stack: VBoxContainer
+var _toast_panel: PanelContainer
+var _toast_stack: VBoxContainer
 var _calendar: SeasonCalendar
 var _time_controls: TimeControls
 var _milestone_track: MilestoneTrack
@@ -57,33 +74,46 @@ var _cue_timer := 0.0
 func _build_ui() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 
-	_stack = VBoxContainer.new()
-	_stack.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_stack.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT,
-			Control.PRESET_MODE_MINSIZE, int(STACK_MARGIN))
-	_stack.add_theme_constant_override("separation", STACK_SEPARATION)
-	add_child(_stack)
+	_clock_stack = _add_zone(Control.PRESET_TOP_LEFT)
+	_clock_panel = _clock_stack.get_parent() as PanelContainer
 
 	_calendar = SeasonCalendar.new()
-	_stack.add_child(_calendar)
+	_clock_stack.add_child(_calendar)
 
 	_time_controls = TimeControls.new()
 	_time_controls.speed_selected.connect(_on_time_controls_speed_selected)
-	_stack.add_child(_time_controls)
+	_clock_stack.add_child(_time_controls)
 
 	_milestone_track = MilestoneTrack.new()
-	_stack.add_child(_milestone_track)
+	_clock_stack.add_child(_milestone_track)
 
-	_build_status_label = _add_label(Color.WHITE)
+	_resource_stack = _add_zone(Control.PRESET_TOP_RIGHT)
+	_resource_panel = _resource_stack.get_parent() as PanelContainer
+
+	_budget_label = _add_label(Color.WHITE, _resource_stack)
+	set_budget(EconomyConstants.STARTING_BUDGET)
+
+	_donation_label = _add_label(CUE_COLOR, _resource_stack)
+	_donation_label.hide()   # nothing to show until a donation arrives
+
+	_toast_stack = _add_zone(Control.PRESET_BOTTOM_RIGHT)
+	_toast_panel = _toast_stack.get_parent() as PanelContainer
+	_toast_panel.hide()   # shown only while a toast is up
+
+	_build_status_label = _add_label(Color.WHITE, _toast_stack)
+	_build_status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART   # a later line (ATT-175) wraps too
 	_build_status_label.hide()   # shown only while build mode is open
 
-	_message_label = _add_label(Color.WHITE)
+	_message_label = _add_label(Color.WHITE, _toast_stack)
+	_message_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_message_label.modulate.a = 0.0
+	_message_label.hide()
 
 	_cue_row = HBoxContainer.new()
 	_cue_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_cue_row.add_theme_constant_override("separation", CUE_ROW_SEPARATION)
-	_stack.add_child(_cue_row)
+	_cue_row.hide()
+	_toast_stack.add_child(_cue_row)
 
 	_cue_icon = TextureRect.new()
 	_cue_icon.texture = CUE_ICON
@@ -96,12 +126,6 @@ func _build_ui() -> void:
 	_cue_label.add_theme_color_override("font_color", CUE_COLOR)
 	_cue_label.modulate.a = 0.0
 	_cue_row.add_child(_cue_label)
-
-	_budget_label = _add_label(Color.WHITE)
-	set_budget(EconomyConstants.STARTING_BUDGET)
-
-	_donation_label = _add_label(CUE_COLOR)
-	_donation_label.hide()   # nothing to show until a donation arrives
 
 	_build_hint_banner()
 
@@ -119,10 +143,14 @@ func apply_text_scale() -> void:
 	_set_font_size(_cue_label, TextScale.BODY)
 	_set_font_size(_budget_label, TextScale.BODY)
 	_set_font_size(_donation_label, TextScale.SMALL)
-	_set_font_size(_hint_label, TextScale.BODY)
+	# BODY, except SMALL at the largest step: at 175% in 720 px the longest hint at BODY
+	# reaches the clock panel. ATT-148 and ATT-169 give more room; then this exception can go.
+	var largest_step: bool = TextScale.step() == TextScale.STEPS.size() - 1
+	_set_font_size(_hint_label, TextScale.SMALL if largest_step else TextScale.BODY)
 	_hint_button.add_theme_font_size_override("font_size", TextScale.size(TextScale.BODY))
 	_hint_label.custom_minimum_size.x = TextScale.size(HINT_WIDTH_BASE)
 	_cue_icon.custom_minimum_size = Vector2.ONE * TextScale.size(roundi(CUE_ICON_BASE_SIZE))
+	_toast_stack.custom_minimum_size.x = TextScale.size(TOAST_WIDTH_BASE)
 
 ## Show the clock in the season calendar; call on `season_changed` and as days pass.
 func set_clock(year: int, season: String, day_of_season: int) -> void:
@@ -152,19 +180,23 @@ func handle_time_key(keycode: Key) -> bool:
 func set_build_status(text: String) -> void:
 	_build_status_label.text = text
 	_build_status_label.show()
+	_refresh_toast_panel()
 
 ## Hide the build-mode readout (build mode closed).
 func clear_build_status() -> void:
 	_build_status_label.hide()
+	_refresh_toast_panel()
 
 ## Show a first-time hint in the banner until the player dismisses it.
 func show_hint(text: String) -> void:
 	_hint_label.text = text
 	_hint_panel.show()
+	_refresh_toast_panel()
 
 ## Hide the hint banner.
 func clear_hint() -> void:
 	_hint_panel.hide()
+	_refresh_toast_panel()
 
 ## Whether the hint banner is up.
 func is_hint_visible() -> bool:
@@ -176,7 +208,7 @@ func _build_hint_banner() -> void:
 	_hint_panel = PanelContainer.new()
 	_hint_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_hint_panel.hide()
-	_stack.add_child(_hint_panel)
+	_toast_stack.add_child(_hint_panel)
 
 	var column := VBoxContainer.new()
 	column.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -201,11 +233,43 @@ func _on_hint_button_pressed() -> void:
 	clear_hint()
 	hint_dismissed.emit()
 
-func _add_label(color: Color) -> Label:
+func _add_label(color: Color, parent: Control) -> Label:
 	var label := Label.new()
 	label.add_theme_color_override("font_color", color)
-	_stack.add_child(label)
+	parent.add_child(label)
 	return label
+
+# One zone: a mouse-ignoring backing panel pinned to a corner, holding a stack.
+# The preset runs before the stack has children, so it pins the corner at a
+# zero-size panel; the grow directions then keep that corner on its margin
+# however big the contents make the panel.
+func _add_zone(preset: Control.LayoutPreset) -> VBoxContainer:
+	var panel := PanelContainer.new()
+	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var style := StyleBoxFlat.new()
+	style.bg_color = PANEL_COLOR
+	style.set_corner_radius_all(PANEL_CORNER_RADIUS)
+	style.set_content_margin_all(PANEL_PADDING)
+	panel.add_theme_stylebox_override("panel", style)
+	panel.set_anchors_and_offsets_preset(preset, Control.PRESET_MODE_MINSIZE, int(STACK_MARGIN))
+	var at_right := preset == Control.PRESET_TOP_RIGHT or preset == Control.PRESET_BOTTOM_RIGHT
+	var at_bottom := preset == Control.PRESET_BOTTOM_LEFT or preset == Control.PRESET_BOTTOM_RIGHT
+	panel.grow_horizontal = Control.GROW_DIRECTION_BEGIN if at_right else Control.GROW_DIRECTION_END
+	panel.grow_vertical = Control.GROW_DIRECTION_BEGIN if at_bottom else Control.GROW_DIRECTION_END
+	add_child(panel)
+	var stack := VBoxContainer.new()
+	stack.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	stack.add_theme_constant_override("separation", STACK_SEPARATION)
+	panel.add_child(stack)
+	return stack
+
+## The toast panel shows only while some toast in it is visible.
+func _refresh_toast_panel() -> void:
+	var any_toast := false
+	for child: Node in _toast_stack.get_children():
+		if (child as Control).visible:
+			any_toast = true
+	_toast_panel.visible = any_toast
 
 func _set_font_size(label: Label, base: int) -> void:
 	label.add_theme_font_size_override("font_size", TextScale.size(base))
@@ -217,7 +281,9 @@ func _on_event_bus_text_scale_changed(_factor: float) -> void:
 func show_message(text: String) -> void:
 	_message_label.text = text
 	_message_label.modulate.a = 1.0
+	_message_label.show()
 	_message_timer = MESSAGE_FADE_SECONDS
+	_refresh_toast_panel()
 
 ## The coalesced crossing-success cue: icon + "+N crossed safely", distinct
 ## from show_message so it reads as an event, not just the latest log line.
@@ -225,7 +291,9 @@ func show_crossing_cue(count: int) -> void:
 	_cue_label.text = "+%d crossed safely" % count
 	_cue_icon.modulate.a = 1.0
 	_cue_label.modulate.a = 1.0
+	_cue_row.show()
 	_cue_timer = CUE_FLASH_SECONDS
+	_refresh_toast_panel()
 
 ## Show the current balance; call on every `budget_changed`.
 func set_budget(balance: int) -> void:
@@ -241,8 +309,13 @@ func _process(delta: float) -> void:
 	if _message_timer > 0.0:
 		_message_timer = maxf(_message_timer - delta, 0.0)
 		_message_label.modulate.a = _message_timer / MESSAGE_FADE_SECONDS
+		if _message_timer == 0.0:
+			_message_label.hide()
 	if _cue_timer > 0.0:
 		_cue_timer = maxf(_cue_timer - delta, 0.0)
 		var a := _cue_timer / CUE_FLASH_SECONDS
 		_cue_icon.modulate.a = a
 		_cue_label.modulate.a = a
+		if _cue_timer == 0.0:
+			_cue_row.hide()
+	_refresh_toast_panel()

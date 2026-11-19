@@ -17,7 +17,7 @@ var _info_button: Button
 func _build_ui() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 
-	# Bottom-left corner (ui-ux-spec §3); the HUD stack owns the top-left, so the
+	# Bottom-left corner (ui-ux-spec §3); the HUD zones (ATT-146) own the other corners, so the
 	# two never share space at any text-scale step. The preset runs before the
 	# buttons exist, so it pins the bottom edge at a zero-height bar; growing
 	# upward keeps that edge on its margin however tall the buttons make the bar,
