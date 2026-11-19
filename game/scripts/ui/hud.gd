@@ -48,6 +48,8 @@ const CUE_ICON_BASE_SIZE := 24.0
 ## The hint banner's text width in px at text-scale step 1.0; scaled with the text.
 const HINT_WIDTH_BASE := 420
 const HINT_DISMISS_TEXT := "Got it"
+## The keys line under the build status readout, up for as long as build mode is open (ATT-175).
+const BUILD_KEYS_TEXT := "Enter to confirm · Esc to cancel"
 
 var _clock_panel: PanelContainer
 var _clock_stack: VBoxContainer
@@ -59,6 +61,7 @@ var _calendar: SeasonCalendar
 var _time_controls: TimeControls
 var _milestone_track: MilestoneTrack
 var _build_status_label: Label
+var _build_keys_label: Label
 var _message_label: Label
 var _cue_row: HBoxContainer
 var _cue_icon: TextureRect
@@ -101,8 +104,13 @@ func _build_ui() -> void:
 	_toast_panel.hide()   # shown only while a toast is up
 
 	_build_status_label = _add_label(Color.WHITE, _toast_stack)
-	_build_status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART   # a later line (ATT-175) wraps too
+	_build_status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_build_status_label.hide()   # shown only while build mode is open
+
+	_build_keys_label = _add_label(Color.WHITE, _toast_stack)
+	_build_keys_label.text = BUILD_KEYS_TEXT
+	_build_keys_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_build_keys_label.hide()   # shown with the status readout
 
 	_message_label = _add_label(Color.WHITE, _toast_stack)
 	_message_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -139,6 +147,7 @@ func _ready() -> void:
 ## Re-size every HUD text from TextScale's current step.
 func apply_text_scale() -> void:
 	_set_font_size(_build_status_label, TextScale.SMALL)
+	_set_font_size(_build_keys_label, TextScale.SMALL)
 	_set_font_size(_message_label, TextScale.BODY)
 	_set_font_size(_cue_label, TextScale.BODY)
 	_set_font_size(_budget_label, TextScale.BODY)
@@ -180,11 +189,13 @@ func handle_time_key(keycode: Key) -> bool:
 func set_build_status(text: String) -> void:
 	_build_status_label.text = text
 	_build_status_label.show()
+	_build_keys_label.show()
 	_refresh_toast_panel()
 
 ## Hide the build-mode readout (build mode closed).
 func clear_build_status() -> void:
 	_build_status_label.hide()
+	_build_keys_label.hide()
 	_refresh_toast_panel()
 
 ## Show a first-time hint in the banner until the player dismisses it.
