@@ -1,8 +1,12 @@
-## The always-on milestone track: "Corridor N/12", a distinct gold capstone node, and a banner that celebrates each milestone.
+## The always-on milestone track: "Corridor N/12" and a distinct gold capstone node; it announces each celebration for the HUD's toast stack.
 class_name MilestoneTrack
 extends BaseScreen
 
+## Emitted with the banner line when a milestone is celebrated; the HUD shows it as a toast.
+signal celebrated(banner: String)
+
 const ROW_SEPARATION := 8
+## How long the HUD's milestone toast takes to fade out.
 const BANNER_FADE_SECONDS := 5.0
 const CORRIDOR_PREFIX := "Corridor"
 const BANNER_PREFIX := "Milestone reached"
@@ -21,8 +25,6 @@ var _column: VBoxContainer
 var _row: HBoxContainer
 var _corridor_label: Label
 var _capstone_node: Label
-var _banner_label: Label
-var _banner_timer := 0.0
 
 ## "Corridor 3/12".
 static func corridor_text(reached: int, total: int) -> String:
@@ -72,12 +74,6 @@ func _build_ui() -> void:
 	_capstone_node.text = CAPSTONE_NODE_TEXT
 	_row.add_child(_capstone_node)
 
-	_banner_label = Label.new()
-	_banner_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_banner_label.add_theme_color_override("font_color", BANNER_COLOR)
-	_banner_label.modulate.a = 0.0
-	_column.add_child(_banner_label)
-
 	_refresh()
 	apply_text_scale()
 
@@ -90,6 +86,7 @@ func _ready() -> void:
 func setup(milestones_registry: Dictionary) -> void:
 	_milestones = milestones_registry.values()
 	_refresh()
+	_reserve_height()
 
 ## Show which milestones are reached; call whenever the tracker's record changes (a load included). Never celebrates.
 func set_reached(reached_ids: Array, capstone_reached: bool) -> void:
@@ -102,11 +99,9 @@ func set_reached(reached_ids: Array, capstone_reached: bool) -> void:
 	_capstone_reached = capstone_reached
 	_refresh()
 
-## Raise the celebration banner for a milestone; it fades by itself and never takes input.
+## Announce a milestone: emits `celebrated` with its banner line. The track itself stays one line.
 func celebrate(milestone_id: String, is_capstone: bool) -> void:
-	_banner_label.text = banner_text(_display_name(milestone_id), is_capstone)
-	_banner_label.modulate.a = 1.0
-	_banner_timer = BANNER_FADE_SECONDS
+	celebrated.emit(banner_text(_display_name(milestone_id), is_capstone))
 
 ## The track's count line as shown.
 func corridor_line() -> String:
@@ -120,19 +115,12 @@ func is_capstone_lit() -> bool:
 func apply_text_scale() -> void:
 	_corridor_label.add_theme_font_size_override("font_size", TextScale.size(TextScale.BODY))
 	_capstone_node.add_theme_font_size_override("font_size", TextScale.size(TextScale.TITLE))
-	_banner_label.add_theme_font_size_override("font_size", TextScale.size(TextScale.BODY))
 	_reserve_height()
 
-## A plain Control does not size to its children; reserve the whole column, the
-## Corridor row and the banner line under it (the banner line counts when empty).
+## A plain Control does not size to its children; reserve the Corridor row's size.
 ## Runs again whenever the column's minimum size changes.
 func _reserve_height() -> void:
 	custom_minimum_size = _column.get_combined_minimum_size()
-
-func _process(delta: float) -> void:
-	if _banner_timer > 0.0:
-		_banner_timer = maxf(_banner_timer - delta, 0.0)
-		_banner_label.modulate.a = _banner_timer / BANNER_FADE_SECONDS
 
 func _refresh() -> void:
 	_corridor_label.text = corridor_text(sub_area_reached(_milestones, _reached),

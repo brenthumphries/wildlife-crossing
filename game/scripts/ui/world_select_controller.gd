@@ -44,7 +44,7 @@ const LOCKED_MAX_TILE_PX := float(SimulationConstants.SEGMENT_ZOOM_DEACTIVATE_PX
 # sub-area's `card_image` is set (roadmap decision logged 2026-09-15 — see
 # roadmap.md). Drawn at world zoom only; it fades out across the hysteresis
 # band and segment mode shows the live world instead (ADR 0021) ---
-const CARD_SIZE := Vector2(170.0, 84.0)
+const CARD_SIZE := Vector2(240.0, 84.0)
 const CARD_GAP := 12.0
 const GRID_COLS := 3
 const GRID_ORIGIN := Vector2(48.0, 72.0)
@@ -56,7 +56,7 @@ const COLOR_TEXT := Color(0.92, 0.92, 0.88)
 const COLOR_TEXT_DIM := Color(0.70, 0.70, 0.70)
 const COLOR_LABEL_SCRIM := Color(0.0, 0.0, 0.0, 0.45)   # legibility backing over card art
 const CARD_TEXT_INSET := 8.0
-const CARD_MAX_NAME_LINES := 2
+const CARD_MAX_NAME_LINES := 3
 const HEADER_MARGIN := 12.0                       # gap under the header zone before the grid
 ## The header's own zone (ATT-168): top-centre, between the HUD's clock panel and
 ## budget panel, on a backing like theirs. Its edges come from the HUD panels'
@@ -642,6 +642,8 @@ func _card_layout() -> Dictionary:
 	card.x = minf(card.x, col_w)
 	var row_h := (height - top - GRID_BOTTOM_MARGIN - CARD_GAP * (rows - 1)) / rows
 	card.y = minf(card.y, maxf(row_h, 1.0))
+	# Every name must fit inside its card: never shorter than the tallest wrapped name plus the insets.
+	card.y = maxf(card.y, _tallest_name_height(font, card.x - CARD_TEXT_INSET * 2.0) + CARD_TEXT_INSET * 2.0)
 	var rects := {}
 	for i: int in ids.size():
 		var col := i % GRID_COLS
@@ -649,6 +651,16 @@ func _card_layout() -> Dictionary:
 		rects[ids[i]] = Rect2(Vector2(GRID_ORIGIN.x + col * (card.x + CARD_GAP),
 				top + row * (card.y + CARD_GAP)), card)
 	return { "header": header, "header_width": header_zone["text_width"], "header_rect": header_rect, "card_size": card, "rects": rects }
+
+## The height of the tallest sub-area name wrapped to `text_width` at the current small size,
+## capped at CARD_MAX_NAME_LINES lines.
+func _tallest_name_height(font: Font, text_width: float) -> float:
+	var tallest := 0.0
+	for sub_area: Dictionary in _sub_areas.values():
+		var label := String(sub_area.get("name", ""))
+		tallest = maxf(tallest, font.get_multiline_string_size(label, HORIZONTAL_ALIGNMENT_LEFT,
+				text_width, TextScale.size(TextScale.SMALL), CARD_MAX_NAME_LINES).y)
+	return tallest
 
 func _draw_card_grid(font: Font, alpha: float, layout: Dictionary) -> void:
 	var backdrop := COLOR_BACKDROP

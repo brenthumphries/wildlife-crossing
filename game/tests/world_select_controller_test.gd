@@ -778,14 +778,14 @@ func test_summary_without_a_source_counts_zero() -> void:
 	assert_eq(_c.summary_text(7), "Central Canadian Rockies\n0 segments · 0 existing crossings")
 
 func test_card_at_finds_the_card_under_the_cursor() -> void:
-	_c.size = Vector2(1280.0, 720.0)
+	_c.size = Vector2(WindowFixture.content_size())
 	_c.enter_selection_mode()
 	var rect: Rect2 = _c._card_layout()["rects"][8]
 	assert_eq(_c.card_at(rect.get_center()), 8)
 	assert_eq(_c.card_at(Vector2(1.0, 1.0)), 0, "off the grid hits nothing")
 
 func test_hover_sets_and_clears_hovered_card() -> void:
-	_c.size = Vector2(1280.0, 720.0)
+	_c.size = Vector2(WindowFixture.content_size())
 	_c.enter_selection_mode()
 	var rect: Rect2 = _c._card_layout()["rects"][7]
 	_c.update_hover(rect.get_center())
@@ -798,13 +798,41 @@ func test_cards_fit_the_viewport_at_every_text_scale_step() -> void:
 	for id: int in range(1, 13):
 		many[id] = { "id": id, "name": "Sub-area number %d with a long name" % id }
 	_c.setup(many)
-	_c.size = Vector2(1280.0, 720.0)
+	_c.size = Vector2(WindowFixture.content_size())
 	_c.enter_selection_mode()
 	for step: int in TextScale.STEPS.size():
 		TextScale.set_step(step)
 		var bounds := Rect2(Vector2.ZERO, _c.size)
 		for rect: Rect2 in _c._card_layout()["rects"].values():
 			assert_true(bounds.encloses(rect), "card inside viewport at step %d" % step)
+
+func _real_sub_areas() -> Dictionary:
+	var parsed: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://data/sub_areas.json"))
+	var records: Dictionary = {}
+	for record: Dictionary in parsed["sub_areas"]:
+		records[int(record["id"])] = record
+	return records
+
+func test_every_card_name_sits_inside_its_card_at_every_text_scale_step() -> void:
+	var records: Dictionary = _real_sub_areas()
+	_c.setup(records)
+	_c.size = Vector2(WindowFixture.content_size())
+	_c.enter_selection_mode()
+	var font: Font = ThemeDB.fallback_font
+	for step: int in TextScale.STEPS.size():
+		TextScale.set_step(step)
+		var font_size: int = TextScale.size(TextScale.SMALL)
+		var rects: Dictionary = _c._card_layout()["rects"]
+		for id: int in rects:
+			var rect: Rect2 = rects[id]
+			var label: String = String(records[id]["name"])
+			var text_width: float = rect.size.x - WorldSelectController.CARD_TEXT_INSET * 2.0
+			var full: Vector2 = font.get_multiline_string_size(label, HORIZONTAL_ALIGNMENT_LEFT, text_width, font_size, -1)
+			var shown: Vector2 = font.get_multiline_string_size(label, HORIZONTAL_ALIGNMENT_LEFT, text_width, font_size, WorldSelectController.CARD_MAX_NAME_LINES)
+			assert_eq(shown.y, full.y, "'%s' is cut by the line cap at step %d" % [label, step])
+			var name_rect := Rect2(rect.position + Vector2.ONE * WorldSelectController.CARD_TEXT_INSET, Vector2(text_width, full.y))
+			assert_true(rect.encloses(name_rect), "'%s' name %s spills out of its card %s at step %d" % [label, name_rect, rect, step])
+	TextScale.set_step(0)
 
 # --- map header copy (ATT-176) ---
 
@@ -849,11 +877,11 @@ func test_header_keeps_px_tile_readout_and_esc_hint_in_both_modes() -> void:
 
 # --- header zone (ATT-168) ---
 
-const HEADER_WINDOW := Vector2i(1280, 720)
+var HEADER_WINDOW: Vector2i = WindowFixture.content_size()
 ## Shortest card that still holds a two-line name at the SMALL size.
 const MIN_USABLE_CARD_HEIGHT := 40
 
-# A real HUD and the controller in one 1280x720 viewport, so the panels have the
+# A real HUD and the controller in one content-size viewport, so the panels have the
 # rectangles the player sees. The controller is wired the way Main wires it.
 func _header_rig() -> Hud:
 	var window := SubViewport.new()
@@ -953,3 +981,27 @@ func test_no_card_meets_a_hud_panel_or_the_header_zone_at_every_text_scale_step(
 			assert_false(rect.intersects(clock), "card %s meets the clock panel at step %d" % [rect, step])
 			assert_false(rect.intersects(budget), "card %s meets the budget panel at step %d" % [rect, step])
 			assert_false(rect.intersects(zone), "card %s meets the header zone at step %d" % [rect, step])
+
+# The confirm panel (segment mode, open) must clear the HUD's clock and budget panels and the header zone.
+func test_confirm_panel_clears_the_clock_budget_and_header_zone_at_every_text_scale_step() -> void:
+	var hud: Hud = _header_rig()
+	var confirm := ConfirmPanel.new()
+	_c.get_parent().add_child(confirm)
+	autofree(confirm)
+	confirm.attach(_c)
+	_c.enter_selection_mode()
+	_c.set_zoom((ACTIVATE_PX + 4.0) / WorldSelectController.BASE_TILE_FLAT_TO_FLAT_PX)
+	assert_eq(_c.mode, WorldSelectController.Mode.SEGMENT, "precondition: segment mode")
+	confirm.open({ "id": "s7_trans_canada_bow_a", "sub_area_id": 7,
+			"label": "Trans-Canada Hwy, Bow Valley sector A",
+			"connectivity_note": "Splits two forest patches; a full span reconnects them." }, 9000, 300, 4)
+	assert_true(confirm.is_open, "precondition: panel open")
+	for step: int in TextScale.STEPS.size():
+		await _settle_header_rig(step, hud)
+		confirm.apply_text_scale()
+		await get_tree().process_frame
+		var box: Rect2 = confirm._panel_box.get_global_rect()
+		assert_false(box.intersects(hud._clock_panel.get_global_rect()), "confirm panel %s meets the clock panel at step %d" % [box, step])
+		assert_false(box.intersects(hud._resource_panel.get_global_rect()), "confirm panel %s meets the budget panel at step %d" % [box, step])
+		assert_false(box.intersects(_c._card_layout()["header_rect"]), "confirm panel %s meets the header zone at step %d" % [box, step])
+	TextScale.set_step(0)

@@ -14,7 +14,7 @@
 ## C43 adds a dismissible hint banner at the foot of the stack for HintCoach.
 ## C36 puts the SeasonCalendar at the head of the stack, always visible.
 ## C34 adds the TimeControls row directly beneath it.
-## C42 adds the MilestoneTrack ("Corridor N/12" and the celebration banner) beneath that.
+## C42 adds the MilestoneTrack ("Corridor N/12") beneath that; its celebration banner is a toast in the bottom-right stack.
 ## ATT-146 splits the one stack into three zones, each on a semi-opaque panel:
 ## top-left the clock (calendar, time controls, milestone track), top-right the
 ## resources (budget, last donation), bottom-right a toast stack (build status,
@@ -63,6 +63,8 @@ var _toast_stack: VBoxContainer
 var _calendar: SeasonCalendar
 var _time_controls: TimeControls
 var _milestone_track: MilestoneTrack
+var _milestone_label: Label
+var _milestone_timer := 0.0
 var _build_status_label: Label
 var _build_keys_label: Label
 var _message_label: Label
@@ -92,6 +94,7 @@ func _build_ui() -> void:
 
 	_milestone_track = MilestoneTrack.new()
 	_clock_stack.add_child(_milestone_track)
+	_milestone_track.celebrated.connect(_on_milestone_celebrated)
 
 	_resource_stack = _add_zone(Control.PRESET_TOP_RIGHT)
 	_resource_panel = _resource_stack.get_parent() as PanelContainer
@@ -114,6 +117,10 @@ func _build_ui() -> void:
 	_build_keys_label.text = BUILD_KEYS_TEXT
 	_build_keys_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_build_keys_label.hide()   # shown with the status readout
+
+	_milestone_label = _add_label(MilestoneTrack.BANNER_COLOR, _toast_stack)
+	_milestone_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_milestone_label.hide()   # shown while a milestone is being celebrated
 
 	_message_label = _add_label(Color.WHITE, _toast_stack)
 	_message_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -152,6 +159,7 @@ func apply_text_scale() -> void:
 	_set_font_size(_build_status_label, TextScale.SMALL)
 	_set_font_size(_build_keys_label, TextScale.SMALL)
 	_set_font_size(_message_label, TextScale.BODY)
+	_set_font_size(_milestone_label, TextScale.BODY)
 	_set_font_size(_cue_label, TextScale.BODY)
 	_set_font_size(_budget_label, TextScale.BODY)
 	_set_font_size(_donation_label, TextScale.SMALL)
@@ -180,9 +188,16 @@ func setup_milestones(milestones_registry: Dictionary) -> void:
 func set_milestones_reached(reached_ids: Array, capstone_reached: bool) -> void:
 	_milestone_track.set_reached(reached_ids, capstone_reached)
 
-## Celebrate a milestone with the banner on the track.
+## Celebrate a milestone with a toast in the bottom-right stack.
 func celebrate_milestone(milestone_id: String, is_capstone: bool) -> void:
 	_milestone_track.celebrate(milestone_id, is_capstone)
+
+func _on_milestone_celebrated(banner: String) -> void:
+	_milestone_label.text = banner
+	_milestone_label.modulate.a = 1.0
+	_milestone_label.show()
+	_milestone_timer = MilestoneTrack.BANNER_FADE_SECONDS
+	_refresh_toast_panel()
 
 ## Handle a Space / 1 / 2 / 3 press; true if it was a time-control key.
 func handle_time_key(keycode: Key) -> bool:
@@ -325,6 +340,11 @@ func set_last_donation(amount: int) -> void:
 	_donation_label.text = "Last donation: $%d" % amount
 
 func _process(delta: float) -> void:
+	if _milestone_timer > 0.0:
+		_milestone_timer = maxf(_milestone_timer - delta, 0.0)
+		_milestone_label.modulate.a = _milestone_timer / MilestoneTrack.BANNER_FADE_SECONDS
+		if _milestone_timer == 0.0:
+			_milestone_label.hide()
 	if _message_timer > 0.0:
 		_message_timer = maxf(_message_timer - delta, 0.0)
 		_message_label.modulate.a = _message_timer / MESSAGE_FADE_SECONDS

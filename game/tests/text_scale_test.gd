@@ -12,15 +12,15 @@ func after_all() -> void:
 func _bus() -> Node:
 	return (Engine.get_main_loop() as SceneTree).root.get_node_or_null("EventBus")
 
-func test_named_sizes_are_the_q6_proposals() -> void:
-	assert_eq(TextScale.BODY, 20)
-	assert_eq(TextScale.TITLE, 36)
-	assert_eq(TextScale.SMALL, 16)
+func test_named_sizes_are_the_att169_baseline() -> void:
+	assert_eq(TextScale.BODY, 25)
+	assert_eq(TextScale.TITLE, 45)
+	assert_eq(TextScale.SMALL, 20)
 
 func test_default_step_is_first() -> void:
 	assert_eq(TextScale.step(), 0)
 	assert_eq(TextScale.factor(), 1.0)
-	assert_eq(TextScale.size(TextScale.BODY), 20)
+	assert_eq(TextScale.size(TextScale.BODY), 25)
 
 func test_sizes_at_every_step() -> void:
 	for i in TextScale.STEPS.size():
@@ -29,9 +29,11 @@ func test_sizes_at_every_step() -> void:
 			var expected: int = roundi(base * TextScale.STEPS[i])
 			assert_eq(TextScale.size(base), expected, "base %d step %d" % [base, i])
 	TextScale.set_step(1)
-	assert_eq(TextScale.size(TextScale.BODY), 25)
+	assert_eq(TextScale.size(TextScale.BODY), 31)
 	TextScale.set_step(3)
-	assert_eq(TextScale.size(TextScale.TITLE), 63)
+	assert_eq(TextScale.size(TextScale.BODY), 44)
+	assert_eq(TextScale.size(TextScale.TITLE), 79)
+	assert_eq(TextScale.size(TextScale.SMALL), 35)
 
 func test_size_never_below_one() -> void:
 	assert_eq(TextScale.size(0), 1)

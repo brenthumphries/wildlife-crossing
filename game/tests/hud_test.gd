@@ -3,7 +3,7 @@
 ## time rather than left stuck on screen.
 extends GutTest
 
-const WINDOW_SIZE := Vector2i(1280, 720)
+var WINDOW_SIZE: Vector2i = WindowFixture.content_size()
 ## The longest text in data/hints.json (the build-mode hint), the toast stack's worst case.
 const LONGEST_HINT := "Click tiles across the highway to place the crossing. Each tile costs money, and the total is shown at the top. Press Enter to confirm."
 
@@ -212,7 +212,7 @@ func test_stack_rows_never_overlap_with_a_migration_clock_and_a_banner() -> void
 		await get_tree().process_frame
 		_assert_stack_rows_clear(_h._clock_stack, "step %d" % step)
 
-# ATT-146: zones. A real 1280x720 viewport so anchors resolve to pixels.
+# ATT-146: zones. A real content-size viewport so anchors resolve to pixels.
 func _hud_in_window(everything_showing: bool, stress: bool = true) -> Hud:
 	var window := SubViewport.new()
 	window.size = WINDOW_SIZE
@@ -261,26 +261,14 @@ func test_the_three_panels_never_overlap_while_build_mode_is_up_at_every_text_sc
 	var hud: Hud = _hud_in_window(true, false)
 	for step: int in TextScale.STEPS.size():
 		await _settle(step, hud)
-		# ATT-175's keys line adds one row; with the hint and a message also up, at the largest step
-		# the stack then meets the clock in a 720 px window (about 24 px). ATT-148 / ATT-169 own that.
-		if step == TextScale.STEPS.size() - 1 and hud._clock_panel.get_global_rect().intersects(hud._toast_panel.get_global_rect()):
-			pending("step %d: clock %s meets the toast stack %s in build mode with the hint and a message up; pending ATT-148, ATT-169" % [
-					step, hud._clock_panel.get_global_rect(), hud._toast_panel.get_global_rect()])
-		else:
-			_assert_panels_apart(hud, step)
+		_assert_panels_apart(hud, step)
 
 # Every toast at once, with a rejection reason and a cue: more than the game puts up together.
-# At the largest step it does not fit a 720 px window, which ATT-148 (minimum window per text
-# step) and ATT-169 (larger default window) own; the steps below it still assert.
 func test_the_three_panels_never_overlap_with_every_toast_up_at_every_text_scale_step() -> void:
 	var hud: Hud = _hud_in_window(true)
 	for step: int in TextScale.STEPS.size():
 		await _settle(step, hud)
-		if step == TextScale.STEPS.size() - 1 and hud._clock_panel.get_global_rect().intersects(hud._toast_panel.get_global_rect()):
-			pending("step %d: clock %s meets the toast stack %s with every toast up; pending ATT-148, ATT-169" % [
-					step, hud._clock_panel.get_global_rect(), hud._toast_panel.get_global_rect()])
-		else:
-			_assert_panels_apart(hud, step)
+		_assert_panels_apart(hud, step)
 
 func _assert_panels_apart(hud: Hud, step: int) -> void:
 	var panels: Array[Control] = [hud._clock_panel, hud._resource_panel, hud._toast_panel]
@@ -291,6 +279,46 @@ func _assert_panels_apart(hud: Hud, step: int) -> void:
 					"panels %d and %d overlap at step %d" % [a, b, step])
 	_assert_stack_rows_clear(hud._toast_stack, "step %d" % step)
 	_assert_stack_rows_clear(hud._clock_stack, "step %d" % step)
+
+func test_clock_panel_size_ignores_the_milestone_banner_at_every_text_scale_step() -> void:
+	var window := SubViewport.new()
+	window.size = WINDOW_SIZE
+	add_child_autofree(window)
+	var hud := Hud.new()
+	hud.setup_milestones({ "first_crossing_sub11": { "id": "first_crossing_sub11",
+			"display_name": "First crossing — Stikine–Nass–Skeena Headwaters", "is_capstone": false } })
+	hud.set_clock(1, "fall", 3)
+	window.add_child(hud)
+	var before: Array[Vector2] = []
+	for step: int in TextScale.STEPS.size():
+		await _settle(step, hud)
+		before.append(hud._clock_panel.size)
+	hud.celebrate_milestone("first_crossing_sub11", false)
+	for step: int in TextScale.STEPS.size():
+		await _settle(step, hud)
+		assert_eq(hud._clock_panel.size, before[step], "clock panel size changed when the banner showed at step %d" % step)
+		assert_true(hud._milestone_label.visible, "the banner is a toast at step %d" % step)
+		assert_true(hud._toast_panel.visible, "the toast panel shows for it at step %d" % step)
+		assert_true(hud._toast_panel.get_global_rect().encloses(hud._milestone_label.get_global_rect()), "banner inside the toast panel at step %d" % step)
+		var font: Font = hud._milestone_label.get_theme_default_font()
+		var font_size: int = hud._milestone_label.get_theme_font_size("font_size")
+		var needed: float = font.get_multiline_string_size(hud._milestone_label.text, HORIZONTAL_ALIGNMENT_LEFT, hud._milestone_label.size.x, font_size).y
+		assert_gte(hud._milestone_label.size.y + 0.5, needed, "banner text is clipped at step %d" % step)
+	TextScale.set_step(0)
+
+func test_milestone_banner_toast_fades_out_and_ignores_the_mouse() -> void:
+	add_child(_h)
+	_h.setup_milestones({ "first_crossing_sub1": { "id": "first_crossing_sub1",
+			"display_name": "First crossing", "is_capstone": false } })
+	_h.celebrate_milestone("first_crossing_sub1", false)
+	assert_eq(_h._milestone_label.text, "Milestone reached: First crossing")
+	assert_eq(_h._milestone_label.modulate.a, 1.0)
+	assert_eq(_h._milestone_label.mouse_filter, Control.MOUSE_FILTER_IGNORE)
+	assert_true(_h._toast_panel.visible)
+	_h._process(MilestoneTrack.BANNER_FADE_SECONDS)
+	assert_eq(_h._milestone_label.modulate.a, 0.0)
+	assert_false(_h._milestone_label.visible)
+	assert_false(_h._toast_panel.visible, "nothing else is up, so the panel goes")
 
 func test_milestone_track_sits_directly_under_the_time_controls() -> void:
 	var hud: Hud = _hud_in_window(true)

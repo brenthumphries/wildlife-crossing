@@ -73,10 +73,14 @@ const ICE_LENS_BAR_MAX_PX := 4.0
 const HARDNESS_CODE_INSET := Vector2(-28.0, 0.0)
 const THICKNESS_LABEL_INSET := Vector2(6.0, 0.0)
 const LEGEND_HEIGHT := 128.0
+## Minimums at step 1.0; the legend grows past them to fit the small font and the longest grain name.
 const LEGEND_ROW_HEIGHT := 18.0
 const LEGEND_COLUMN_WIDTH := 150.0
 const LEGEND_SYMBOL_OFFSET := Vector2(10.0, 0.0)
-const LEGEND_TEXT_OFFSET := Vector2(24.0, 4.0)
+const LEGEND_TEXT_OFFSET_X := 24.0
+## Air around each legend entry, in px at step 1.0: between rows, and after a name before the next column.
+const LEGEND_ROW_PAD := 4.0
+const LEGEND_COLUMN_PAD := 16.0
 const LEGEND_COLUMNS := 2
 const BANNER_HEIGHT := 30.0
 const BANNER_TEXT_OFFSET := Vector2(10.0, 0.0)
@@ -157,7 +161,7 @@ func apply_text_scale() -> void:
 		label.add_theme_font_size_override("font_size", TextScale.size(_label_bases[label]))
 	for button: Button in _verdict_buttons.values():
 		button.add_theme_font_size_override("font_size", TextScale.size(TextScale.BODY))
-	_legend_area.custom_minimum_size = Vector2(0.0, LEGEND_HEIGHT * TextScale.factor())
+	_legend_area.custom_minimum_size = Vector2(0.0, _legend_height_px())
 	_banner_area.custom_minimum_size = Vector2(0.0, BANNER_HEIGHT * TextScale.factor())
 	queue_redraw()
 
@@ -447,18 +451,63 @@ func _draw_symbol(c: Vector2, grain: SnowpackProfile.Grain, half: float) -> void
 		SnowpackProfile.Grain.ICE_LENS:
 			draw_line(c - Vector2(half, 0.0), c + Vector2(half, 0.0), INK, HATCH_LINE_WIDTH * 2.0)
 
+## One legend row's height: the small font's line plus padding, never under the step-1.0 minimum.
+func _legend_row_px() -> float:
+	var font := get_theme_default_font()
+	return maxf(LEGEND_ROW_HEIGHT * TextScale.factor(),
+			font.get_height(_small_px()) + LEGEND_ROW_PAD * TextScale.factor())
+
+## One legend column's width: symbol gutter, the longest grain name and padding, never under the minimum.
+func _legend_column_px() -> float:
+	var font := get_theme_default_font()
+	var widest := 0.0
+	for grain: SnowpackProfile.Grain in SnowpackProfile.Grain.values():
+		widest = maxf(widest, font.get_string_size(SnowpackProfile.grain_name(grain),
+				HORIZONTAL_ALIGNMENT_LEFT, -1, _small_px()).x)
+	var f := TextScale.factor()
+	return maxf(LEGEND_COLUMN_WIDTH * f, (LEGEND_TEXT_OFFSET_X + LEGEND_COLUMN_PAD) * f + widest)
+
+func _legend_rows() -> int:
+	return ceili(float(SnowpackProfile.Grain.values().size()) / float(LEGEND_COLUMNS))
+
+## The legend area's height: every grain row plus the hardness line, never under the minimum.
+func _legend_height_px() -> float:
+	return maxf(LEGEND_HEIGHT * TextScale.factor(), (_legend_rows() + 1) * _legend_row_px())
+
+## The text box of each legend entry (grain names, then the hardness line), relative to the
+## legend area's top left: the same placement the drawing uses.
+func legend_entry_rects() -> Array[Rect2]:
+	var font := get_theme_default_font()
+	var line_h := font.get_height(_small_px())
+	var f := TextScale.factor()
+	var row_h := _legend_row_px()
+	var col_w := _legend_column_px()
+	var rects: Array[Rect2] = []
+	var grains: Array = SnowpackProfile.Grain.values()
+	for i: int in range(grains.size()):
+		var top := floori(float(i) / float(LEGEND_COLUMNS)) * row_h + (row_h - line_h) * 0.5
+		var width := font.get_string_size(SnowpackProfile.grain_name(grains[i]),
+				HORIZONTAL_ALIGNMENT_LEFT, -1, _small_px()).x
+		rects.append(Rect2(Vector2((i % LEGEND_COLUMNS) * col_w + LEGEND_TEXT_OFFSET_X * f, top),
+				Vector2(width, line_h)))
+	var hardness_w := font.get_string_size(HARDNESS_LEGEND, HORIZONTAL_ALIGNMENT_LEFT, -1, _small_px()).x
+	rects.append(Rect2(Vector2(LEGEND_SYMBOL_OFFSET.x * 0.5, _legend_rows() * row_h + (row_h - line_h) * 0.5),
+			Vector2(hardness_w, line_h)))
+	return rects
+
 ## Every grain symbol with its name, plus the hardness codes, so the pit
 ## reads without a key in the player's head.
 func _draw_legend(area: Rect2) -> void:
 	draw_rect(area, PARCHMENT)
 	var font := get_theme_default_font()
-	var f := TextScale.factor()
 	var grains: Array = SnowpackProfile.Grain.values()
+	var rects := legend_entry_rects()
+	var row_h := _legend_row_px()
+	var col_w := _legend_column_px()
+	var ascent := font.get_ascent(_small_px())
 	for i: int in range(grains.size()):
-		var column := i % LEGEND_COLUMNS
-		var row := floori(float(i) / float(LEGEND_COLUMNS))
-		var origin := area.position + Vector2(column * LEGEND_COLUMN_WIDTH * f,
-				(row + 0.5) * LEGEND_ROW_HEIGHT * f)
+		var origin := area.position + Vector2((i % LEGEND_COLUMNS) * col_w,
+				(floori(float(i) / float(LEGEND_COLUMNS)) + 0.5) * row_h)
 		var grain: SnowpackProfile.Grain = grains[i]
 		if grain == SnowpackProfile.Grain.ICE_LENS:
 			draw_rect(Rect2(origin + LEGEND_SYMBOL_OFFSET - Vector2(hatch_symbol_half_px * 1.5,
@@ -466,12 +515,10 @@ func _draw_legend(area: Rect2) -> void:
 					ICE_LENS_BAR_MAX_PX)), INK)
 		else:
 			_draw_symbol(origin + LEGEND_SYMBOL_OFFSET, grain, hatch_symbol_half_px)
-		draw_string(font, origin + LEGEND_TEXT_OFFSET * f, SnowpackProfile.grain_name(grain),
-				HORIZONTAL_ALIGNMENT_LEFT, -1, _small_px(), INK)
-	var rows := ceili(float(grains.size()) / float(LEGEND_COLUMNS))
-	draw_string(font, area.position + Vector2(LEGEND_SYMBOL_OFFSET.x * 0.5,
-			(rows + 1) * LEGEND_ROW_HEIGHT * f), HARDNESS_LEGEND,
-			HORIZONTAL_ALIGNMENT_LEFT, -1, _small_px(), INK)
+		draw_string(font, area.position + rects[i].position + Vector2(0.0, ascent),
+				SnowpackProfile.grain_name(grain), HORIZONTAL_ALIGNMENT_LEFT, -1, _small_px(), INK)
+	draw_string(font, area.position + rects[grains.size()].position + Vector2(0.0, ascent),
+			HARDNESS_LEGEND, HORIZONTAL_ALIGNMENT_LEFT, -1, _small_px(), INK)
 
 ## The result band: the true verdict's position on the data axis.
 func _draw_banner(area: Rect2) -> void:

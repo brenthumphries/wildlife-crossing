@@ -1,7 +1,7 @@
 ## Tests for Toolbar: the Add crossing and Info buttons, their signals, text scaling, anchoring and visibility.
 extends GutTest
 
-const WINDOW_SIZE := Vector2i(1280, 720)
+var WINDOW_SIZE: Vector2i = WindowFixture.content_size()
 
 var _t: Toolbar
 var _add_count := 0
@@ -55,7 +55,7 @@ func test_bar_is_anchored_bottom_left_clear_of_the_hud_zones() -> void:
 	assert_eq(hud._toast_panel.anchor_left, 1.0, "toast zone hugs the right edge")
 
 func test_bar_sits_inside_the_window_and_clear_of_every_hud_zone_at_every_text_scale_step() -> void:
-	# A real 1280x720 viewport, so anchors resolve to pixels. The bar's anchors
+	# A real content-size viewport, so anchors resolve to pixels. The bar's anchors
 	# alone do not prove it fits: it was built before its buttons existed and grew
 	# downward past the bottom edge (V16, 2026-10-18).
 	var window := SubViewport.new()

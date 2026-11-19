@@ -55,28 +55,25 @@ func test_banner_text_names_the_milestone() -> void:
 	assert_eq(MilestoneTrack.banner_text("Continental Connection", true),
 			"Capstone reached: Continental Connection")
 
-func test_celebrate_shows_the_banner_with_the_display_name() -> void:
+func test_celebrate_announces_the_banner_with_the_display_name() -> void:
+	watch_signals(_t)
 	_t.celebrate("first_crossing_sub7", false)
-	assert_eq(_t._banner_label.text, "Milestone reached: First crossing — Area 7")
-	assert_eq(_t._banner_label.modulate.a, 1.0)
+	assert_signal_emitted_with_parameters(_t, "celebrated", ["Milestone reached: First crossing — Area 7"])
 
 func test_celebrate_the_capstone_uses_the_capstone_wording() -> void:
+	watch_signals(_t)
 	_t.celebrate("continental_connection", true)
-	assert_eq(_t._banner_label.text, "Capstone reached: Continental Connection")
-
-func test_banner_fades_out_by_itself() -> void:
-	_t.celebrate("first_crossing_sub1", false)
-	_t._process(MilestoneTrack.BANNER_FADE_SECONDS)
-	assert_eq(_t._banner_label.modulate.a, 0.0)
+	assert_signal_emitted_with_parameters(_t, "celebrated", ["Capstone reached: Continental Connection"])
 
 func test_celebration_never_blocks_input() -> void:
 	_t.celebrate("first_crossing_sub1", false)
-	for node: Control in [_t, _t._corridor_label, _t._capstone_node, _t._banner_label]:
+	for node: Control in [_t, _t._corridor_label, _t._capstone_node]:
 		assert_eq(node.mouse_filter, Control.MOUSE_FILTER_IGNORE)
 
 func test_set_reached_alone_does_not_celebrate() -> void:
+	watch_signals(_t)
 	_t.set_reached(["first_crossing_sub1"], false)
-	assert_eq(_t._banner_label.modulate.a, 0.0)
+	assert_signal_not_emitted(_t, "celebrated")
 
 func test_text_sizes_come_from_text_scale() -> void:
 	assert_eq(_t._corridor_label.get_theme_font_size("font_size"), TextScale.size(TextScale.BODY))
@@ -85,19 +82,9 @@ func test_text_sizes_come_from_text_scale() -> void:
 	assert_eq(_t._corridor_label.get_theme_font_size("font_size"), TextScale.size(TextScale.BODY))
 	assert_eq(_t._capstone_node.get_theme_font_size("font_size"), TextScale.size(TextScale.TITLE))
 
-func test_reserved_height_covers_the_banner_line_before_and_after_celebrate() -> void:
-	var needed: float = _t._row.get_combined_minimum_size().y \
-			+ _t._banner_label.get_combined_minimum_size().y
-	assert_true(_t.custom_minimum_size.y >= needed, "reserved before any celebration")
+func test_track_reserves_one_row_and_nothing_for_a_banner() -> void:
+	var row_h: float = _t._row.get_combined_minimum_size().y
+	assert_eq(_t.custom_minimum_size.y, row_h, "one line before any celebration")
 	_t.celebrate("first_crossing_sub1", false)
-	assert_true(_t.custom_minimum_size.y >= _t._row.get_combined_minimum_size().y
-			+ _t._banner_label.get_combined_minimum_size().y, "reserved while the banner shows")
-
-func test_reservation_covers_row_and_banner_once_in_the_tree() -> void:
-	add_child(_t)
-	_t.celebrate("first_crossing_sub1", false)
-	await get_tree().process_frame
-	await get_tree().process_frame
-	var drawn: float = _t._row.size.y + _t._banner_label.size.y
-	assert_true(_t.custom_minimum_size.y >= drawn,
-			"reserved %s covers row and banner (%s)" % [_t.custom_minimum_size.y, drawn])
+	assert_eq(_t.custom_minimum_size.y, row_h, "still one line after a celebration")
+	assert_eq(_t.custom_minimum_size.x, _t._row.get_combined_minimum_size().x, "width is the row's")

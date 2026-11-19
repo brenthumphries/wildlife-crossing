@@ -2,10 +2,10 @@
 class_name TextScale
 extends RefCounted
 
-# Base sizes in px at step 1.0 (Q6, 2026-10-16; V15 tunes them on screen).
-const BODY := 20
-const TITLE := 36
-const SMALL := 16
+# Base sizes in px at step 1.0 (ATT-169: the old 125% step; were 20/36/16 from Q6).
+const BODY := 25
+const TITLE := 45
+const SMALL := 20
 
 ## Scale factors, smallest to largest.
 const STEPS: Array[float] = [1.0, 1.25, 1.5, 1.75]
