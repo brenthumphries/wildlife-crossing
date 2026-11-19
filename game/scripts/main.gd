@@ -85,6 +85,8 @@ var _hint_coach: HintCoach
 
 func _ready() -> void:
 	_debug = get_node_or_null("/root/Debug")
+	# Idempotent; covers launching Main directly (the title screen applies it in a normal boot).
+	WindowFloor.apply(get_window())
 	sim = Simulation.new()
 	sim.name = "Simulation"
 	add_child(sim)

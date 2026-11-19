@@ -35,6 +35,10 @@ func _ready() -> void:
 	# size is in force for whichever scene draws first.
 	_settings.apply_saved_text_scale()
 
+	# Before the --skip-menu branch too: the window cannot be dragged below the
+	# legibility floor from the first screen on (ATT-148). It persists across scenes.
+	WindowFloor.apply(get_window())
+
 	if should_skip_menu(OS.get_cmdline_user_args()):
 		# Deferred: changing scene during another node's _ready() frees this
 		# tree while it is still being built.
