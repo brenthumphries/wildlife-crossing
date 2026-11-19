@@ -44,7 +44,7 @@ const LOCKED_MAX_TILE_PX := float(SimulationConstants.SEGMENT_ZOOM_DEACTIVATE_PX
 # sub-area's `card_image` is set (roadmap decision logged 2026-09-15 — see
 # roadmap.md). Drawn at world zoom only; it fades out across the hysteresis
 # band and segment mode shows the live world instead (ADR 0021) ---
-const CARD_SIZE := Vector2(170.0, 84.0)
+const CARD_SIZE := Vector2(240.0, 84.0)
 const CARD_GAP := 12.0
 const GRID_COLS := 3
 const GRID_ORIGIN := Vector2(48.0, 72.0)
@@ -56,7 +56,7 @@ const COLOR_TEXT := Color(0.92, 0.92, 0.88)
 const COLOR_TEXT_DIM := Color(0.70, 0.70, 0.70)
 const COLOR_LABEL_SCRIM := Color(0.0, 0.0, 0.0, 0.45)   # legibility backing over card art
 const CARD_TEXT_INSET := 8.0
-const CARD_MAX_NAME_LINES := 2
+const CARD_MAX_NAME_LINES := 3
 const HEADER_MARGIN := 12.0                       # gap under the header zone before the grid
 ## The header's own zone (ATT-168): top-centre, between the HUD's clock panel and
 ## budget panel, on a backing like theirs. Its edges come from the HUD panels'
@@ -640,6 +640,8 @@ func _card_layout() -> Dictionary:
 	var card := CARD_SIZE * TextScale.factor()
 	var col_w := maxf((width - GRID_ORIGIN.x * 2.0 - CARD_GAP * (GRID_COLS - 1)) / GRID_COLS, 1.0)
 	card.x = minf(card.x, col_w)
+	# Room for a full name on every card: the line cap's worth of text plus the insets above and below.
+	card.y = maxf(card.y, font.get_height(TextScale.size(TextScale.SMALL)) * CARD_MAX_NAME_LINES + CARD_TEXT_INSET * 2.0)
 	var row_h := (height - top - GRID_BOTTOM_MARGIN - CARD_GAP * (rows - 1)) / rows
 	card.y = minf(card.y, maxf(row_h, 1.0))
 	var rects := {}

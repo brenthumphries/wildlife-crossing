@@ -225,3 +225,16 @@ func test_pit_and_buttons_are_on_screen_and_usable_at_every_text_scale_step() ->
 		_m._gui_input(click)
 		assert_true(_m.grain_known.has(true), "a click in the pit reveals a layer at step %d" % i)
 		_m.start(SEED)
+
+func test_legend_entries_do_not_overlap_at_every_text_scale_step() -> void:
+	_m.start(SEED)
+	for step: int in TextScale.STEPS.size():
+		TextScale.set_step(step)
+		_m.apply_text_scale()
+		var rects: Array[Rect2] = _m.legend_entry_rects()
+		assert_gt(rects.size(), 1, "the legend lists entries")
+		for a: int in rects.size():
+			for b: int in range(a + 1, rects.size()):
+				assert_false(rects[a].intersects(rects[b]), "legend entries %d and %d overlap at step %d: %s vs %s" % [a, b, step, rects[a], rects[b]])
+		var height: float = _m._legend_area.custom_minimum_size.y
+		assert_lte(rects[rects.size() - 1].end.y, height, "the hardness line stays inside the legend at step %d" % step)

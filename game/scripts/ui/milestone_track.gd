@@ -55,7 +55,9 @@ func _build_ui() -> void:
 	_column = VBoxContainer.new()
 	_column.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_column)
+	_column.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)   # the panel sizes the column, not the reverse
 	_column.minimum_size_changed.connect(_reserve_height)
+	resized.connect(_reserve_height)
 
 	_row = HBoxContainer.new()
 	_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -76,6 +78,7 @@ func _build_ui() -> void:
 	_banner_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_banner_label.add_theme_color_override("font_color", BANNER_COLOR)
 	_banner_label.modulate.a = 0.0
+	_banner_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART   # wraps within the panel's width
 	_column.add_child(_banner_label)
 
 	_refresh()
@@ -90,6 +93,7 @@ func _ready() -> void:
 func setup(milestones_registry: Dictionary) -> void:
 	_milestones = milestones_registry.values()
 	_refresh()
+	_reserve_height()
 
 ## Show which milestones are reached; call whenever the tracker's record changes (a load included). Never celebrates.
 func set_reached(reached_ids: Array, capstone_reached: bool) -> void:
@@ -123,11 +127,21 @@ func apply_text_scale() -> void:
 	_banner_label.add_theme_font_size_override("font_size", TextScale.size(TextScale.BODY))
 	_reserve_height()
 
-## A plain Control does not size to its children; reserve the whole column, the
-## Corridor row and the banner line under it (the banner line counts when empty).
-## Runs again whenever the column's minimum size changes.
+## A plain Control does not size to its children; reserve the Corridor row's width (never the
+## banner's: the banner wraps within whatever width the panel has) and the whole column's height,
+## the Corridor row plus a banner area tall enough for the longest banner at this width, so
+## the rows below never shift when a banner shows. Runs again whenever the column or the track resizes.
 func _reserve_height() -> void:
-	custom_minimum_size = _column.get_combined_minimum_size()
+	var font := _banner_label.get_theme_default_font()
+	var font_size := _banner_label.get_theme_font_size("font_size")
+	var banner_h := font.get_height(font_size)
+	if size.x > 0.0:
+		for m: Dictionary in _milestones:
+			var text := banner_text(String(m.get("display_name", m["id"])), bool(m.get("is_capstone", false)))
+			banner_h = maxf(banner_h, font.get_multiline_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, size.x, font_size).y)
+	_banner_label.custom_minimum_size.y = banner_h
+	custom_minimum_size = Vector2(_row.get_combined_minimum_size().x,
+			_row.get_combined_minimum_size().y + _column.get_theme_constant("separation") + banner_h)
 
 func _process(delta: float) -> void:
 	if _banner_timer > 0.0:

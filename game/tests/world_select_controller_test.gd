@@ -806,6 +806,33 @@ func test_cards_fit_the_viewport_at_every_text_scale_step() -> void:
 		for rect: Rect2 in _c._card_layout()["rects"].values():
 			assert_true(bounds.encloses(rect), "card inside viewport at step %d" % step)
 
+func _real_sub_areas() -> Dictionary:
+	var parsed: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://data/sub_areas.json"))
+	var records: Dictionary = {}
+	for record: Dictionary in parsed["sub_areas"]:
+		records[int(record["id"])] = record
+	return records
+
+func test_no_card_name_is_truncated_at_any_text_scale_step() -> void:
+	var records: Dictionary = _real_sub_areas()
+	_c.setup(records)
+	_c.size = Vector2(WindowFixture.content_size())
+	_c.enter_selection_mode()
+	var font: Font = ThemeDB.fallback_font
+	for step: int in TextScale.STEPS.size():
+		TextScale.set_step(step)
+		var font_size: int = TextScale.size(TextScale.SMALL)
+		var rects: Dictionary = _c._card_layout()["rects"]
+		for id: int in rects:
+			var rect: Rect2 = rects[id]
+			var label: String = String(records[id]["name"])
+			var text_width: float = rect.size.x - WorldSelectController.CARD_TEXT_INSET * 2.0
+			var full: Vector2 = font.get_multiline_string_size(label, HORIZONTAL_ALIGNMENT_LEFT, text_width, font_size, -1)
+			var shown: Vector2 = font.get_multiline_string_size(label, HORIZONTAL_ALIGNMENT_LEFT, text_width, font_size, WorldSelectController.CARD_MAX_NAME_LINES)
+			assert_eq(shown.y, full.y, "'%s' is cut by the line cap at step %d" % [label, step])
+			assert_lte(WorldSelectController.CARD_TEXT_INSET + full.y, rect.size.y, "'%s' runs past the card bottom at step %d" % [label, step])
+	TextScale.set_step(0)
+
 # --- map header copy (ATT-176) ---
 
 func test_header_world_view_is_exact_approved_copy() -> void:
