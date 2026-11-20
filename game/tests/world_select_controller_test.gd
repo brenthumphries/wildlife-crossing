@@ -989,6 +989,10 @@ func test_confirm_panel_clears_the_clock_budget_and_header_zone_at_every_text_sc
 	_c.get_parent().add_child(confirm)
 	autofree(confirm)
 	confirm.attach(_c)
+	confirm.attach_reserved_zones(func() -> Array[Rect2]:
+		var zones: Array[Rect2] = hud.top_zone_rects()
+		zones.append(_c.header_zone_rect())
+		return zones)
 	_c.enter_selection_mode()
 	_c.set_zoom((ACTIVATE_PX + 4.0) / WorldSelectController.BASE_TILE_FLAT_TO_FLAT_PX)
 	assert_eq(_c.mode, WorldSelectController.Mode.SEGMENT, "precondition: segment mode")
@@ -1001,7 +1005,41 @@ func test_confirm_panel_clears_the_clock_budget_and_header_zone_at_every_text_sc
 		confirm.apply_text_scale()
 		await get_tree().process_frame
 		var box: Rect2 = confirm._panel_box.get_global_rect()
-		assert_false(box.intersects(hud._clock_panel.get_global_rect()), "confirm panel %s meets the clock panel at step %d" % [box, step])
-		assert_false(box.intersects(hud._resource_panel.get_global_rect()), "confirm panel %s meets the budget panel at step %d" % [box, step])
-		assert_false(box.intersects(_c._card_layout()["header_rect"]), "confirm panel %s meets the header zone at step %d" % [box, step])
+		var margin: float = ConfirmPanel.ZONE_MARGIN * 0.5   # half the margin: slack for font differences
+		assert_false(box.intersects(hud._clock_panel.get_global_rect().grow(margin)), "confirm panel %s meets the clock panel at step %d" % [box, step])
+		assert_false(box.intersects(hud._resource_panel.get_global_rect().grow(margin)), "confirm panel %s meets the budget panel at step %d" % [box, step])
+		assert_false(box.intersects(_c.header_zone_rect().grow(margin)), "confirm panel %s meets the header zone at step %d" % [box, step])
+		assert_true(Rect2(Vector2.ZERO, Vector2(HEADER_WINDOW)).encloses(box), "confirm panel inside the window at step %d" % step)
+		assert_true(Rect2(Vector2.ZERO, Vector2(HEADER_WINDOW)).encloses(confirm._confirm_button.get_global_rect()), "Confirm on screen at step %d" % step)
+		assert_true(Rect2(Vector2.ZERO, Vector2(HEADER_WINDOW)).encloses(confirm._cancel_button.get_global_rect()), "Cancel on screen at step %d" % step)
 	TextScale.set_step(0)
+
+# With no HUD panels in the way the confirm panel stays centred in the window.
+func test_confirm_panel_stays_centred_when_nothing_is_in_the_way() -> void:
+	var window := SubViewport.new()
+	window.size = HEADER_WINDOW
+	add_child_autofree(window)
+	var confirm := ConfirmPanel.new()
+	window.add_child(confirm)
+	confirm.attach_reserved_zones(func() -> Array[Rect2]: return [Rect2(0.0, 0.0, 100.0, 40.0)])
+	confirm.open({ "id": "s7_x", "sub_area_id": 7, "label": "Road" }, 9000, 300, 0)
+	await get_tree().process_frame
+	var box: Rect2 = confirm._panel_box.get_global_rect()
+	assert_almost_eq(box.get_center().x, HEADER_WINDOW.x * 0.5, 1.0, "centred horizontally")
+	assert_almost_eq(box.get_center().y, HEADER_WINDOW.y * 0.5, 1.0, "centred vertically")
+
+# A clock panel wider than the headless font gives (the real font's case, ATT-184):
+# the box must move clear of it, not sit under it.
+func test_confirm_panel_clears_a_clock_panel_that_reaches_into_the_centred_box() -> void:
+	var window := SubViewport.new()
+	window.size = HEADER_WINDOW
+	add_child_autofree(window)
+	var confirm := ConfirmPanel.new()
+	window.add_child(confirm)
+	var wide_clock := Rect2(12.0, 12.0, float(HEADER_WINDOW.x) * 0.5, 480.0)
+	confirm.attach_reserved_zones(func() -> Array[Rect2]: return [wide_clock])
+	confirm.open({ "id": "s7_x", "sub_area_id": 7, "label": "Road" }, 9000, 300, 0)
+	await get_tree().process_frame
+	var box: Rect2 = confirm._panel_box.get_global_rect()
+	assert_false(box.intersects(wide_clock.grow(ConfirmPanel.ZONE_MARGIN * 0.5)), "box %s clear of the wide clock" % box)
+	assert_true(Rect2(Vector2.ZERO, Vector2(HEADER_WINDOW)).encloses(box), "box inside the window")

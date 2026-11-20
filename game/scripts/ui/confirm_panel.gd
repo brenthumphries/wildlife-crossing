@@ -12,6 +12,10 @@ signal confirmed(segment_id: String, sub_area_id: int)
 signal cancelled()
 
 const PANEL_MIN_SIZE := Vector2(320.0, 180.0)
+## Clear space kept between the box and every reserved HUD / header rectangle,
+## and between the box and the window edge. Wider than any font difference
+## between the headless fallback font and the real one (ATT-184).
+const ZONE_MARGIN := 16.0
 const NO_CROSSINGS_TEXT := "No crossings here yet"
 const CROSSINGS_TEXT := "Crossings here: %d"
 const GATE_NOTE_TEXT := "Insufficient budget for any crossing — you can keep browsing locations."
@@ -29,6 +33,7 @@ var _title_label: Label
 var _confirm_button: Button
 var _cancel_button: Button
 var _can_confirm := false
+var _reserved_zones: Callable
 
 func _init() -> void:
 	_build_ui()
@@ -40,7 +45,7 @@ func _ready() -> void:
 		bus.text_scale_changed.connect(_on_event_bus_text_scale_changed)
 
 ## Re-size every text and the box minimum from TextScale's current step. Labels
-## wrap and the box grows about its centre, so the buttons stay on screen.
+## wrap and _reposition() keeps the box inside the window, so the buttons stay on screen.
 func apply_text_scale() -> void:
 	_panel_box.custom_minimum_size = PANEL_MIN_SIZE * TextScale.factor()
 	_set_font_size(_title_label, TextScale.BODY)
@@ -69,6 +74,7 @@ func open(segment: Dictionary, budget: int, min_crossing_cost: int, crossing_cou
 	_gate_label.visible = not _can_confirm
 	_confirm_button.disabled = not _can_confirm
 	show()
+	_reposition()
 
 ## Whether the budget gate allows confirmation.
 func can_confirm() -> bool:
@@ -104,11 +110,49 @@ func close() -> void:
 	_segment = {}
 	hide()
 
+## Hand the panel the rectangles it must stay clear of (the HUD's clock and
+## budget panels, the map header zone): `zones() -> Array[Rect2]` in screen
+## pixels. The HUD draws on a layer above this one, so the box centres when it
+## can and drops below whatever it would otherwise sit under.
+func attach_reserved_zones(zones: Callable) -> void:
+	_reserved_zones = zones
+	_reposition()
+
 ## Subscribe to a WorldSelectController so the panel can never outlive the
 ## selection state it belongs to (PRD rule 13).
 func attach(controller: WorldSelectController) -> void:
 	controller.selection_mode_exited.connect(_on_world_select_controller_selection_mode_exited)
 	controller.segment_mode_exited.connect(_on_world_select_controller_segment_mode_exited)
+
+# The HUD panels resize a frame after a text-scale change, so re-place each frame.
+func _process(_delta: float) -> void:
+	if is_open:
+		_reposition()
+
+# Centre the box in the window; if that meets a reserved rectangle (plus the
+# margin), move it down below that rectangle, then keep it inside the window.
+func _reposition() -> void:
+	_panel_box.reset_size()
+	var box_size := _panel_box.get_combined_minimum_size().max(_panel_box.size)
+	var view := get_viewport_rect().size if is_inside_tree() else size
+	var zones: Array = []
+	if _reserved_zones.is_valid():
+		zones = _reserved_zones.call()
+	var top := (view.y - box_size.y) * 0.5
+	var left := (view.x - box_size.x) * 0.5
+	for _pass: int in zones.size():
+		var moved := false
+		var rect := Rect2(Vector2(left, top), box_size)
+		for zone: Rect2 in zones:
+			if rect.intersects(zone.grow(ZONE_MARGIN)):
+				top = zone.end.y + ZONE_MARGIN
+				moved = true
+				rect = Rect2(Vector2(left, top), box_size)
+		if not moved:
+			break
+	top = minf(top, view.y - box_size.y - ZONE_MARGIN)
+	left = clampf(left, 0.0, maxf(0.0, view.x - box_size.x))
+	_panel_box.position = Vector2(left, maxf(top, 0.0))
 
 func _on_world_select_controller_selection_mode_exited() -> void:
 	close()
@@ -149,9 +193,7 @@ func _build_ui() -> void:
 
 	_panel_box = PanelContainer.new()
 	_panel_box.custom_minimum_size = PANEL_MIN_SIZE
-	_panel_box.set_anchors_preset(Control.PRESET_CENTER)
-	_panel_box.grow_horizontal = Control.GROW_DIRECTION_BOTH
-	_panel_box.grow_vertical = Control.GROW_DIRECTION_BOTH
+	_panel_box.set_anchors_preset(Control.PRESET_TOP_LEFT)   # placed by _reposition()
 	add_child(_panel_box)
 
 	var column := VBoxContainer.new()
