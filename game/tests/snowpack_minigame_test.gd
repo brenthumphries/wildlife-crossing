@@ -238,3 +238,59 @@ func test_legend_entries_do_not_overlap_at_every_text_scale_step() -> void:
 				assert_false(rects[a].intersects(rects[b]), "legend entries %d and %d overlap at step %d: %s vs %s" % [a, b, step, rects[a], rects[b]])
 		var height: float = _m._legend_area.custom_minimum_size.y
 		assert_lte(rects[rects.size() - 1].end.y, height, "the hardness line stays inside the legend at step %d" % step)
+
+# --- post-verdict right pane (ATT-186) -----------------------------------------
+
+## Open the minigame at the project's window size, at `step`, and call a verdict; layout settles over two frames.
+func _resolved_at_step(step: int) -> void:
+	if not _m.get_parent() is Control:
+		var window := Control.new()
+		window.size = Vector2(WindowFixture.content_size())
+		add_child_autofree(window)
+		_m.reparent(window)
+	TextScale.set_step(step)
+	_m.start(SEED)
+	_m.submit_verdict(SnowpackProfile.Verdict.VIABLE)
+	_m.apply_text_scale()
+	await get_tree().process_frame
+	await get_tree().process_frame
+	await get_tree().process_frame
+
+func test_banner_does_not_overlap_the_date_label_after_a_verdict_at_every_step() -> void:
+	for step: int in TextScale.STEPS.size():
+		await _resolved_at_step(step)
+		var banner: Rect2 = _m._banner_area.get_global_rect()
+		var date: Rect2 = _m._date_label.get_global_rect()
+		assert_gt(banner.size.y, 0.0, "the banner has height at step %d" % step)
+		assert_false(banner.intersects(date), "banner %s overlaps the date label %s at step %d" % [banner, date, step])
+
+func test_banner_text_fits_inside_the_banner_at_every_step() -> void:
+	for step: int in TextScale.STEPS.size():
+		await _resolved_at_step(step)
+		var font: Font = _m.get_theme_default_font()
+		var text_h: float = font.get_height(_m._small_px())
+		assert_gte(_m._banner_area.size.y, text_h, "banner tall enough for its text at step %d" % step)
+
+func test_legend_entries_stay_clear_and_hardness_wraps_to_the_pane_after_a_verdict_at_every_step() -> void:
+	for step: int in TextScale.STEPS.size():
+		await _resolved_at_step(step)
+		var rects: Array[Rect2] = _m.legend_entry_rects()
+		for a: int in rects.size():
+			for b: int in range(a + 1, rects.size()):
+				assert_false(rects[a].intersects(rects[b]), "legend entries %d and %d overlap at step %d" % [a, b, step])
+		var hardness: Rect2 = rects[rects.size() - 1]
+		var pane_w: float = _m._scroll.size.x
+		assert_lte(hardness.end.x, _m._legend_area.size.x, "hardness line within the legend's width at step %d: %s" % [step, hardness])
+		assert_lte(hardness.end.x, pane_w, "hardness line within the pane's width at step %d: %s" % [step, hardness])
+		assert_lte(hardness.end.y, _m._legend_area.size.y, "hardness line within the legend's height at step %d: %s" % [step, hardness])
+
+func test_hardness_line_wraps_at_the_largest_step() -> void:
+	await _resolved_at_step(TextScale.STEPS.size() - 1)
+	var rects: Array[Rect2] = _m.legend_entry_rects()
+	var line_h: float = _m.get_theme_default_font().get_height(_m._small_px())
+	assert_gt(rects[rects.size() - 1].size.y, line_h * 1.5, "the hardness line takes more than one line at the largest step")
+
+func test_legend_and_banner_are_painted_inside_the_scrolled_column() -> void:
+	# Painted on their own placeholders, they scroll and clip with the pane: no second copy at a stale offset.
+	assert_true(_m._scroll.is_ancestor_of(_m._legend_area))
+	assert_true(_m._scroll.is_ancestor_of(_m._banner_area))
