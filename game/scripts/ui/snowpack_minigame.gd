@@ -163,6 +163,8 @@ func apply_text_scale() -> void:
 		button.add_theme_font_size_override("font_size", TextScale.size(TextScale.BODY))
 	_legend_area.custom_minimum_size = Vector2(0.0, _legend_height_px())
 	_banner_area.custom_minimum_size = Vector2(0.0, BANNER_HEIGHT * TextScale.factor())
+	_legend_area.queue_redraw()
+	_banner_area.queue_redraw()
 	queue_redraw()
 
 ## The size of the custom-drawn labels (ruler, legend, banner) at this step.
@@ -194,6 +196,7 @@ func start(seed_value: int) -> void:
 	_set_buttons_enabled(true)
 	_refresh_labels()
 	show()
+	_banner_area.queue_redraw()
 	queue_redraw()
 	_log("Snowpack Survey started (seed %d, surveyed %s)." % [seed_value, profile.survey_date])
 
@@ -252,6 +255,7 @@ func submit_verdict(verdict: SnowpackProfile.Verdict) -> void:
 			SnowpackProfile.verdict_name(verdict), SnowpackProfile.verdict_name(truth)])
 	verdict_submitted.emit(verdict, truth)
 	_refresh_labels()
+	_banner_area.queue_redraw()
 	queue_redraw()
 
 ## True once a verdict has been submitted and the profile revealed.
@@ -336,10 +340,6 @@ func _draw() -> void:
 	if _pit_area == null:
 		return
 	_draw_pit(_local_rect_of(_pit_area))
-	if _is_visible_in_scroll(_legend_area):
-		_draw_legend(_local_rect_of(_legend_area))
-	if submitted and _is_visible_in_scroll(_banner_area):
-		_draw_banner(_local_rect_of(_banner_area))
 
 ## The pit wall: a parchment page, the ruler down the left, layers stacked
 ## surface-to-ground, and the rock line beneath. Unexamined layers are plain
@@ -426,30 +426,30 @@ func _draw_hatch(rect: Rect2, grain: SnowpackProfile.Grain) -> void:
 		# Offset alternate rows so the pattern reads as texture, not a grid.
 		var x := rect.position.x + hatch_spacing_px * (0.5 if row % 2 == 0 else 1.0)
 		while x + half <= rect.end.x:
-			_draw_symbol(Vector2(x, y), grain, half)
+			_draw_symbol(self, Vector2(x, y), grain, half)
 			x += hatch_spacing_px
 		y += hatch_spacing_px
 		row += 1
 
 ## One IACS-style grain symbol centred on `c`: + new snow, • rounded,
 ## □ faceted, Λ depth hoar, ○ melt-freeze crust.
-func _draw_symbol(c: Vector2, grain: SnowpackProfile.Grain, half: float) -> void:
+func _draw_symbol(canvas: CanvasItem, c: Vector2, grain: SnowpackProfile.Grain, half: float) -> void:
 	match grain:
 		SnowpackProfile.Grain.NEW_SNOW:
-			draw_line(c - Vector2(half, 0.0), c + Vector2(half, 0.0), INK, HATCH_LINE_WIDTH)
-			draw_line(c - Vector2(0.0, half), c + Vector2(0.0, half), INK, HATCH_LINE_WIDTH)
+			canvas.draw_line(c - Vector2(half, 0.0), c + Vector2(half, 0.0), INK, HATCH_LINE_WIDTH)
+			canvas.draw_line(c - Vector2(0.0, half), c + Vector2(0.0, half), INK, HATCH_LINE_WIDTH)
 		SnowpackProfile.Grain.ROUNDED:
-			draw_circle(c, half * 0.5, INK)
+			canvas.draw_circle(c, half * 0.5, INK)
 		SnowpackProfile.Grain.FACETED:
-			draw_rect(Rect2(c - Vector2(half, half), Vector2(half * 2.0, half * 2.0)),
+			canvas.draw_rect(Rect2(c - Vector2(half, half), Vector2(half * 2.0, half * 2.0)),
 					INK, false, HATCH_LINE_WIDTH)
 		SnowpackProfile.Grain.DEPTH_HOAR:
-			draw_line(c + Vector2(-half, half), c + Vector2(0.0, -half), INK, HATCH_LINE_WIDTH)
-			draw_line(c + Vector2(0.0, -half), c + Vector2(half, half), INK, HATCH_LINE_WIDTH)
+			canvas.draw_line(c + Vector2(-half, half), c + Vector2(0.0, -half), INK, HATCH_LINE_WIDTH)
+			canvas.draw_line(c + Vector2(0.0, -half), c + Vector2(half, half), INK, HATCH_LINE_WIDTH)
 		SnowpackProfile.Grain.MELT_FREEZE_CRUST:
-			draw_arc(c, half, 0.0, TAU, CIRCLE_SEGMENTS, INK, HATCH_LINE_WIDTH)
+			canvas.draw_arc(c, half, 0.0, TAU, CIRCLE_SEGMENTS, INK, HATCH_LINE_WIDTH)
 		SnowpackProfile.Grain.ICE_LENS:
-			draw_line(c - Vector2(half, 0.0), c + Vector2(half, 0.0), INK, HATCH_LINE_WIDTH * 2.0)
+			canvas.draw_line(c - Vector2(half, 0.0), c + Vector2(half, 0.0), INK, HATCH_LINE_WIDTH * 2.0)
 
 ## One legend row's height: the small font's line plus padding, never under the step-1.0 minimum.
 func _legend_row_px() -> float:
@@ -470,12 +470,27 @@ func _legend_column_px() -> float:
 func _legend_rows() -> int:
 	return ceili(float(SnowpackProfile.Grain.values().size()) / float(LEGEND_COLUMNS))
 
-## The legend area's height: every grain row plus the hardness line, never under the minimum.
-func _legend_height_px() -> float:
-	return maxf(LEGEND_HEIGHT * TextScale.factor(), (_legend_rows() + 1) * _legend_row_px())
+## The width the legend wraps to: the placeholder's laid-out width, or its two columns before the first layout.
+func _legend_width_px() -> float:
+	if _legend_area != null and _legend_area.size.x > 0.0:
+		return _legend_area.size.x
+	return _legend_column_px() * LEGEND_COLUMNS
 
-## The text box of each legend entry (grain names, then the hardness line), relative to the
-## legend area's top left: the same placement the drawing uses.
+## The hardness line's box at the legend's width: it wraps rather than running past the pane's right edge.
+func _hardness_size_px() -> Vector2:
+	var avail := maxf(_legend_width_px() - LEGEND_SYMBOL_OFFSET.x * 0.5 * TextScale.factor(), 1.0)
+	return get_theme_default_font().get_multiline_string_size(HARDNESS_LEGEND,
+			HORIZONTAL_ALIGNMENT_LEFT, avail, _small_px())
+
+## The legend area's height: every grain row plus the wrapped hardness line, never under the minimum.
+func _legend_height_px() -> float:
+	var row_h := _legend_row_px()
+	var line_h := get_theme_default_font().get_height(_small_px())
+	var hardness_bottom := _legend_rows() * row_h + (row_h - line_h) * 0.5 + _hardness_size_px().y
+	return maxf(LEGEND_HEIGHT * TextScale.factor(), hardness_bottom + (row_h - line_h) * 0.5)
+
+## The text box of each legend entry (grain names, then the wrapped hardness line), relative to
+## the legend area's top left: the same placement the drawing uses.
 func legend_entry_rects() -> Array[Rect2]:
 	var font := get_theme_default_font()
 	var line_h := font.get_height(_small_px())
@@ -490,15 +505,16 @@ func legend_entry_rects() -> Array[Rect2]:
 				HORIZONTAL_ALIGNMENT_LEFT, -1, _small_px()).x
 		rects.append(Rect2(Vector2((i % LEGEND_COLUMNS) * col_w + LEGEND_TEXT_OFFSET_X * f, top),
 				Vector2(width, line_h)))
-	var hardness_w := font.get_string_size(HARDNESS_LEGEND, HORIZONTAL_ALIGNMENT_LEFT, -1, _small_px()).x
-	rects.append(Rect2(Vector2(LEGEND_SYMBOL_OFFSET.x * 0.5, _legend_rows() * row_h + (row_h - line_h) * 0.5),
-			Vector2(hardness_w, line_h)))
+	rects.append(Rect2(Vector2(LEGEND_SYMBOL_OFFSET.x * 0.5 * f, _legend_rows() * row_h + (row_h - line_h) * 0.5),
+			_hardness_size_px()))
 	return rects
 
-## Every grain symbol with its name, plus the hardness codes, so the pit
-## reads without a key in the player's head.
-func _draw_legend(area: Rect2) -> void:
-	draw_rect(area, PARCHMENT)
+## Every grain symbol with its name, plus the wrapped hardness codes, so the pit reads without a
+## key in the player's head. Painted on the legend placeholder itself (its `draw` signal), so it
+## scrolls and clips with the pane instead of being drawn at a rect that can go stale.
+func _draw_legend() -> void:
+	var canvas := _legend_area
+	canvas.draw_rect(Rect2(Vector2.ZERO, canvas.size), PARCHMENT)
 	var font := get_theme_default_font()
 	var grains: Array = SnowpackProfile.Grain.values()
 	var rects := legend_entry_rects()
@@ -506,27 +522,31 @@ func _draw_legend(area: Rect2) -> void:
 	var col_w := _legend_column_px()
 	var ascent := font.get_ascent(_small_px())
 	for i: int in range(grains.size()):
-		var origin := area.position + Vector2((i % LEGEND_COLUMNS) * col_w,
+		var origin := Vector2((i % LEGEND_COLUMNS) * col_w,
 				(floori(float(i) / float(LEGEND_COLUMNS)) + 0.5) * row_h)
 		var grain: SnowpackProfile.Grain = grains[i]
 		if grain == SnowpackProfile.Grain.ICE_LENS:
-			draw_rect(Rect2(origin + LEGEND_SYMBOL_OFFSET - Vector2(hatch_symbol_half_px * 1.5,
+			canvas.draw_rect(Rect2(origin + LEGEND_SYMBOL_OFFSET - Vector2(hatch_symbol_half_px * 1.5,
 					ICE_LENS_BAR_MAX_PX * 0.5), Vector2(hatch_symbol_half_px * 3.0,
 					ICE_LENS_BAR_MAX_PX)), INK)
 		else:
-			_draw_symbol(origin + LEGEND_SYMBOL_OFFSET, grain, hatch_symbol_half_px)
-		draw_string(font, area.position + rects[i].position + Vector2(0.0, ascent),
+			_draw_symbol(canvas, origin + LEGEND_SYMBOL_OFFSET, grain, hatch_symbol_half_px)
+		canvas.draw_string(font, rects[i].position + Vector2(0.0, ascent),
 				SnowpackProfile.grain_name(grain), HORIZONTAL_ALIGNMENT_LEFT, -1, _small_px(), INK)
-	draw_string(font, area.position + rects[grains.size()].position + Vector2(0.0, ascent),
-			HARDNESS_LEGEND, HORIZONTAL_ALIGNMENT_LEFT, -1, _small_px(), INK)
+	var hardness: Rect2 = rects[grains.size()]
+	canvas.draw_multiline_string(font, hardness.position + Vector2(0.0, ascent), HARDNESS_LEGEND,
+			HORIZONTAL_ALIGNMENT_LEFT, hardness.size.x, _small_px(), -1, INK)
 
-## The result band: the true verdict's position on the data axis.
-func _draw_banner(area: Rect2) -> void:
+## The result band: the true verdict's position on the data axis. Painted on the banner placeholder
+## itself, which sits in the scrolled column below the date label, so it cannot overlap it.
+func _draw_banner() -> void:
+	if not submitted:
+		return
+	var canvas := _banner_area
 	var truth := profile.evaluate()
-	draw_rect(area, ramp_color(float(VERDICT_RAMP_POSITION[truth])))
+	canvas.draw_rect(Rect2(Vector2.ZERO, canvas.size), ramp_color(float(VERDICT_RAMP_POSITION[truth])))
 	var font := get_theme_default_font()
-	draw_string(font, area.position + BANNER_TEXT_OFFSET
-			+ Vector2(0.0, area.size.y * 0.5 + _small_px() * 0.35),
+	canvas.draw_string(font, BANNER_TEXT_OFFSET + Vector2(0.0, canvas.size.y * 0.5 + _small_px() * 0.35),
 			"Site verdict: %s" % SnowpackProfile.verdict_name(truth),
 			HORIZONTAL_ALIGNMENT_LEFT, -1, _small_px(), PARCHMENT)
 
@@ -608,7 +628,6 @@ func _build_ui() -> void:
 	_scroll = ScrollContainer.new()
 	_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	_scroll.get_v_scroll_bar().value_changed.connect(_on_scroll_changed)
 	sidebar.add_child(_scroll)
 
 	var content := VBoxContainer.new()
@@ -648,7 +667,7 @@ func _build_ui() -> void:
 	_banner_area = Control.new()
 	_banner_area.custom_minimum_size = Vector2(0.0, BANNER_HEIGHT)
 	_banner_area.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_banner_area.resized.connect(_on_area_resized)
+	_banner_area.draw.connect(_draw_banner)
 	content.add_child(_banner_area)
 
 	_result_label = _make_label("", TextScale.BODY)
@@ -658,7 +677,8 @@ func _build_ui() -> void:
 	_legend_area = Control.new()
 	_legend_area.custom_minimum_size = Vector2(0.0, LEGEND_HEIGHT)
 	_legend_area.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_legend_area.resized.connect(_on_area_resized)
+	_legend_area.draw.connect(_draw_legend)
+	_legend_area.resized.connect(_on_legend_resized)
 	content.add_child(_legend_area)
 
 	_controls_label = _make_label(CONTROLS_TEXT, TextScale.BODY)
@@ -667,15 +687,6 @@ func _build_ui() -> void:
 
 	apply_text_scale()
 	hide()
-
-func _on_scroll_changed(_value: float) -> void:
-	queue_redraw()
-
-## Whether a drawn area sits wholly inside the scrolled sidebar's visible
-## window. Drawing is not clipped to the ScrollContainer, so an area that is
-## scrolled partly out of view is skipped rather than painted over its edge.
-func _is_visible_in_scroll(child: Control) -> bool:
-	return _scroll.get_global_rect().encloses(child.get_global_rect())
 
 func _make_label(text: String, base_size: int) -> Label:
 	var label := Label.new()
@@ -688,3 +699,9 @@ func _make_label(text: String, base_size: int) -> Label:
 
 func _on_area_resized() -> void:
 	queue_redraw()
+
+## The legend wraps to its own width, so its height follows every resize; setting the same
+## minimum again is a no-op, which stops this from looping.
+func _on_legend_resized() -> void:
+	_legend_area.custom_minimum_size = Vector2(0.0, _legend_height_px())
+	_legend_area.queue_redraw()
