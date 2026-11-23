@@ -318,6 +318,10 @@ func attach_reserved_zones(zones: Callable) -> void:
 	_reserved_zones = zones
 	queue_redraw()
 
+## The header zone's rectangle in screen pixels, for panels that must stay clear of it.
+func header_zone_rect() -> Rect2:
+	return _card_layout()["header_rect"]
+
 ## Hand this controller the hover resolvers (PRD rules 8–9). `pick(screen_position)
 ## -> Dictionary` returns the segment record under a screen point, or {};
 ## `is_dangerous(coord: Vector2i) -> bool` is true for an `is_impassable` or
