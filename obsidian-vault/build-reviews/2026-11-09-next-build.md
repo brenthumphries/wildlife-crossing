@@ -18,6 +18,9 @@ status: active
 > asserts** (unchanged since 2026-11-02). Latest run on `main`: **success** on
 > `f33dfa9` at 2026-11-07T18:49:44Z. Previous plan: [[2026-11-02-next-build]].
 
+> [!success] Amendment 2026-11-23 — **V19 passes; D7 is drafted.**
+> Brent walked V19 windowed at 100% and 175% on `main` at `9e856fa` with no failures, so the fix list is empty. CI on `main` at `9e856fa` is green, including the Windows smoke test. The v0.2.0 release notes are drafted (`docs/release-notes/v0.2.0.md`, date and Downloads still to set at the cut), and the baseline and window decision is recorded in `docs/roadmap.md`. D8 is not done. Still open: B9, D8, D9, Q2, D4, V5. Not verified: loading a v0.1.0 save, the exact window floor size, the Mac and Linux boot. See [[../daily-logs/2026-11-23]].
+
 > [!success] Amendment 2026-11-22 — **V15 and the V18 recheck pass; Q10 is called and the feature freeze starts 2026-11-22.**
 > The V15 re-walk (ATT-149) passed windowed on `main` at `04340b8`: 175%, 150%, 125% on every screen, the title menu at 100% to 150%, the window floor (by eye), and the default window at a scaled 1024x663. Three 175% defects found on the way were fixed and merged as #140, #141 and #142 (ATT-185, ATT-184, ATT-186). The V18 recheck (ATT-171) passes at 175% with fresh settings. Only fixes merge from here. Still open: V19, D8, D7, B9, D9, Q2, D4, V5. Not verified: the exact window-floor size. See [[../daily-logs/2026-11-22]].
 
