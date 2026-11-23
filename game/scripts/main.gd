@@ -608,11 +608,19 @@ func _open_world_select() -> void:
 		_world_select.hover_highlight_changed.connect(_on_hover_highlight_changed)
 		_confirm_panel = ConfirmPanel.new()
 		_confirm_panel.attach(_world_select)
+		_confirm_panel.attach_reserved_zones(_confirm_panel_reserved_zones)
 		_confirm_panel.confirmed.connect(_on_confirm_panel_confirmed)
 		layer.add_child(_confirm_panel)
 	if _world_select.mode == WorldSelectController.Mode.INACTIVE:
 		_world_select.enter_selection_mode()
 		_log("Crossing location selection — zoom in to pick a road to cross, Escape to exit.")
+
+## The rectangles the confirm panel stays clear of: the HUD's clock and budget
+## panels and the map header zone, in screen pixels.
+func _confirm_panel_reserved_zones() -> Array[Rect2]:
+	var zones: Array[Rect2] = _hud.top_zone_rects()
+	zones.append(_world_select.header_zone_rect())
+	return zones
 
 ## Completed crossings in one sub-area, for the world-select hover summary.
 func _crossings_in_sub_area(sub_area_id: int) -> int:
