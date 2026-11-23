@@ -503,6 +503,25 @@ systems).
 > cheapest information product. C15 shipped the information-product reading
 > (1,000); C32 changes it. Rejected: the information-product reading.
 
+> **Decision logged (2026-11-18): the text baseline is 25 / 45 / 20 in a 1680x945
+> viewport, and the window floor is 1344x756.** Amends the 2026-10-16 text block
+> above. Brent's call, from the windowed walk of V15 on a 16 inch MacBook.
+>
+> **Text.** Body 25, title 45 and small 20, up from 20, 36 and 16 at 1280x720
+> (ATT-169, #137). The steps stay 100, 125, 150 and 175 percent, so 175 percent is
+> 44, 79 and 35. The viewport is 1680x945 with stretch `canvas_items` and aspect
+> `keep`. Rejected: a bigger window alone, which adds no layout room under `keep`.
+>
+> **Floor.** One minimum window size for every text step (ATT-148, #138): 100%
+> body text never under 20 physical pixels, so 1680 x 20 / 25 = 1344 wide and 756
+> high. Rejected: per-step minimums, which add nothing because the layout is
+> fixed in content space. Brent kept this floor after asking whether a 13 inch
+> laptop size should be the floor instead.
+>
+> **Walked.** V15 passed on `main` at `04340b8` at 100, 125, 150 and 175 percent
+> and at a scaled 1024x663 screen (2026-11-22). The floor was checked by eye; its
+> exact size was not measured.
+
 > **Decision logged (2026-10-16, v0.2.0 scope): v0.2.0 goes big, behind a feature
 > freeze.** Resolves Q8 from the plan for the week of 2026-10-19. Brent's call:
 > include as much as can reasonably fit without risking stability.
