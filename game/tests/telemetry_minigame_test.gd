@@ -164,3 +164,33 @@ func test_controls_text_fits_the_viewport_at_every_text_scale_step() -> void:
 		await get_tree().process_frame
 		assert_true(view.encloses(_m._controls_label.get_global_rect()),
 				"controls text within the viewport at step %d: %s" % [i, _m._controls_label.get_global_rect()])
+
+## The smallest plan view worth playing, px: below this the stations are too close to read.
+const MIN_PLAYABLE_PLAN_PX := 300.0
+
+func test_readout_and_meter_are_on_screen_outside_the_scroll_at_every_text_scale_step() -> void:
+	_m.start(SEED)
+	var view := Rect2(Vector2.ZERO, Vector2(WindowFixture.content_size()))
+	assert_true(view.encloses(get_viewport().get_visible_rect()) \
+			and get_viewport().get_visible_rect().encloses(view),
+			"the test viewport is the project's content size")
+	for i in TextScale.STEPS.size():
+		TextScale.set_step(i)
+		await get_tree().process_frame
+		await get_tree().process_frame
+		var scroll_rect: Rect2 = _m._scroll.get_global_rect()
+		var pinned: Dictionary = {
+			"antenna readout": _m._station_label,
+			"meter label": _m._meter_label,
+			"meter bar": _m._meter_area,
+			"controls text": _m._controls_label,
+		}
+		for key: String in pinned:
+			var rect: Rect2 = (pinned[key] as Control).get_global_rect()
+			assert_true(view.encloses(rect), "%s within the viewport at step %d: %s" % [key, i, rect])
+			assert_false(scroll_rect.intersects(rect),
+					"%s is not inside the scrolling pane at step %d" % [key, i])
+		var plan: Rect2 = _m._plan_area.get_global_rect()
+		assert_true(view.encloses(plan), "plan view within the viewport at step %d: %s" % [i, plan])
+		assert_gt(plan.size.x, MIN_PLAYABLE_PLAN_PX, "plan wide enough at step %d" % i)
+		assert_gt(plan.size.y, MIN_PLAYABLE_PLAN_PX, "plan tall enough at step %d" % i)

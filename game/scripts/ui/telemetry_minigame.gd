@@ -277,8 +277,7 @@ func _draw() -> void:
 	if _plan_area == null:
 		return
 	_draw_plan(_local_rect_of(_plan_area))
-	if _is_visible_in_scroll(_meter_area):
-		_draw_meter(_local_rect_of(_meter_area))
+	_draw_meter(_local_rect_of(_meter_area))
 
 func _draw_plan(area: Rect2) -> void:
 	var inner := area.grow(-PLAN_PADDING)
@@ -413,12 +412,12 @@ func _build_ui() -> void:
 	sidebar.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	row.add_child(sidebar)
 
-	# The sidebar scrolls so a large text step never pushes copy off screen; the
-	# controls line stays pinned below it, always visible.
+	# Only the reading copy scrolls, so a large text step never pushes it off
+	# screen; the antenna readout, signal meter and controls line stay pinned
+	# below it, always visible.
 	_scroll = ScrollContainer.new()
 	_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	_scroll.get_v_scroll_bar().value_changed.connect(_on_scroll_changed)
 	sidebar.add_child(_scroll)
 
 	var content := VBoxContainer.new()
@@ -433,15 +432,18 @@ func _build_ui() -> void:
 	_intro_label = _make_label(INTRO_TEXT, TextScale.BODY)
 	content.add_child(_intro_label)
 	_station_label = _make_label("", TextScale.BODY)
-	content.add_child(_station_label)
+	# The antenna readout and the signal meter are the game: the player turns the
+	# antenna until the meter peaks. At the larger text steps the title and intro
+	# fill the window, so anything inside the scroll would sit below the fold.
+	sidebar.add_child(_station_label)
 	_meter_label = _make_label("", TextScale.BODY)
-	content.add_child(_meter_label)
+	sidebar.add_child(_meter_label)
 
 	_meter_area = Control.new()
 	_meter_area.custom_minimum_size = Vector2(0.0, METER_HEIGHT)
 	_meter_area.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_meter_area.resized.connect(_on_plan_area_resized)
-	content.add_child(_meter_area)
+	sidebar.add_child(_meter_area)
 
 	_result_label = _make_label("", TextScale.BODY)
 	_result_label.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -452,15 +454,6 @@ func _build_ui() -> void:
 
 	apply_text_scale()
 	hide()
-
-func _on_scroll_changed(_value: float) -> void:
-	queue_redraw()
-
-## Whether a drawn area sits wholly inside the scrolled sidebar's visible
-## window. Drawing is not clipped to the ScrollContainer, so an area that is
-## scrolled partly out of view is skipped rather than painted over its edge.
-func _is_visible_in_scroll(child: Control) -> bool:
-	return _scroll.get_global_rect().encloses(child.get_global_rect())
 
 func _make_label(text: String, base_size: int) -> Label:
 	var label := Label.new()

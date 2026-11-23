@@ -56,6 +56,18 @@ camera feel, frame time and headless CI behaviour in 3D are unverified.
 > which gives the environment art a production path the first draft did not
 > assume. The ADR is still `proposed`.
 
+> **Amendment 2026-11-22.** The product owner set the order of work: v0.2.0
+> ships first, the 3D view is built next, and no art asset is produced until
+> the 3D renderer exists. The spike is now engine-only, with a billboarded
+> animal and one lit tile added to it (decision 4). The hex geometry the
+> renderer and every later asset share is added as decision 5. The Blender
+> pilot moves from the spike to the start of art production (step 8 below).
+> Blender 5.3 and the Blender Lab connector are already installed on the Mac
+> and were proven end to end on 2026-11-22 outside this repo: a test prop was
+> built through the connector, validated and exported by script, and imported
+> into Godot 4.6.3 with the expected size, origin, materials and collision.
+> No asset from that run enters this repo. The ADR is still `proposed`.
+
 ## Decision
 
 Move the world view to **3D as a presentation layer over the unchanged hex
@@ -125,19 +137,48 @@ These are the product owner's calls. Each has a proposed default.
    glTF for Godot. Blender is free, so this adds a tool and no subscription.
    It is expected to suit hard-surface and procedural geometry and to be weak
    at organic character work, which is why animals stay sprites under decision
-   1. This expectation is untested on this project; the spike in decision 4 is
-   the test.
+   1. This expectation is untested on this project's terrain and crossings;
+   the Blender pilot at the start of art production (step 8 below) is the
+   test.
 3. **Renderer.** Proposed: run the spike on `gl_compatibility` as configured
-   and decide after seeing it. Moving to the Mobile or Forward+ renderer buys
-   better lighting and shadows and changes CI and every export preset.
-4. **Go or no-go after a spike.** Proposed: a two-part spike, judged together
-   before any of the migration is routed. The **engine half** is a throwaway
-   branch that renders Bow Valley as hex prisms under the orbit camera with
-   the live simulation running, walked windowed on the Mac. The **art half**
-   is a Blender session in which Claude builds three terrain tiles, one
-   overpass and one animal attempt, exported to glTF and loaded into the
-   engine half. The animal attempt is there to confirm or overturn decision 1,
-   not because it is expected to ship.
+   and decide after seeing it, judged on the spike's one lit tile rather than
+   on finished art. Moving to the Mobile or Forward+ renderer buys better
+   lighting and shadows and changes CI and every export preset.
+4. **Go or no-go after an engine spike.** Proposed: one spike, walked
+   windowed on the Mac before any of the migration is routed. It is a
+   throwaway branch that renders Bow Valley as hex prisms under the orbit
+   camera with the live simulation running, and it adds two checks that need
+   no new art:
+   - **One billboarded animal**, using a species portrait from
+     `docs/prompt-templates/wildlife-crossing-portraits-2048/` as a stand-in
+     sprite, to test whether a camera-facing sprite reads under rotation and
+     tilt. This tests the risky part of decision 1 without Blender.
+   - **One lit tile**: a single prism under a directional light, to judge
+     decision 3.
+
+   No Blender asset is made for the spike. Accepting the ADR on this spike
+   means the Blender path (decision 2) is confirmed only at step 8, after the
+   view seam, renderer, ports and elevation are built. That risk is accepted
+   knowingly: the renderer draws placeholder prisms coloured by `tile_color`
+   until art lands, so if the pilot fails, the environment falls back to the
+   alternatives listed under decision 1 without any engine work being lost.
+5. **Hex geometry.** Proposed defaults, shared by the placeholder prisms and
+   every later tile and crossing asset, held as named constants in
+   `simulation_constants.gd`:
+   - **Orientation: pointy-top**, matching the layout `WorldRenderer.px_at_coord`
+     already draws (neighbours one tile width apart horizontally, rows 0.87 of
+     that apart vertically). [`art-direction`](../../obsidian-vault/design/art-direction.md)
+     §3 says flat-top and [ADR 0002](0002-hex-grid-topology.md) names neither;
+     the art-direction line is corrected on acceptance. The alternative,
+     flat-top, means changing the projection and the world-select tests.
+   - **Size: 2.0 world units flat-to-flat.** A hex stands for roughly a
+     kilometre of valley, so assets are built at diorama scale, not in real
+     metres.
+   - **Origin** at the hex centre on its top surface.
+   - **Elevation step: 0.25 world units** per unit of the new `elevation`
+     field.
+   - **Skirt: 1.0 world unit** of side wall below the top surface, so a tile
+     raised above its neighbours shows no gap.
 
 ## Consequences
 
@@ -161,7 +202,9 @@ These are the product owner's calls. Each has a proposed default.
   animals.** Every one of the 18 tile types needs a 3D treatment, crossings
   need models, and the art direction's per-asset list (pixel dimensions, 32 by
   32 hex box) is rewritten. If the Blender path in decision 2 holds up in the
-  spike, the environment has a production path and its risk is moderate. The
+  step 8 pilot, the environment has a production path and its risk is
+  moderate. Because that pilot now comes after the engine work, a failure
+  there is found later than the first draft planned. The
   animals do not: with billboarded sprites the species work stays close to
   what was planned, and without them the project needs rigged, animated
   quadrupeds that no tool it has is expected to produce well.
@@ -193,13 +236,13 @@ High-level migration plan, sized as in `docs/plan/week.json`:
 | # | Step | Lane | Size |
 |---|---|---|---|
 | 1 | Cut v0.2.0 as the last 2D release | mac | L (already planned as B9) |
-| 2 | Engine spike: Bow Valley in 3D with the orbit camera, on a throwaway branch | code | S |
-| 3 | Art spike: install Blender and the connector; Claude builds three tiles, one overpass and one animal attempt; load them into the engine spike | mac | S |
-| 4 | Walk both spikes; decide art style, toolchain, renderer, go or no-go; accept or reject this ADR | decision | S |
-| 5 | View seam in 2D, suite green | code | M |
-| 6 | 3D renderer, camera rig and ray picking behind a flag | code | L |
-| 7 | Port build preview, segment hover, hotspots, connectivity overlay and world-select zoom | code | L |
-| 8 | Elevation field, schema and loader; author Bow Valley heights | code + content | M |
+| 2 | Engine spike: Bow Valley in 3D with the orbit camera, one billboarded animal and one lit tile, on a throwaway branch | code | S |
+| 3 | Walk the spike; decide renderer, hex geometry, go or no-go; accept or reject this ADR | decision | S |
+| 4 | View seam in 2D, suite green | code | M |
+| 5 | 3D renderer, camera rig and ray picking behind a flag | code | L |
+| 6 | Port build preview, segment hover, hotspots, connectivity overlay and world-select zoom | code | L |
+| 7 | Elevation field, schema and loader; author Bow Valley heights | code + content | M |
+| 8 | Blender pilot: Claude builds three terrain tiles and the forest overpass to decision 5's geometry and loads them into the 3D renderer; confirm or overturn decision 2; set the asset rules (palette, budgets, naming) from what it shows | mac | S |
 | 9 | Environment art through the Blender path; animal sprites; lighting and seasonal grade | mac + mixed | L |
 | 10 | Amend docs; remove the 2D renderer; release v0.3.0 | mixed | M |
 
@@ -208,7 +251,8 @@ On acceptance, these documents are amended to point here:
 - [ADR 0001](0001-choose-godot-4.md): the 2D framing in Context and the
   tilemap and `Camera2D` benefit.
 - [ADR 0002](0002-hex-grid-topology.md) and [ADR 0013](0013-scaffolding-conventions.md):
-  the flat-to-flat pixel measure and the 32 by 32 tile box.
+  the flat-to-flat pixel measure and the 32 by 32 tile box; ADR 0002 also
+  gains the orientation from decision 5.
 - [ADR 0006](0006-world-map-authoring.md): the generated `TileMapLayer` set,
   and the new `elevation` field.
 - [ADR 0021](0021-world-select-renders-the-live-world.md): the camera hand-off,
